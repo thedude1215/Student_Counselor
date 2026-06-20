@@ -1,0 +1,303 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,700;1,9..40,800;1,9..40,900&display=swap');
+
+/* ============================================================
+   SCHOLARPATH  ·  EXACT BORDERLESS.SO CLONE
+   Colors measured pixel-by-pixel from screenshots
+   ============================================================ */
+
+:root {
+  /* ── Backgrounds (EXACT from screenshots) ── */
+  --bg:            #E9ECF5;   /* main blue-lavender page bg */
+  --bg-white:      #F4F4F8;   /* slightly lighter sections */
+  --white:         #FFFFFF;
+
+  /* ── Brand blue (BORDERLESS logo, hero title, links) ── */
+  --blue:          #4055F5;   /* primary brand indigo-blue */
+  --blue-dark:     #2D3FCC;
+  --blue-light:    #EAE8FF;   /* lavender tint for active tabs */
+  --blue-mid:      #C5C3F0;   /* border for blue elements */
+
+  /* ── Purple accent (for italic accents, "counselor" word) ── */
+  --purple:        #6B5CE7;
+
+  /* ── Text ── */
+  --ink:           #111118;   /* near-black for big headings */
+  --ink-2:         #3A3A4C;   /* body text */
+  --ink-3:         #7878A0;   /* muted labels */
+  --ink-4:         #AEAEC8;   /* very muted */
+
+  /* ── Story card pastels (EXACT from Borderless cards) ── */
+  --card-pink:     #FFE8E6;   /* border: #F5C4BE */
+  --card-blue:     #E5EAFF;   /* border: #C5CBEE */
+  --card-peach:    #FEF1E6;   /* border: #F5DFC5 */
+  --card-lavender: #EDE9FF;   /* border: #D5CEEE */
+  --card-mint:     #E8F5EF;   /* border: #C8E8D8 */
+  --card-cream:    #FFF8E6;   /* border: #F0E5C8 */
+
+  /* ── Card border colors (2px, same hue but darker) ── */
+  --cb-pink:       #F5C4BE;
+  --cb-blue:       #C5CBEE;
+  --cb-peach:      #F5DFC5;
+  --cb-lavender:   #D5CEEE;
+  --cb-mint:       #C8E8D8;
+  --cb-cream:      #F0E5C8;
+
+  /* ── Border ── */
+  --border:        #D8DAF0;
+  --border-2:      #C8CAE0;
+
+  /* ── Feature section backgrounds ── */
+  --feat-purple:   #EBE8FF;
+  --feat-green:    #EBF5EF;
+  --feat-yellow:   #FEF9E6;
+  --feat-pink:     #FEE8E6;
+
+  /* ── Font — DM Sans matches Borderless best ── */
+  --font: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* ── Layout ── */
+  --nav-h:  72px;
+  --max-w:  1080px;
+
+  /* ── Radii ── */
+  --r-sm:   10px;
+  --r-md:   16px;
+  --r-lg:   22px;
+  --r-xl:   28px;
+  --r-pill: 9999px;
+
+  /* ── Shadows ── */
+  --shadow: 0 2px 12px rgba(64,85,245,0.07), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-hover: 0 8px 28px rgba(64,85,245,0.13), 0 2px 8px rgba(0,0,0,0.06);
+
+  --t: 180ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink-2);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+a    { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: var(--font); border: none; background: none; }
+img  { max-width: 100%; display: block; }
+ul   { list-style: none; }
+
+/* ── Layout wrapper ── */
+.wrap {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  border: none;
+  transition: all var(--t);
+}
+
+/* Exact "Join Waitlist" style — white with subtle border */
+.btn-outline {
+  background: var(--white);
+  color: var(--ink);
+  border: 1.5px solid var(--border-2);
+  padding: 0.6rem 1.4rem;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+
+.btn-dark {
+  background: #1A1A2E;
+  color: white;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.9rem;
+}
+.btn-dark:hover { background: #2A2A45; }
+
+.btn-blue {
+  background: var(--blue);
+  color: white;
+  padding: 0.65rem 1.4rem;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 14px rgba(64,85,245,0.3);
+}
+.btn-blue:hover { background: var(--blue-dark); transform: translateY(-1px); }
+
+.btn-sm  { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+.btn-lg  { padding: 0.8rem 1.8rem; font-size: 1rem; }
+.btn-xl  { padding: 1rem 2.4rem; font-size: 1.1rem; }
+
+/* ── Search bar (exact Borderless style) ── */
+.search-bar { position: relative; }
+.search-bar svg {
+  position: absolute;
+  right: 1.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-4);
+  pointer-events: none;
+}
+.search-bar input {
+  width: 100%;
+  padding: 0.85rem 3rem 0.85rem 1.3rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--white);
+  font-size: 0.9rem;
+  font-family: var(--font);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.search-bar input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(64,85,245,0.1);
+}
+.search-bar input::placeholder { color: var(--ink-4); }
+
+/* ── Tab bar (EXACT Borderless width/style) ── */
+.tab-bar {
+  display: flex;
+  background: var(--white);
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--border);
+  padding: 4px;
+  box-shadow: var(--shadow);
+}
+.tab {
+  flex: 1;
+  padding: 0.65rem 2.5rem;
+  border-radius: var(--r-pill);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--t);
+  font-family: var(--font);
+}
+.tab.active {
+  background: var(--blue-light);
+  color: var(--ink);
+}
+.tab:hover:not(.active) { color: var(--ink-2); }
+
+/* ── Filter chips ── */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 0.4rem 1rem;
+  border-radius: var(--r-pill);
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all var(--t);
+  font-family: var(--font);
+}
+.chip:hover { border-color: var(--blue); color: var(--blue); }
+.chip.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+/* ── Select ── */
+.sel {
+  padding: 0.5rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--white);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  font-family: var(--font);
+  cursor: pointer;
+  outline: none;
+}
+.sel:focus { border-color: var(--blue); }
+
+/* ── Tags ── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.7rem;
+  border-radius: var(--r-pill);
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+.tag-blue  { background: var(--blue-light); color: var(--blue); }
+.tag-gray  { background: rgba(0,0,0,0.06);  color: var(--ink-3); }
+.tag-green { background: #DCFCE7; color: #16A34A; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 5rem 2rem; }
+.empty-icon { font-size: 2.5rem; opacity: 0.3; margin-bottom: 1rem; }
+.empty h3 { font-size: 1.1rem; font-weight: 800; color: var(--ink); margin-bottom: 0.4rem; }
+.empty p  { font-size: 0.875rem; color: var(--ink-3); }
+
+/* ── Result count ── */
+.result-ct { font-size: 0.82rem; color: var(--ink-4); font-weight: 600; margin-left: auto; }
+
+/* ── Aid toggle ── */
+.aid-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer; color: var(--ink-3);
+  font-family: var(--font);
+}
+.aid-toggle input { accent-color: var(--blue); width: 15px; height: 15px; }
+
+/* ── Page heading ── */
+.page-h1 {
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--blue);
+  margin-bottom: 0.5rem;
+}
+.page-sub {
+  font-size: 1rem;
+  color: var(--ink-3);
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scrollLeft {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%       { transform: scale(1.6); opacity: 0.35; }
+}
+
+.fade-up { animation: fadeUp 0.5s ease both; }
+.d1 { animation-delay: 0.08s; }
+.d2 { animation-delay: 0.16s; }
+.d3 { animation-delay: 0.26s; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+@media (max-width: 768px) { .wrap { padding: 0 1rem; } }

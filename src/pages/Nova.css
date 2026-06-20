@@ -1,0 +1,320 @@
+/* ── NOVA PAGE ── */
+.nova-page {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+  padding-top: var(--nav-h);
+  background: var(--bg);
+}
+
+/* ── Sidebar ── */
+.nova-sidebar {
+  border-right: 1.5px solid var(--border);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.nova-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.nova-brand-icon {
+  width: 34px; height: 34px;
+  background: var(--blue);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 900;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(64,85,245,0.3);
+}
+
+.nova-brand-info { flex: 1; }
+.nova-brand-name { font-size: 0.9rem; font-weight: 900; color: var(--ink); letter-spacing: -0.01em; }
+.nova-brand-role { font-size: 0.7rem; color: var(--ink-3); font-weight: 600; }
+
+.nova-online {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #16A34A;
+  background: #DCFCE7;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 0.5rem;
+}
+
+.nova-starters { display: flex; flex-direction: column; gap: 4px; margin-bottom: 1.5rem; }
+.nova-starter {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all var(--t);
+  font-family: var(--font);
+  line-height: 1.4;
+}
+.nova-starter:hover {
+  background: var(--blue-light);
+  border-color: var(--blue-mid);
+  color: var(--blue);
+}
+
+.nova-profile-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.nova-profile-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--bg);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background var(--t), color var(--t);
+}
+.nova-profile-toggle:hover { background: var(--blue-light); color: var(--blue); }
+
+.nova-profile-form {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.nova-pf-input {
+  padding: 0.48rem 0.65rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 0.78rem;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--white);
+  outline: none;
+  transition: border-color var(--t);
+}
+.nova-pf-input:focus { border-color: var(--blue); }
+.nova-pf-input::placeholder { color: var(--ink-4); }
+
+.nova-env-note {
+  margin-top: auto;
+  background: #FFFBEB;
+  border: 1.5px solid #FDE68A;
+  border-radius: var(--r-md);
+  padding: 0.75rem;
+  font-size: 0.73rem;
+  color: #78350F;
+  line-height: 1.5;
+}
+.nova-env-note code {
+  background: rgba(0,0,0,0.07);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+/* ── Chat area ── */
+.nova-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.nova-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Message rows */
+.nova-msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 760px;
+  animation: fadeUp 0.2s ease both;
+}
+.nova-msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
+.nova-msg-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+.av-nova { background: var(--blue); color: white; box-shadow: 0 3px 10px rgba(64,85,245,0.3); }
+.av-user { background: var(--bg); color: var(--ink-3); border: 1.5px solid var(--border); }
+
+/* Bubbles */
+.nova-bubble {
+  padding: 0.875rem 1.1rem;
+  border-radius: 18px;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  max-width: calc(100% - 42px);
+  font-weight: 400;
+}
+.nova-bubble.nova {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--ink-2);
+  border-top-left-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.nova-bubble.user {
+  background: var(--blue);
+  color: white;
+  border-top-right-radius: 4px;
+  box-shadow: 0 4px 14px rgba(64,85,245,0.25);
+}
+
+/* Message formatting */
+.msg-h3 { font-size: 0.95rem; font-weight: 800; margin: 0.75rem 0 0.35rem; color: var(--ink); }
+.msg-h4 { font-size: 0.875rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
+.nova-bubble.user .msg-h3, .nova-bubble.user .msg-h4 { color: white; }
+.msg-p    { margin: 0; }
+.msg-bold { font-weight: 800; }
+.msg-bullet { display: flex; gap: 8px; margin: 0.2rem 0; }
+.bullet-dot { color: var(--blue); font-weight: 900; flex-shrink: 0; font-size: 1.1rem; line-height: 1.4; }
+.nova-bubble.user .bullet-dot { color: rgba(255,255,255,0.7); }
+.msg-spacer { height: 0.35rem; }
+
+/* Typing dots */
+.nova-typing { display: flex; gap: 5px; align-items: center; padding: 0.875rem 1.1rem !important; min-width: 56px; }
+.nova-typing span {
+  width: 6px; height: 6px;
+  background: var(--ink-4);
+  border-radius: 50%;
+  animation: typBounce 1.2s infinite;
+}
+.nova-typing span:nth-child(2) { animation-delay: 0.2s; }
+.nova-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%            { transform: translateY(-6px); background: var(--blue); }
+}
+
+/* ── Input area ── */
+.nova-input-wrap {
+  padding: 1rem 3rem;
+  background: var(--white);
+  border-top: 1.5px solid var(--border);
+}
+.nova-input-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.nova-input-box:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(64,85,245,0.1);
+}
+
+.nova-reset {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-4);
+  flex-shrink: 0;
+  transition: all var(--t);
+  margin-bottom: 2px;
+}
+.nova-reset:hover { background: var(--border); color: var(--ink); }
+
+.nova-textarea {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  font-family: var(--font);
+  color: var(--ink);
+  resize: none;
+  line-height: 1.55;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 4px 0;
+  font-weight: 400;
+}
+.nova-textarea::placeholder { color: var(--ink-4); }
+
+.nova-send {
+  width: 34px; height: 34px;
+  background: var(--blue);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--t);
+  box-shadow: 0 3px 10px rgba(64,85,245,0.3);
+}
+.nova-send:hover:not(.disabled) { background: var(--blue-dark); transform: scale(1.05); }
+.nova-send.disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
+
+.nova-hint {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--ink-4);
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .nova-page { grid-template-columns: 1fr; }
+  .nova-sidebar { display: none; }
+  .nova-messages { padding: 1rem; }
+  .nova-input-wrap { padding: 0.75rem 1rem; }
+}

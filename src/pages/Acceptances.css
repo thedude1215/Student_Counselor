@@ -1,0 +1,183 @@
+.acc-page { min-height: 100vh; background: var(--bg); }
+
+/* Dark purple hero — EXACT Borderless Acceptances */
+.acc-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0C0420 0%, #1B0646 35%, #3A1098 65%, #6830C8 100%);
+  min-height: 520px;
+  padding: calc(var(--nav-h) + 3rem) 0 4rem;
+}
+
+.acc-hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 75% 50%, rgba(104,48,200,0.6) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+.acc-hero-content { position: relative; z-index: 1; }
+
+.acc-cycle {
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #F0C040;
+  margin-bottom: 1.5rem;
+}
+
+.acc-hero-title {
+  font-size: clamp(2.5rem, 6vw, 5.5rem);
+  font-weight: 900;
+  color: white;
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.25rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}
+
+.acc-hero-sub {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.6);
+  max-width: 400px;
+  line-height: 1.75;
+  margin-bottom: 2.5rem;
+  font-weight: 400;
+}
+
+.acc-stats-row {
+  display: inline-flex;
+  gap: 3rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 22px;
+  padding: 1.5rem 2.5rem;
+  backdrop-filter: blur(12px);
+  margin-bottom: 1.5rem;
+}
+
+.acc-stat-n {
+  font-size: 3rem;
+  font-weight: 900;
+  color: white;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-family: var(--font);
+}
+.acc-stat-l {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin-top: 5px;
+}
+
+.acc-footnote {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.25);
+  font-weight: 400;
+}
+
+/* Glowing world map dots */
+.acc-map-dots {
+  position: absolute;
+  right: 0; top: 0;
+  width: 50%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.map-dot {
+  position: absolute;
+  width: 10px; height: 10px;
+  background: #7FFFD4;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(127,255,212,0.9), 0 0 22px rgba(127,255,212,0.4);
+  animation: dotPulse 3s infinite;
+}
+.map-dot:nth-child(2n)  { animation-delay: 0.6s; width: 7px; height: 7px; }
+.map-dot:nth-child(3n)  { animation-delay: 1.3s; width: 8px; height: 8px; }
+.map-dot:nth-child(4n)  { animation-delay: 2.0s; }
+
+/* Table section */
+.acc-body { padding: 2.5rem 0 4rem; }
+
+.acc-body-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.acc-body-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.acc-search { max-width: 300px; }
+
+.acc-table-wrap {
+  background: var(--white);
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.acc-table { width: 100%; border-collapse: collapse; }
+
+.acc-table thead {
+  background: var(--bg);
+  border-bottom: 1.5px solid var(--border);
+}
+
+.acc-table th {
+  text-align: left;
+  padding: 1rem 1.25rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.acc-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background var(--t);
+}
+.acc-table tbody tr:last-child { border-bottom: none; }
+.acc-table tbody tr:hover { background: var(--bg); }
+
+.acc-table td { padding: 0.875rem 1.25rem; font-size: 0.875rem; font-weight: 500; }
+
+.td-bold  { font-weight: 800; color: var(--ink); }
+.td-muted { color: var(--ink-3); }
+
+.acc-badge {
+  display: inline-flex;
+  padding: 0.22rem 0.75rem;
+  border-radius: var(--r-pill);
+  font-size: 0.73rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.acc-footnote-table {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: var(--ink-4);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .acc-map-dots { display: none; }
+  .acc-stats-row { flex-direction: column; gap: 1.25rem; padding: 1.25rem; }
+  .acc-table th:nth-child(4), .acc-table td:nth-child(4) { display: none; }
+}
