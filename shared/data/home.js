@@ -64,20 +64,20 @@ export const homeUniversityLogos = [
   {
     name: 'National University of Singapore',
     fallback: 'NUS',
-    logoUrl: '/logos/national-university-of-singapore.png',
-    logoStyle: { background: '#FFFFFF', padding: '12px' },
+    logoUrl: '/logos/nus-hq.png',
+    logoStyle: { background: '#FFFFFF', padding: '8px' },
   },
   {
     name: 'University of Toronto',
     fallback: 'UofT',
-    logoUrl: '/logos/university-of-toronto.png',
-    logoStyle: { background: '#FFFFFF', padding: '12px' },
+    logoUrl: '/logos/university-of-toronto.svg',
+    logoStyle: { background: '#002A5C', padding: '0px' },
   },
   {
     name: 'New York University',
     fallback: 'NYU',
-    logoUrl: '/logos/new-york-university.png',
-    logoStyle: { background: '#FFFFFF', padding: '12px' },
+    logoUrl: '/logos/nyuad-hq.png',
+    logoStyle: { background: '#57068C', padding: '6px' },
   },
   {
     name: 'Imperial College London',
@@ -106,8 +106,14 @@ export const homeUniversityLogos = [
   {
     name: 'University of Edinburgh',
     fallback: 'Ed',
-    logoUrl: '/logos/university-of-edinburgh.png',
-    logoStyle: { background: '#FFFFFF', padding: '12px' },
+    logoUrl: '/logos/edinburgh-hq.png',
+    logoStyle: { background: '#FFFFFF', padding: '8px' },
+  },
+  {
+    name: 'Nanyang Technological University',
+    fallback: 'NTU',
+    logoUrl: '/logos/nanyang-technological-university.svg',
+    logoStyle: { background: '#C4122F', padding: '0px' },
   },
 ];
 

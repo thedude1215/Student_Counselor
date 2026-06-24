@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import LogoTile from '../components/LogoTile';
-import { stories } from '../api/catalog';
+import { fetchStories } from '../api/catalog';
 import './Stories.css';
 
 const FILTERS = ['All','Full Scholarship','Ivy League','UK','Asia','Research','Africa','Latin America','Engineering'];
@@ -18,25 +18,27 @@ const ROW_COLORS = [
 ];
 
 export default function Stories() {
-  const [query, setQuery]   = useState('');
-  const [tab, setTab]       = useState('Stories');
-  const [filter, setFilter] = useState('All');
+  const [query, setQuery]     = useState('');
+  const [tab, setTab]         = useState('Stories');
+  const [filter, setFilter]   = useState('All');
+  const [stories, setStories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = stories.filter(s => {
-    const q = query.toLowerCase();
-    const mQ = s.name.toLowerCase().includes(q) ||
-               s.title.toLowerCase().includes(q) ||
-               s.university.toLowerCase().includes(q) ||
-               s.country.toLowerCase().includes(q);
-    const mF = filter === 'All' || s.tags.includes(filter);
-    return mQ && mF;
-  });
+  useEffect(() => {
+    setLoading(true);
+    fetchStories({
+      q: query || undefined,
+      tag: filter !== 'All' ? filter : undefined,
+    })
+      .then(setStories)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [query, filter]);
 
   return (
     <div className="stories-page">
       <div className="stories-top wrap">
 
-        {/* Tabs — exact Borderless full-width pill */}
         <div className="tab-bar stories-tabs">
           {['Stories', 'Playlists'].map(t => (
             <button key={t} className={`tab ${tab === t ? 'active' : ''}`}
@@ -44,7 +46,6 @@ export default function Stories() {
           ))}
         </div>
 
-        {/* Search */}
         <div className="search-bar stories-search">
           <Search size={16} />
           <input
@@ -55,7 +56,6 @@ export default function Stories() {
           />
         </div>
 
-        {/* Filter chips */}
         <div className="chips" style={{ marginBottom: '1.75rem' }}>
           {FILTERS.map(f => (
             <button key={f} className={`chip ${filter === f ? 'active' : ''}`}
@@ -64,9 +64,10 @@ export default function Stories() {
         </div>
       </div>
 
-      {/* Story rows */}
       <div className="stories-body wrap">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="empty"><p>Loading…</p></div>
+        ) : stories.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">🔍</div>
             <h3>No stories found</h3>
@@ -74,7 +75,7 @@ export default function Stories() {
           </div>
         ) : (
           <div className="story-rows">
-            {filtered.map((s, idx) => {
+            {stories.map((s, idx) => {
               const c = ROW_COLORS[idx % ROW_COLORS.length];
               return (
                 <div key={s.id} className="story-row"
@@ -87,7 +88,12 @@ export default function Stories() {
                   />
                   <div className="story-row-content">
                     <div className="story-row-uni">
-                      <LogoTile item={s} size={32} radius={8} />
+                      <LogoTile item={{
+                        logoUrl: s.university_logo_url,
+                        logoStyle: s.university_logo_style,
+                        fallback: s.fallback || s.university_logo,
+                        name: s.university,
+                      }} size={32} radius={8} />
                       <div className="story-row-uni-info">
                         <div className="story-row-uni-name">{s.university} {s.flag}</div>
                         <div className="story-row-uni-loc">{s.location}</div>

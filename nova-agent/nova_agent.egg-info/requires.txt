@@ -1,0 +1,12 @@
+fastapi>=0.115.0
+uvicorn>=0.34.0
+langgraph>=0.4.0
+langchain-google-genai>=2.1.0
+langchain-core>=0.3.0
+supabase>=2.15.0
+python-dotenv>=1.1.0
+pydantic>=2.10.0
+
+[dev]
+pytest
+httpx

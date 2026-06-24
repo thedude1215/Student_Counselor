@@ -15,6 +15,12 @@
   width: var(--logo-tile-size);
 }
 
+.logo-tile--generated {
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, var(--logo-tile-bg), color-mix(in srgb, var(--logo-tile-bg) 70%, #000));
+}
+
 .logo-tile__img {
   display: block;
   height: 100%;
@@ -35,15 +41,21 @@
   align-items: center;
   color: currentColor;
   display: flex;
-  font-size: 0.74rem;
+  font-size: calc(var(--logo-tile-size) * 0.32);
   font-weight: 900;
   height: 100%;
   justify-content: center;
-  padding: 4px;
+  padding: 2px;
   transition: opacity 120ms ease;
   text-align: center;
   width: 100%;
   z-index: 1;
+  letter-spacing: 0.03em;
+  user-select: none;
+}
+
+.logo-tile--generated .logo-tile__fallback {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .logo-tile.has-loaded-image .logo-tile__fallback {

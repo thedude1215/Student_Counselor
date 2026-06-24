@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="22" fill="#EF7C00"/>
+  <text x="64" y="72" font-family="'Georgia', serif" font-size="42" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">NUS</text>
+  <line x1="30" y1="84" x2="98" y2="84" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.5"/>
+</svg>

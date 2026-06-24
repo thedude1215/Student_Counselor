@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { acceptanceData } from '../api/catalog';
+import { fetchAcceptances } from '../api/catalog';
 import './Acceptances.css';
 
 const BADGE = {
@@ -14,21 +14,20 @@ const BADGE = {
 
 export default function Acceptances() {
   const [query, setQuery] = useState('');
+  const [acceptances, setAcceptances] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = acceptanceData.filter(a => {
-    const q = query.toLowerCase();
-    return (
-      a.student.toLowerCase().includes(q) ||
-      a.university.toLowerCase().includes(q) ||
-      a.country.toLowerCase().includes(q) ||
-      a.scholarship.toLowerCase().includes(q)
-    );
-  });
+  useEffect(() => {
+    setLoading(true);
+    fetchAcceptances({ q: query || undefined })
+      .then(setAcceptances)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [query]);
 
   return (
     <div className="acc-page">
 
-      {/* ── Dark purple hero ── */}
       <div className="acc-hero">
         <div className="acc-hero-glow" />
         <div className="wrap acc-hero-content">
@@ -59,7 +58,6 @@ export default function Acceptances() {
           <p className="acc-footnote">Data from the 2025–2026 admissions cycle only.</p>
         </div>
 
-        {/* World map glowing dots */}
         <div className="acc-map-dots" aria-hidden>
           {[
             [28,22],[22,50],[38,54],[20,57],[48,30],[42,72],
@@ -71,7 +69,6 @@ export default function Acceptances() {
         </div>
       </div>
 
-      {/* ── Table ── */}
       <div className="acc-body wrap">
         <div className="acc-body-header">
           <h2 className="acc-body-title">All Acceptances</h2>
@@ -98,10 +95,10 @@ export default function Acceptances() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((a, i) => {
+              {acceptances.map((a) => {
                 const b = BADGE[a.scholarship] || BADGE['No Aid'];
                 return (
-                  <tr key={i}>
+                  <tr key={a.id}>
                     <td className="td-bold">{a.student}</td>
                     <td className="td-muted">{a.country}</td>
                     <td className="td-bold">{a.university}</td>
@@ -116,7 +113,7 @@ export default function Acceptances() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && (
+          {!loading && acceptances.length === 0 && (
             <div className="empty">
               <div className="empty-icon">🏆</div>
               <h3>No matches found</h3>

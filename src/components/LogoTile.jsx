@@ -1,6 +1,38 @@
 import { useState } from 'react';
 import './LogoTile.css';
 
+const BRAND_COLORS = [
+  '#1a56db', '#2563eb', '#0369a1', '#0891b2', '#0d9488',
+  '#059669', '#16a34a', '#65a30d', '#ca8a04', '#d97706',
+  '#ea580c', '#dc2626', '#e11d48', '#c026d3', '#9333ea',
+  '#7c3aed', '#6366f1', '#4f46e5', '#2dd4bf', '#f59e0b',
+  '#8b5cf6', '#06b6d4', '#10b981', '#f97316', '#ef4444',
+  '#3b82f6', '#14b8a6', '#84cc16', '#eab308', '#a855f7',
+];
+
+function hashName(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function getBrandColor(name) {
+  return BRAND_COLORS[hashName(name) % BRAND_COLORS.length];
+}
+
+function getInitials(name, shortName) {
+  if (shortName && shortName.length <= 4) return shortName;
+
+  const skip = ['of', 'the', 'and', 'at', 'in', 'for', 'de', 'del', 'di', 'des', 'du', 'la', 'le', 'van', 'von', 'zu'];
+  const words = (name || '').split(/[\s-]+/).filter(w => !skip.includes(w.toLowerCase()));
+
+  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+  if (words.length === 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return words.slice(0, 3).map(w => w[0]).join('').toUpperCase();
+}
+
 function sizeToCss(size) {
   return typeof size === 'number' ? `${size}px` : size;
 }
@@ -19,15 +51,22 @@ export default function LogoTile({
   const [loaded, setLoaded] = useState(false);
   const imageUrl = logoUrl ?? item.logoUrl ?? item.universityLogoUrl ?? item.hostLogoUrl;
   const tileStyle = logoStyle ?? item.logoStyle ?? item.universityLogoStyle ?? item.hostLogoStyle ?? {};
-  const fallbackText = fallback ?? item.fallback ?? item.logo ?? item.universityLogo ?? item.hostLogo ?? item.shortName ?? item.name ?? 'SP';
-  const accessibleName = alt ?? item.name ?? item.university ?? item.host ?? item.shortName ?? fallbackText;
-  const background = tileStyle.background ?? '#FFFFFF';
+  const uniName = item.name ?? item.university ?? item.host ?? '';
+  const shortName = item.shortName ?? item.short_name ?? '';
+  const fallbackText = fallback ?? item.fallback ?? item.logo ?? item.universityLogo ?? item.hostLogo ?? shortName ?? uniName ?? 'SP';
+  const accessibleName = alt ?? uniName ?? shortName ?? fallbackText;
+
+  const hasImage = imageUrl && !failed;
+  const brandColor = getBrandColor(uniName || fallbackText);
+  const initials = getInitials(uniName, shortName);
+
+  const background = hasImage ? (tileStyle.background ?? '#FFFFFF') : brandColor;
   const padding = tileStyle.padding ?? '7px';
-  const textColor = tileStyle.color ?? getReadableTextColor(background);
+  const textColor = '#FFFFFF';
 
   return (
     <div
-      className={`logo-tile ${loaded && !failed ? 'has-loaded-image' : ''} ${className}`}
+      className={`logo-tile ${loaded && !failed ? 'has-loaded-image' : ''} ${!hasImage ? 'logo-tile--generated' : ''} ${className}`}
       style={{
         '--logo-tile-bg': background,
         '--logo-tile-color': textColor,
@@ -37,8 +76,8 @@ export default function LogoTile({
       }}
       title={accessibleName}
     >
-      <span className="logo-tile__fallback" aria-hidden={imageUrl && loaded && !failed ? 'true' : undefined}>
-        {fallbackText}
+      <span className="logo-tile__fallback" aria-hidden={hasImage && loaded ? 'true' : undefined}>
+        {hasImage ? fallbackText : initials}
       </span>
       {imageUrl && !failed ? (
         <img
@@ -47,21 +86,13 @@ export default function LogoTile({
           alt={accessibleName}
           decoding="async"
           loading="eager"
-          onLoad={() => setLoaded(true)}
+          onLoad={e => {
+            if (e.target.naturalWidth < 32) { setFailed(true); return; }
+            setLoaded(true);
+          }}
           onError={() => setFailed(true)}
         />
       ) : null}
     </div>
   );
-}
-
-function getReadableTextColor(background) {
-  if (!/^#[0-9a-f]{6}$/i.test(background)) return '#111118';
-
-  const red = parseInt(background.slice(1, 3), 16);
-  const green = parseInt(background.slice(3, 5), 16);
-  const blue = parseInt(background.slice(5, 7), 16);
-  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-
-  return luminance > 0.62 ? '#111118' : '#ffffff';
 }
