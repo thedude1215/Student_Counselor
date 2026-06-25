@@ -90,6 +90,58 @@
 }
 .nav-nova:hover { border-color: var(--blue); color: var(--blue); }
 
+/* ── Login / Dashboard / Sign-out ── */
+.nav-login {
+  padding: 0.5rem 1rem;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: var(--r-pill);
+  transition: color var(--t);
+  font-family: var(--font);
+}
+.nav-login:hover { color: var(--blue); }
+
+.nav-dashboard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 1rem;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: var(--r-pill);
+  transition: color var(--t);
+  font-family: var(--font);
+}
+.nav-dashboard:hover { color: var(--blue); }
+
+.nav-signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--white);
+  border: 1.5px solid var(--border-2);
+  border-radius: 50%;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all var(--t);
+}
+.nav-signout:hover { color: #DC2626; border-color: #FECACA; }
+
+.nav-mobile-signout {
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font);
+  color: #DC2626 !important;
+}
+
 .nav-dot {
   width: 7px; height: 7px;
   background: #22C55E;

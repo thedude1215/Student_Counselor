@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: nova-agent
+Version: 0.1.0
+Summary: ScholarPath Nova AI Agent — LangGraph-powered counselor
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn>=0.34.0
+Requires-Dist: langgraph>=0.4.0
+Requires-Dist: langchain-google-genai>=2.1.0
+Requires-Dist: langchain-core>=0.3.0
+Requires-Dist: supabase>=2.15.0
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: pydantic>=2.10.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: httpx; extra == "dev"

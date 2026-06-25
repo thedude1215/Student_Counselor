@@ -127,11 +127,12 @@
   background: var(--white);
   border-radius: 20px;
   border: 1.5px solid var(--border);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow);
 }
 
-.acc-table { width: 100%; border-collapse: collapse; }
+.acc-table { width: 100%; min-width: 560px; border-collapse: collapse; }
 
 .acc-table thead {
   background: var(--bg);
@@ -179,5 +180,9 @@
 @media (max-width: 768px) {
   .acc-map-dots { display: none; }
   .acc-stats-row { flex-direction: column; gap: 1.25rem; padding: 1.25rem; }
-  .acc-table th:nth-child(4), .acc-table td:nth-child(4) { display: none; }
+}
+
+@media (max-width: 520px) {
+  .acc-hero { min-height: auto; }
+  .acc-hero-title { font-size: clamp(2rem, 12vw, 3.5rem); }
 }

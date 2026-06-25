@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Calendar, Clock, ExternalLink } from 'lucide-react';
 import LogoTile from '../components/LogoTile';
-import { programs } from '../api/catalog';
+import { fetchPrograms } from '../api/catalog';
 import './Programs.css';
 
 const DISCIPLINES = ['All','STEM','Math','Computer Science','Biology','Engineering','Leadership','Humanities','Policy'];
@@ -13,17 +13,23 @@ export default function Programs() {
   const [disc, setDisc]         = useState('All');
   const [cost, setCost]         = useState('All');
   const [type, setType]         = useState('All');
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading]   = useState(true);
 
-  const filtered = programs.filter(p => {
-    const q = query.toLowerCase();
-    const mQ = p.name.toLowerCase().includes(q) || p.host.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
-    const mD = disc === 'All' || p.discipline.includes(disc);
-    const mC = cost === 'All' || p.costType === cost;
-    const mT = type === 'All' || p.type === type;
-    return mQ && mD && mC && mT;
-  });
+  useEffect(() => {
+    setLoading(true);
+    fetchPrograms({
+      q: query || undefined,
+      discipline: disc !== 'All' ? disc : undefined,
+      costType: cost !== 'All' ? cost : undefined,
+      type: type !== 'All' ? type : undefined,
+    })
+      .then(setPrograms)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [query, disc, cost, type]);
 
-  const freeCount = programs.filter(p => p.costType === 'free').length;
+  const freeCount = programs.filter(p => p.cost_type === 'free').length;
 
   return (
     <div className="prog-page">
@@ -66,10 +72,12 @@ export default function Programs() {
                 onClick={() => setCost(v)}>{l}</button>
             ))}
           </div>
-          <span className="result-ct">{filtered.length} programs</span>
+          <span className="result-ct">{programs.length} programs</span>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="empty"><p>Loading…</p></div>
+        ) : programs.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">🔬</div>
             <h3>No programs found</h3>
@@ -77,38 +85,40 @@ export default function Programs() {
           </div>
         ) : (
           <div className="prog-list">
-            {filtered.map(p => (
+            {programs.map(p => (
               <div key={p.id} className="prog-row">
                 <div className="prog-row-left">
-                  <LogoTile item={p} size={48} radius={10} />
+                  <LogoTile item={{
+                    logoUrl: p.host_logo_url,
+                    logoStyle: p.host_logo_style,
+                    fallback: p.host?.split(' ')[0],
+                    name: p.host,
+                  }} size={48} radius={10} />
                 </div>
                 <div className="prog-row-body">
                   <div className="prog-row-meta">
-                    <span className={`prog-type-badge ${p.costType === 'free' ? 'free' : ''}`}>
+                    <span className={`prog-type-badge ${p.cost_type === 'free' ? 'free' : ''}`}>
                       {p.type}
                     </span>
-                    <span className={`prog-cost ${p.costType === 'free' ? 'free-cost' : ''}`}>
-                      {p.costType === 'free' ? '🎁 Free' : p.cost}
+                    <span className={`prog-cost ${p.cost_type === 'free' ? 'free-cost' : ''}`}>
+                      {p.cost_type === 'free' ? '🎁 Free' : 'Paid'}
                     </span>
                   </div>
                   <div className="prog-row-host">{p.host}</div>
                   <h3 className="prog-row-name">{p.name}</h3>
                   <p className="prog-row-desc">{p.description}</p>
-                  <div className="prog-row-details">
-                    <span><Calendar size={12} /> {p.dates}</span>
-                    <span><Clock size={12} /> {p.duration}</span>
-                    <span>Acceptance: {p.acceptance}</span>
-                  </div>
                   <div className="prog-row-tags">
-                    {p.tags.slice(0,3).map(t => <span key={t} className="tag tag-gray">{t}</span>)}
+                    {(p.discipline || []).slice(0,3).map(t => <span key={t} className="tag tag-gray">{t}</span>)}
                   </div>
                 </div>
                 <div className="prog-row-right">
                   <div className="prog-deadline-label">Deadline</div>
                   <div className="prog-deadline-date">{p.deadline}</div>
-                  <a href={p.link} target="_blank" rel="noreferrer" className="btn btn-blue btn-sm">
-                    Apply <ExternalLink size={11} />
-                  </a>
+                  {p.url && (
+                    <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-blue btn-sm">
+                      Apply <ExternalLink size={11} />
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
