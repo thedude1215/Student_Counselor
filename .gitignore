@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
 # Environment variables (keep API keys secret!)
 .env
 .env.local
