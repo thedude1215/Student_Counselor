@@ -28,15 +28,35 @@
 
 /* ── Logo: 🌐 SCHOLARPATH (exact Borderless style) ── */
 .nav-logo {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 7px;
   text-decoration: none;
 }
 
+/* Invisible box overlaying just the paper-plane icon at the left of the
+   horizontal logo (logo is ~4:1, so the plane occupies the leftmost square).
+   Used purely as a measurement anchor for the hero connection line. */
+.nav-logo-icon {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+}
+
 .nav-logo-globe {
   font-size: 1.1rem;   /* globe emoji */
   line-height: 1;
+}
+
+.nav-logo-img {
+  height: 36px;
+  width: auto;
+  display: block;
 }
 
 .nav-logo-name {

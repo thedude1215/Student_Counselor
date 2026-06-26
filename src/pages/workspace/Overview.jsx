@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Bell, AlertTriangle, Clock, Info, CheckCircle2, Circle, Plus, MessageCircle } from 'lucide-react';
+import { ArrowRight, CheckSquare, Square, Plus } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchCollegeList, fetchTasks, fetchEssays, fetchProfile, updateTask } from '../../api/workspace.js';
-import { computeNudges } from '../../lib/nudges.js';
 import { computeReadiness } from '../../lib/readiness.js';
 import './workspace.css';
-
-const LEVEL_ICON = { high: AlertTriangle, medium: Clock, info: Info };
 
 export default function Overview() {
   const { user, profile } = useAuth();
@@ -25,7 +22,6 @@ export default function Overview() {
   }, [user]);
 
   const { colleges, tasks, essays, profileRow } = data;
-  const nudges = computeNudges({ tasks, essays, collegeList: colleges });
   const readiness = computeReadiness({ profile: profileRow, collegeList: colleges, essays, tasks });
 
   const open = tasks.filter(t => t.status !== 'done');
@@ -102,38 +98,21 @@ export default function Overview() {
           )}
         </div>
 
-        {/* Nudges */}
-        {nudges.length > 0 && (
-          <div className="ws-nudges">
-            <div className="ws-nudges-head"><Bell size={15} /><span>Nudges</span><span className="ws-nudges-count">{nudges.length}</span></div>
-            {nudges.slice(0, 3).map(n => {
-              const Icon = LEVEL_ICON[n.level] || Info;
-              return (
-                <Link key={n.id} to={n.to} className={`ws-nudge level-${n.level}`}>
-                  <Icon size={17} />
-                  <div className="ws-nudge-body">
-                    <div className="ws-nudge-title">{n.title}</div>
-                    {n.detail && <div className="ws-nudge-detail">{n.detail}</div>}
-                  </div>
-                  <span className="ws-nudge-action">{n.action} <ArrowRight size={12} /></span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-
         {/* Today */}
         <div className="ws-home-section">
           <div className="ws-home-section-head"><h3>Today</h3><Link to="/dashboard/tasks">Open tasks</Link></div>
           {dueToday.length === 0 ? <p className="ws-agenda-empty">Nothing due today. 🎉</p>
-            : dueToday.map(t => <AgendaRow key={t.id} task={t} onToggle={toggle} overdueAware />)}
+            : dueToday.map(t => <AgendaRow key={t.id} task={t} onToggle={toggle} />)}
         </div>
 
         {/* This week */}
         <div className="ws-home-section">
           <div className="ws-home-section-head"><h3>This week</h3><Link to="/dashboard/calendar">Calendar</Link></div>
           {thisWeek.length === 0 ? <p className="ws-agenda-empty">No deadlines in the next 7 days.</p>
-            : thisWeek.map(t => <AgendaRow key={t.id} task={t} onToggle={toggle} />)}
+            : thisWeek
+                .slice()
+                .sort((a, b) => a.due_date.localeCompare(b.due_date))
+                .map(t => <WeekRow key={t.id} task={t} />)}
         </div>
       </div>
 
@@ -148,9 +127,12 @@ export default function Overview() {
           essays.slice(0, 5).map((e, i) => (
             <Link key={e.id} to="/dashboard/essays" className={`ws-essay-card c${i % 4}`}>
               {e.universities ? (
-                <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={30} radius={8} />
-              ) : <div className="ws-essay-card-icon"><MessageCircle size={16} /></div>}
+                <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={32} radius={8} />
+              ) : (
+                <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={32} radius={8} />
+              )}
               <div className="ws-essay-card-body">
+                <div className="ws-essay-card-uni">{e.universities ? (e.universities.short_name || e.universities.name) : 'Common App'}</div>
                 <div className="ws-essay-card-title">{e.title || 'Untitled'}</div>
                 <div className="ws-essay-card-meta">{new Date(e.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}</div>
               </div>
@@ -162,22 +144,35 @@ export default function Overview() {
   );
 }
 
-function AgendaRow({ task, onToggle, overdueAware }) {
-  const today = new Date(new Date().toDateString());
-  const overdue = overdueAware && task.due_date && new Date(task.due_date + 'T00:00:00') < today;
+function AgendaRow({ task, onToggle }) {
+  const done = task.status === 'done';
   const source = task.category || (task.universities ? task.universities.name : 'Task');
   return (
-    <div className="ws-agenda-row">
+    <div className={`ws-agenda-row ${done ? 'done' : ''}`}>
       <button className="ws-task-check" onClick={() => onToggle(task)}>
-        {task.status === 'done' ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+        {done ? <CheckSquare size={18} /> : <Square size={18} />}
       </button>
       <span className="ws-agenda-title">{task.title}</span>
       <span className="ws-agenda-source">{source}</span>
-      {task.due_date && (
-        <span className={`ws-task-due ${overdue ? 'overdue' : ''}`}>
-          {overdue ? 'Overdue' : new Date(task.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-        </span>
-      )}
+    </div>
+  );
+}
+
+function WeekRow({ task }) {
+  const date = new Date(task.due_date + 'T00:00:00');
+  const dow = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const day = date.getDate();
+  const source = task.category || (task.universities ? task.universities.name : null);
+  return (
+    <div className="ws-week-row">
+      <div className="ws-week-date">
+        <span className="ws-week-dow">{dow}</span>
+        <span className="ws-week-day">{day}</span>
+      </div>
+      <div className="ws-week-body">
+        <div className="ws-week-title">{task.title}</div>
+        {source && <div className="ws-week-meta">{source}</div>}
+      </div>
     </div>
   );
 }

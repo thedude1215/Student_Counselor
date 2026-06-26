@@ -18,11 +18,12 @@ import Essays from './pages/workspace/Essays';
 import Profile from './pages/workspace/Profile';
 import Calendar from './pages/workspace/Calendar';
 import Activities from './pages/workspace/Activities';
+import DashboardAddSchools from './pages/workspace/DashboardAddSchools';
 import './index.css';
 
 function AppLayout() {
   const location = useLocation();
-  const hideFooter = location.pathname === '/nova' || location.pathname === '/auth';
+  const hideFooter = location.pathname === '/nova' || location.pathname === '/auth' || location.pathname.startsWith('/dashboard');
 
   return (
     <>
@@ -35,6 +36,14 @@ function AppLayout() {
         <Route path="/acceptances"  element={<Acceptances />} />
         <Route path="/nova"         element={<Nova />} />
         <Route path="/auth"         element={<Auth />} />
+        <Route
+          path="/dashboard/add-schools"
+          element={
+            <ProtectedRoute>
+              <DashboardAddSchools />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

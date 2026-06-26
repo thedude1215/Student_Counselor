@@ -1,25 +1,28 @@
+import contextvars
 from langchain_core.tools import tool
 from app.supabase_client import supabase
 
-# user_id is injected via the graph state, stored in a module-level var per request
-_current_user_id: str | None = None
+_user_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar('user_id', default=None)
 
 
 def set_current_user(user_id: str):
-    global _current_user_id
-    _current_user_id = user_id
+    _user_id_var.set(user_id)
+
+
+def get_current_user() -> str | None:
+    return _user_id_var.get()
 
 
 @tool
 def get_student_profile() -> dict:
     """Get the current student's profile including grade, country, GPA, SAT, interests, target countries, and budget."""
-    if not _current_user_id:
+    if not get_current_user():
         return {"error": "No user context available."}
 
     result = (
         supabase.table("profiles")
         .select("full_name, grade_level, country, gpa, sat_score, interests, target_countries, budget, goals")
-        .eq("id", _current_user_id)
+        .eq("id", get_current_user())
         .single()
         .execute()
     )
@@ -31,13 +34,13 @@ def get_student_profile() -> dict:
 @tool
 def get_college_list() -> list[dict] | dict:
     """Get the student's current college list with tier classifications (reach/match/likely)."""
-    if not _current_user_id:
+    if not get_current_user():
         return {"error": "No user context available."}
 
     result = (
         supabase.table("college_list_items")
         .select("tier, universities(id, name, country, ranking, acceptance_rate, tuition, financial_aid)")
-        .eq("profile_id", _current_user_id)
+        .eq("profile_id", get_current_user())
         .order("created_at")
         .execute()
     )
@@ -57,7 +60,7 @@ def get_college_list() -> list[dict] | dict:
 @tool
 def add_to_college_list(university_name: str, tier: str) -> dict:
     """Add a university to the student's college list. Tier must be 'reach', 'match', or 'likely'."""
-    if not _current_user_id:
+    if not get_current_user():
         return {"error": "No user context available."}
     if tier not in ("reach", "match", "likely"):
         return {"error": "Tier must be 'reach', 'match', or 'likely'."}
@@ -77,7 +80,7 @@ def add_to_college_list(university_name: str, tier: str) -> dict:
     existing = (
         supabase.table("college_list_items")
         .select("id")
-        .eq("profile_id", _current_user_id)
+        .eq("profile_id", get_current_user())
         .eq("university_id", uni["id"])
         .limit(1)
         .execute()
@@ -86,7 +89,7 @@ def add_to_college_list(university_name: str, tier: str) -> dict:
         return {"message": f"{uni['name']} is already on the student's college list."}
 
     supabase.table("college_list_items").insert({
-        "profile_id": _current_user_id,
+        "profile_id": get_current_user(),
         "university_id": uni["id"],
         "tier": tier,
     }).execute()

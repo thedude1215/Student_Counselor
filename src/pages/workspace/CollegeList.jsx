@@ -63,7 +63,7 @@ export default function CollegeList() {
           <button className="ws-btn ws-btn-ai" onClick={fetchRecs} disabled={loadingRecs}>
             <Sparkles size={15} /> {loadingRecs ? 'Thinking…' : 'AI Suggestions'}
           </button>
-          <Link to="/universities" className="ws-btn ws-btn-primary">
+          <Link to="/dashboard/add-schools" className="ws-btn ws-btn-primary">
             <Plus size={16} /> Add schools
           </Link>
         </div>
@@ -74,7 +74,7 @@ export default function CollegeList() {
           <GraduationCap size={40} />
           <h3>Your college list is empty</h3>
           <p>Browse universities and add them to your list to start tracking.</p>
-          <Link to="/universities" className="ws-btn ws-btn-primary">Browse universities</Link>
+          <Link to="/dashboard/add-schools" className="ws-btn ws-btn-primary">Browse universities</Link>
         </div>
       ) : (
         <div className="ws-tiers">

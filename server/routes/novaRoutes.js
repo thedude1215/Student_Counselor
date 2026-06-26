@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { generateResponse } from '../services/aiService.js';
-import { toolDeclarations } from '../services/novaTools.js';
 import { supabase } from '../lib/supabase.js';
 import crypto from 'crypto';
 
 const router = Router();
 router.use(requireAuth);
+
+const NOVA_AGENT_URL = process.env.NOVA_AGENT_URL || 'http://localhost:8000';
 
 /* ─── Rate limiting (in-memory, per-user) ─── */
 const rateLimits = new Map();
@@ -22,73 +22,49 @@ function checkRate(userId, bucket, maxPerHour) {
   return true;
 }
 
-/* ─── System prompts ─── */
+/* ─── Proxy helper ─── */
 
-const CHAT_SYSTEM_PROMPT = `You are Nova, ScholarPath's AI admissions counselor — built specifically for international high school students applying to universities worldwide.
+async function proxyToAgent(path, body, timeoutMs = 60_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-You are NOT a generic AI assistant. You operate like the world's best human admissions mentor.
+  let agentRes;
+  try {
+    agentRes = await fetch(`${NOVA_AGENT_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (fetchErr) {
+    clearTimeout(timer);
+    if (fetchErr.name === 'AbortError') {
+      console.error(`[Nova] Timeout after ${timeoutMs}ms calling ${path}`);
+      const err = new Error(`Nova agent timed out after ${timeoutMs / 1000}s`);
+      err.status = 504;
+      throw err;
+    }
+    console.error(`[Nova] Cannot reach nova-agent at ${NOVA_AGENT_URL}${path}:`, fetchErr.message);
+    const err = new Error('Nova agent is not running. Start it with: cd nova-agent && .venv/bin/uvicorn app.main:app --port 8000');
+    err.status = 503;
+    throw err;
+  }
+  clearTimeout(timer);
 
-CORE BEHAVIORS:
-1. UNDERSTAND FIRST — Before giving advice, learn who the student is. Use get_student_profile to pull their data. Ask for what's missing.
-2. BE SPECIFIC — No generic advice. Use your tools to look up real data. NEVER guess university stats — search first.
-3. BE PROACTIVE — Use search_programs and search_stories to surface opportunities the student didn't know about.
-4. REMEMBER CONTEXT — Use everything shared earlier in the conversation.
-5. BE HONEST — If something is a reach, say so. Celebrate genuine strengths.
-6. BE CONCISE — Use bullet points, headers, and structure.
+  if (!agentRes.ok) {
+    const rawText = await agentRes.text().catch(() => '');
+    let parsed = {};
+    try { parsed = JSON.parse(rawText); } catch { /* non-JSON body */ }
 
-TOOL USAGE:
-- ALWAYS use search_universities when asked about schools. Never rely on memory for stats.
-- Use get_student_profile at the start of meaningful conversations to personalize advice.
-- Use get_college_list to see what schools they're already considering.
-- Use compare_universities when students ask to compare schools.
-- Use search_programs when asked about summer programs or competitions.
-- Use search_stories to find inspiring examples from similar students.
-- Use add_to_college_list when a student wants to add a school to their list.
-- Use get_upcoming_tasks to help with deadline planning.
+    const message = parsed.detail || parsed.error || `Nova agent error: HTTP ${agentRes.status}`;
+    console.error(`[Nova] Agent returned ${agentRes.status} for ${path}:`, rawText.slice(0, 500));
+    const error = new Error(message);
+    error.status = agentRes.status;
+    throw error;
+  }
 
-DOMAIN KNOWLEDGE:
-- US: Common App, SAT/ACT, AP/IB, CSS Profile, QuestBridge, need-blind vs need-aware
-- UK: UCAS, personal statements (4000 chars), A-levels, IB
-- Canada: Direct application, grade-based
-- Europe: Low/no tuition (ETH, TU Delft), language requirements
-- Singapore: NUS, NTU — competitive for internationals
-- UAE: NYU Abu Dhabi (full scholarship), MBZUAI
-- Scholarships: QuestBridge, Pearson (UofT), need-blind Ivies, Minerva
-- Essays: Show don't tell, authenticity > prestige-chasing
-- Activities: Depth > breadth, leadership + impact
-
-TONE: Warm, direct, encouraging. You believe every student has a path — your job is to find it.
-
-Start your first message by warmly greeting the student and asking 2-3 key questions to understand their situation.`;
-
-const ESSAY_REVIEW_PROMPT = `You are an expert college admissions essay reviewer. Provide structured, actionable feedback.
-
-FORMAT YOUR RESPONSE AS:
-## Overall Impression
-(2-3 sentences)
-
-## Strengths
-- (bullet points)
-
-## Areas for Improvement
-- (bullet points with specific suggestions)
-
-## Line-Specific Suggestions
-- (quote specific phrases and suggest improvements)
-
-## Score: X/10
-
-Be specific — reference actual phrases from the essay. Be encouraging but honest.`;
-
-const RECOMMENDATION_PROMPT = `You are a college list advisor for international students. You have tools to search the university catalog. Use search_universities to find matching schools based on the student's profile.
-
-For each recommendation:
-1. University name
-2. Why it fits this student
-3. Tier (Reach/Match/Safety)
-4. Key deadline or tip
-
-Use get_student_profile and get_college_list first to understand the student, then search_universities with appropriate filters. Only recommend schools from your search results.`;
+  return agentRes.json();
+}
 
 /* ─── Chat ─── */
 
@@ -102,33 +78,92 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    const { data: history } = await supabase
-      .from('chat_messages')
-      .select('role, content')
-      .eq('conversation_id', conversationId)
-      .eq('profile_id', req.userId)
-      .order('created_at', { ascending: true })
-      .limit(20);
-
-    const messages = [...(history || []), { role: 'user', content: message.trim() }];
-
-    const reply = await generateResponse(CHAT_SYSTEM_PROMPT, messages, {
-      temperature: 0.7,
-      maxOutputTokens: 1200,
-      tools: toolDeclarations,
-      userId: req.userId,
+    const data = await proxyToAgent('/api/chat', {
+      user_id: req.userId,
+      conversation_id: conversationId,
+      messages: [{ role: 'user', content: message.trim() }],
     });
 
-    const now = new Date().toISOString();
-    await supabase.from('chat_messages').insert([
-      { profile_id: req.userId, conversation_id: conversationId, role: 'user', content: message.trim(), created_at: now },
-      { profile_id: req.userId, conversation_id: conversationId, role: 'nova', content: reply, created_at: new Date(Date.now() + 1).toISOString() },
-    ]);
-
-    res.json({ reply });
+    res.json({ reply: data.reply });
   } catch (err) {
-    console.error('Chat error:', err);
-    res.status(500).json({ error: err.message || 'Failed to generate response' });
+    console.error('[Nova] /chat error:', err.message, '| status:', err.status, '| stack:', err.stack);
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to generate response.' });
+  }
+});
+
+/* ─── Chat (streaming) ─── */
+
+router.post('/chat/stream', async (req, res) => {
+  const { conversationId, message } = req.body;
+  if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
+  if (!conversationId) return res.status(400).json({ error: 'conversationId is required' });
+
+  if (!checkRate(req.userId, 'chat', 30)) {
+    return res.status(429).json({ error: 'Rate limit reached (30 messages/hour). Please wait.' });
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120_000);
+
+  try {
+    let agentRes;
+    try {
+      agentRes = await fetch(`${NOVA_AGENT_URL}/api/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: req.userId,
+          conversation_id: conversationId,
+          messages: [{ role: 'user', content: message.trim() }],
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timer);
+      if (fetchErr.name === 'AbortError') {
+        console.error('[Nova] /chat/stream: timeout waiting for nova-agent');
+        return res.status(504).json({ error: 'Nova agent timed out.' });
+      }
+      console.error('[Nova] /chat/stream: cannot reach nova-agent:', fetchErr.message);
+      return res.status(503).json({ error: 'Nova agent is not running. Start it with: cd nova-agent && .venv/bin/uvicorn app.main:app --port 8000' });
+    }
+
+    if (!agentRes.ok) {
+      clearTimeout(timer);
+      const rawText = await agentRes.text().catch(() => '');
+      let parsed = {};
+      try { parsed = JSON.parse(rawText); } catch { /* non-JSON */ }
+      const detail = parsed.detail || parsed.error || rawText.slice(0, 200) || 'Streaming failed';
+      console.error(`[Nova] /chat/stream: agent returned ${agentRes.status}:`, detail);
+      return res.status(agentRes.status).json({ error: detail });
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const reader = agentRes.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(decoder.decode(value, { stream: true }));
+    }
+
+    clearTimeout(timer);
+    res.end();
+  } catch (err) {
+    clearTimeout(timer);
+    console.error('[Nova] /chat/stream unexpected error:', err.message, '| stack:', err.stack);
+    if (!res.headersSent) {
+      res.status(503).json({ error: err.message || 'Nova agent is not available.' });
+    } else {
+      res.end();
+    }
   }
 });
 
@@ -208,34 +243,29 @@ router.post('/essay-review', async (req, res) => {
   }
 
   try {
-    const contextParts = [];
-    if (essayTitle) contextParts.push(`Essay Title: ${essayTitle}`);
-    if (essayPrompt) contextParts.push(`Prompt: ${essayPrompt}`);
-    contextParts.push(`Word Count: ${essayContent.trim().split(/\s+/).length}`);
-
-    const systemPrompt = ESSAY_REVIEW_PROMPT + '\n\n' + contextParts.join('\n');
-
-    const feedback = await generateResponse(
-      systemPrompt,
-      [{ role: 'user', content: essayContent.trim() }],
-      { temperature: 0.3, maxOutputTokens: 1500, userId: req.userId },
-    );
+    const data = await proxyToAgent('/api/essay-review', {
+      user_id: req.userId,
+      essay_content: essayContent.trim(),
+      essay_title: essayTitle || null,
+      essay_prompt: essayPrompt || null,
+    });
 
     if (essayId) {
       await supabase
         .from('essays')
         .update({
-          ai_feedback: feedback,
+          ai_feedback: data.feedback,
           feedback_updated_at: new Date().toISOString(),
         })
         .eq('id', essayId)
         .eq('profile_id', req.userId);
     }
 
-    res.json({ feedback });
+    res.json({ feedback: data.feedback });
   } catch (err) {
     console.error('Essay review error:', err);
-    res.status(500).json({ error: err.message || 'Failed to review essay' });
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to review essay' });
   }
 });
 
@@ -247,21 +277,78 @@ router.post('/recommendations', async (req, res) => {
   }
 
   try {
-    const reply = await generateResponse(
-      RECOMMENDATION_PROMPT,
-      [{ role: 'user', content: 'Based on my profile, recommend schools for me. Use tools to look up my profile and search for matching universities.' }],
-      {
-        temperature: 0.5,
-        maxOutputTokens: 1200,
-        tools: toolDeclarations,
-        userId: req.userId,
-      },
-    );
+    const data = await proxyToAgent('/api/chat', {
+      user_id: req.userId,
+      messages: [{
+        role: 'user',
+        content: 'Based on my profile, recommend schools for me. Use tools to look up my profile and search for matching universities.',
+      }],
+    });
 
-    res.json({ recommendations: reply });
+    res.json({ recommendations: data.reply });
   } catch (err) {
     console.error('Recommendations error:', err);
-    res.status(500).json({ error: err.message || 'Failed to generate recommendations' });
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to generate recommendations' });
+  }
+});
+
+/* ─── Task Suggestions ─── */
+
+router.post('/suggest-tasks', async (req, res) => {
+  const { universityId, universityName } = req.body;
+  if (!universityName?.trim()) return res.status(400).json({ error: 'universityName is required' });
+
+  try {
+    // Cache: if we already generated suggestions for this (user, university),
+    // return the still-pending ones without re-calling the LLM.
+    if (universityId) {
+      const { data: existing } = await supabase
+        .from('task_suggestions')
+        .select('*')
+        .eq('profile_id', req.userId)
+        .eq('university_id', universityId);
+
+      if (existing && existing.length) {
+        return res.json({ suggestions: existing.filter(s => s.status === 'suggested') });
+      }
+    }
+
+    if (!checkRate(req.userId, 'suggest', 15)) {
+      return res.status(429).json({ error: 'Rate limit reached (15 suggestion sets/hour). Please wait.' });
+    }
+
+    const data = await proxyToAgent('/api/tasks/suggest', {
+      user_id: req.userId,
+      university_id: universityId || null,
+      university_name: universityName.trim(),
+    });
+
+    const generated = data.suggestions || [];
+    if (!generated.length) {
+      return res.json({ suggestions: [] });
+    }
+
+    const rows = generated.map(s => ({
+      profile_id: req.userId,
+      university_id: universityId || null,
+      title: s.title,
+      category: s.category || null,
+      priority: s.priority || 'medium',
+      status: 'suggested',
+    }));
+
+    const { data: inserted, error } = await supabase
+      .from('task_suggestions')
+      .insert(rows)
+      .select('*');
+    if (error) throw error;
+
+    res.json({ suggestions: inserted });
+  } catch (err) {
+    console.error('[Nova] /suggest-tasks error:', err.message, '| status:', err.status);
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to suggest tasks' });
   }
 });
 
