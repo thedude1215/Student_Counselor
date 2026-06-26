@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import './layout.css';
 
@@ -9,6 +9,9 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isDashboard = location.pathname.startsWith('/dashboard');
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -30,12 +33,17 @@ export default function Navbar() {
     { to: '/acceptances',  label: 'Acceptances'  },
   ];
 
+  if (isDashboard || location.pathname === '/nova') return null;
+
   return (
     <nav className="navbar">
       <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
 
         <Link to="/" className="nav-logo">
-          <span className="nav-logo-name">ScholarPath</span>
+          <img src="/scholarpath-logo.svg" alt="ScholarPath" className="nav-logo-img" />
+          {/* Invisible anchor tightly bounding the paper-plane icon (left of the
+              wordmark) — the connection line starts here. */}
+          <span id="nav-logo-icon" className="nav-logo-icon" aria-hidden="true" />
         </Link>
 
         <div className="nav-links">
@@ -49,15 +57,10 @@ export default function Navbar() {
 
         <div className="nav-cta">
           {user ? (
-            <>
-              <Link to="/dashboard" className="nav-dashboard">
-                <LayoutDashboard size={15} />
-                Dashboard
-              </Link>
-              <button className="nav-signout" onClick={handleSignOut} title="Log out">
-                <LogOut size={16} />
-              </button>
-            </>
+            <Link to="/dashboard" className="nav-dashboard">
+              <LayoutDashboard size={15} />
+              Dashboard
+            </Link>
           ) : (
             <Link to="/auth" className="nav-login">Log in</Link>
           )}

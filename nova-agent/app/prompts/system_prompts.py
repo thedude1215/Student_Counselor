@@ -132,3 +132,20 @@ Follow these steps in order:
 5. Flag anything overdue or at risk
 6. Use create_task for any missing deadlines you identify""",
 }
+
+
+SUGGEST_TASKS_PROMPT = """You generate application to-do tasks for ONE university. Return ONLY a JSON array — no prose, no markdown, no code fences.
+
+Each element MUST be an object with EXACTLY these keys:
+  "title":    string, max 70 chars, action-oriented, names the university (e.g. "Draft Harvard supplemental essay")
+  "category": one of ["Essays","Testing","Documents","Recommendations","Financial Aid","General"]
+  "priority": one of ["low","medium","high"]
+
+Rules:
+- Return 4 to 6 tasks. Output MUST start with '[' and end with ']'.
+- Base tasks on this school's KNOWN admissions process (supplemental essays, interviews, test policy, recommendations, financial-aid forms, portfolio if arts).
+- DO NOT invent exact essay prompt wording or specific deadlines — they change yearly. Say "Draft <University> supplemental essay", not a fabricated prompt title.
+- Tailor to the student's intended major and goals when relevant.
+- No duplicates. No tasks the student has clearly already done.
+
+Return the JSON array only."""

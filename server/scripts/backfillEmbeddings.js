@@ -13,6 +13,10 @@ const OUTPUT_DIM = 768;
 const CONCURRENCY = 5;
 const DELAY_BETWEEN_BATCHES = 1000;
 
+// Re-embed every row (not just rows missing an embedding). Use when the text
+// builders or embedding settings change. Run: node ... backfillEmbeddings.js --force
+const FORCE = process.argv.includes('--force');
+
 async function embedOne(text) {
   const res = await fetch(`${EMBED_URL}?key=${API_KEY}`, {
     method: 'POST',
@@ -21,6 +25,9 @@ async function embedOne(text) {
       model: `models/${EMBED_MODEL}`,
       content: { parts: [{ text }] },
       outputDimensionality: OUTPUT_DIM,
+      // Pair with RETRIEVAL_QUERY on the query side (app/services/embeddings.py)
+      // for correct asymmetric retrieval and sharper similarity scores.
+      taskType: 'RETRIEVAL_DOCUMENT',
     }),
   });
 
@@ -56,14 +63,15 @@ async function embedBatch(items, textBuilder) {
 function buildUniversityText(u) {
   const parts = [u.name];
   if (u.location) parts.push(u.location);
-  if (u.country) parts.push(u.country);
-  if (u.type) parts.push(u.type);
-  if (u.size) parts.push(`${u.size} university`);
-  if (u.tags?.length) parts.push(`Tags: ${u.tags.join(', ')}`);
-  if (u.sat_range) parts.push(`SAT: ${u.sat_range}`);
-  if (u.acceptance_rate) parts.push(`Acceptance rate: ${u.acceptance_rate}%`);
-  if (u.tuition) parts.push(`Tuition: $${u.tuition}`);
-  if (u.financial_aid) parts.push('Offers financial aid to international students');
+  if (u.country) parts.push(`Located in ${u.country}`);
+  if (u.type) parts.push(`${u.type} university`);
+  if (u.size) parts.push(`${u.size} student body`);
+  if (u.ranking) parts.push(`Ranked #${u.ranking} globally`);
+  if (u.tags?.length) parts.push(`Known for: ${u.tags.join(', ')}`);
+  if (u.sat_range) parts.push(`SAT range: ${u.sat_range}`);
+  if (u.acceptance_rate) parts.push(`Acceptance rate: ${u.acceptance_rate}% (${u.acceptance_rate <= 15 ? 'highly selective reach school' : u.acceptance_rate <= 40 ? 'selective match school' : 'accessible likely school'})`);
+  if (u.tuition) parts.push(`Annual tuition around $${u.tuition}`);
+  if (u.financial_aid) parts.push('Offers need-based financial aid and scholarships to international students; good for students who need full or partial aid');
   if (u.description) parts.push(u.description);
   return parts.join('. ');
 }
@@ -71,9 +79,10 @@ function buildUniversityText(u) {
 function buildProgramText(p) {
   const parts = [p.name];
   if (p.host) parts.push(`Hosted by ${p.host}`);
-  if (p.discipline?.length) parts.push(`Discipline: ${Array.isArray(p.discipline) ? p.discipline.join(', ') : p.discipline}`);
-  if (p.type) parts.push(`Type: ${p.type}`);
+  if (p.discipline?.length) parts.push(`Field: ${Array.isArray(p.discipline) ? p.discipline.join(', ') : p.discipline}`);
+  if (p.type) parts.push(`Program type: ${p.type}`);
   if (p.cost_type) parts.push(`Cost: ${p.cost_type}`);
+  if (p.deadline) parts.push(`Deadline: ${p.deadline}`);
   if (p.eligibility) parts.push(`Eligibility: ${p.eligibility}`);
   if (p.description) parts.push(p.description);
   return parts.join('. ');
@@ -81,11 +90,13 @@ function buildProgramText(p) {
 
 function buildStoryText(s) {
   const parts = [s.title || s.name];
-  if (s.name && s.title) parts.push(`by ${s.name}`);
+  if (s.name && s.title) parts.push(`Student: ${s.name}`);
   if (s.country) parts.push(`from ${s.country}`);
-  if (s.university) parts.push(`at ${s.university}`);
+  if (s.location) parts.push(s.location);
+  if (s.university) parts.push(`Admitted to ${s.university}`);
   if (s.major) parts.push(`studying ${s.major}`);
-  if (s.tags?.length) parts.push(`Tags: ${s.tags.join(', ')}`);
+  if (s.year) parts.push(`Class of ${s.year}`);
+  if (s.tags?.length) parts.push(`Themes: ${s.tags.join(', ')}`);
   if (s.excerpt) parts.push(s.excerpt);
   return parts.join('. ');
 }
@@ -93,17 +104,16 @@ function buildStoryText(s) {
 async function backfillTable(table, selectCols, textBuilder) {
   console.log(`\n--- Backfilling ${table} ---`);
 
-  const { data: rows, error } = await supabase
-    .from(table)
-    .select(selectCols)
-    .is('description_embedding', null);
+  let q = supabase.from(table).select(selectCols);
+  if (!FORCE) q = q.is('description_embedding', null);
+  const { data: rows, error } = await q;
 
   if (error) {
     console.error(`Failed to fetch ${table}:`, error.message);
     return;
   }
 
-  console.log(`${rows.length} rows need embeddings`);
+  console.log(`${rows.length} rows ${FORCE ? 'to re-embed (--force)' : 'need embeddings'}`);
   if (!rows.length) return;
 
   const results = await embedBatch(rows, textBuilder);
@@ -136,19 +146,19 @@ async function main() {
 
   await backfillTable(
     'universities',
-    'id, name, location, country, type, size, tags, sat_range, acceptance_rate, tuition, financial_aid, description',
+    'id, name, location, country, type, size, ranking, tags, sat_range, acceptance_rate, tuition, financial_aid, description',
     buildUniversityText
   );
 
   await backfillTable(
     'programs',
-    'id, name, host, discipline, type, cost_type, eligibility, description',
+    'id, name, host, discipline, type, cost_type, deadline, eligibility, description',
     buildProgramText
   );
 
   await backfillTable(
     'stories',
-    'id, name, country, university, major, title, excerpt, tags',
+    'id, name, country, location, university, major, year, title, excerpt, tags',
     buildStoryText
   );
 

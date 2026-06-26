@@ -106,3 +106,10 @@ export function reviewEssay({ essayId, essayContent, essayPrompt, essayTitle }) 
 export function getRecommendations() {
   return novaFetch('/recommendations', { method: 'POST' });
 }
+
+export function suggestTasks(universityId, universityName) {
+  return novaFetch('/suggest-tasks', {
+    method: 'POST',
+    body: JSON.stringify({ universityId, universityName }),
+  });
+}

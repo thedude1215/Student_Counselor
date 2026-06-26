@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, MessageSquare, Trash2, Plus, Sparkles, ArrowRight } from 'lucide-react';
+import { Send, User, MessageSquare, Trash2, Plus, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { sendMessage, listConversations, createConversation, loadMessages, deleteConversation } from '../api/nova.js';
+import { sendMessage, sendMessageStream, listConversations, createConversation, loadMessages, deleteConversation } from '../api/nova.js';
 import { Link } from 'react-router-dom';
 import './Nova.css';
 
@@ -151,8 +151,33 @@ export default function Nova() {
     setLoading(true);
 
     try {
-      const { reply } = await sendMessage(conversationId, msg);
-      setMessages(prev => [...prev, { role: 'nova', text: reply, time: new Date() }]);
+      const novaMsg = { role: 'nova', text: '', time: new Date() };
+      setMessages(prev => [...prev, novaMsg]);
+
+      await sendMessageStream(conversationId, msg, {
+        onText(content) {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { ...updated[updated.length - 1], text: content };
+            return updated;
+          });
+          setLoading(false);
+        },
+        onToolCall(name) {
+          console.log(`[Nova] Using tool: ${name}`);
+        },
+        onDone() {},
+        onError(err) {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              text: `Something went wrong: ${err.message}. Please try again.`,
+            };
+            return updated;
+          });
+        },
+      });
 
       setConversations(prev => {
         const exists = prev.find(c => c.id === conversationId);
@@ -165,11 +190,23 @@ export default function Nova() {
         return prev;
       });
     } catch (err) {
-      setMessages(prev => [...prev, {
-        role: 'nova',
-        text: `Something went wrong: ${err.message}. Please try again.`,
-        time: new Date(),
-      }]);
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.role === 'nova' && !last.text) {
+          updated[updated.length - 1] = {
+            ...last,
+            text: `Something went wrong: ${err.message}. Please try again.`,
+          };
+        } else {
+          updated.push({
+            role: 'nova',
+            text: `Something went wrong: ${err.message}. Please try again.`,
+            time: new Date(),
+          });
+        }
+        return updated;
+      });
     } finally {
       setLoading(false);
       textareaRef.current?.focus();
@@ -211,6 +248,10 @@ export default function Nova() {
     <div className="nova-page">
       {/* ─── Left sidebar ─── */}
       <aside className="nova-sidebar">
+        <Link to="/dashboard" className="nova-back">
+          <ArrowLeft size={14} />
+          Back to Dashboard
+        </Link>
         <div className="nova-sidebar-brand">
           <div className="nova-brand-icon"><Sparkles size={17} /></div>
           <div className="nova-brand-info">
@@ -294,28 +335,22 @@ export default function Nova() {
       {/* ─── Main chat ─── */}
       <div className="nova-chat">
         <div className="nova-messages">
-          {messages.map((m, i) => (
-            <div key={i} className={`nova-msg-row ${m.role}`}>
-              {m.role === 'nova' && (
-                <div className="nova-msg-avatar av-nova"><Sparkles size={14} /></div>
-              )}
-              <div className={`nova-bubble ${m.role}`}>
-                {renderContent(m.text)}
+          {messages.map((m, i) => {
+            const isTyping = m.role === 'nova' && !m.text;
+            return (
+              <div key={i} className={`nova-msg-row ${m.role}`}>
+                {m.role === 'nova' && (
+                  <div className="nova-msg-avatar av-nova"><Sparkles size={14} /></div>
+                )}
+                <div className={`nova-bubble ${m.role} ${isTyping ? 'nova-typing' : ''}`}>
+                  {isTyping ? <><span /><span /><span /></> : renderContent(m.text)}
+                </div>
+                {m.role === 'user' && (
+                  <div className="nova-msg-avatar av-user">U</div>
+                )}
               </div>
-              {m.role === 'user' && (
-                <div className="nova-msg-avatar av-user">U</div>
-              )}
-            </div>
-          ))}
-
-          {loading && (
-            <div className="nova-msg-row nova">
-              <div className="nova-msg-avatar av-nova">N</div>
-              <div className="nova-bubble nova nova-typing">
-                <span /><span /><span />
-              </div>
-            </div>
-          )}
+            );
+          })}
           <div ref={bottomRef} />
         </div>
 

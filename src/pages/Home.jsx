@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, ListChecks, MessageCircle, PenLine } from 'lucide-react';
 import LogoTile from '../components/LogoTile';
+import HeroConnectionLine from '../components/HeroConnectionLine';
 import {
   comparisonRows,
   counselorFeatures,
@@ -203,10 +204,12 @@ export default function Home() {
     <main className="home">
 
       {/* ── Hero ── */}
+      <HeroConnectionLine />
       <section className="hero">
         <div className="wrap hero-wrap">
           <h1 className="hero-title fade-up">
-            Every university in the world, now within reach
+            <span id="hero-every" className="hero-every">Talent</span> is Everywhere.<br />
+            Opportunity is Not.
           </h1>
           <p className="hero-sub fade-up d1">
             A top university abroad used to be reserved for the lucky few who happened

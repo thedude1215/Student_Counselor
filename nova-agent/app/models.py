@@ -26,3 +26,19 @@ class EssayReviewRequest(BaseModel):
 
 class EssayReviewResponse(BaseModel):
     feedback: str
+
+
+class TaskSuggestRequest(BaseModel):
+    user_id: str
+    university_id: str | None = None
+    university_name: str
+
+
+class SuggestedTask(BaseModel):
+    title: str
+    category: str | None = None
+    priority: str = "medium"
+
+
+class TaskSuggestResponse(BaseModel):
+    suggestions: list[SuggestedTask] = []

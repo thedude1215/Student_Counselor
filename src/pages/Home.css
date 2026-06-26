@@ -11,22 +11,66 @@
    HERO
 ══════════════════════════════════════════ */
 .hero {
+  position: relative;
   background: #ffffff;
   padding: calc(var(--nav-h) + 4rem) 0 4.5rem;
   text-align: center;
 }
 
+/* Keep the headline text above the dotted connection-line overlay so the
+   dots tuck behind the word rather than crossing over the letters. */
+.hero-every {
+  /* Removed position: relative because it breaks the gradient text clip */
+}
+
+/* Draw-on reveal for the hero connection line. pathLength="1" normalises the
+   path so a single dash of length 1 covers it. The path's M is at the "E" and
+   its end is at the logo, so offset 1 (animated to 0) reveals from the START —
+   drawing from the word "Every" UP into the navbar logo — then settles to dots. */
+.hero-line-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: heroDraw 1.4s ease-out forwards;
+}
+
+@keyframes heroDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-line-draw { animation-duration: 0.01s; }
+}
+
 .hero-wrap { max-width: 1180px; }
 
 .hero-title {
-  color: var(--blue);
+  position: relative;
+  z-index: 10;
   font-family: var(--font);
   font-size: clamp(3rem, 7vw, 6.7rem);
   font-weight: 900;
   letter-spacing: -0.04em;
   line-height: 0.98;
   margin: 0 auto 1.6rem;
-  max-width: 880px;
+  max-width: 1100px;
+  background: linear-gradient(
+    90deg,
+    var(--blue) 0%,
+    #60a5fa 25%,
+    var(--blue-dark) 50%,
+    #60a5fa 75%,
+    var(--blue) 100%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: blueGradientLoop 8s linear infinite;
+}
+
+@keyframes blueGradientLoop {
+  0% { background-position: 200% center; }
+  100% { background-position: -100% center; }
 }
 
 .hero-sub {

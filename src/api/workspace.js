@@ -1,11 +1,14 @@
 import { supabase } from '../lib/supabase.js';
+import { UNIVERSITY_COLUMNS } from './columns.js';
+
+const COLLEGE_LIST_SELECT = `*, universities(${UNIVERSITY_COLUMNS})`;
 
 /* ─────────────── College List ─────────────── */
 
 export async function fetchCollegeList(profileId) {
   const { data, error } = await supabase
     .from('college_list_items')
-    .select('*, universities(*)')
+    .select(COLLEGE_LIST_SELECT)
     .eq('profile_id', profileId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -16,7 +19,7 @@ export async function addToCollegeList(profileId, universityId, tier = 'match') 
   const { data, error } = await supabase
     .from('college_list_items')
     .insert({ profile_id: profileId, university_id: universityId, tier })
-    .select('*, universities(*)')
+    .select(COLLEGE_LIST_SELECT)
     .single();
   if (error) throw error;
   return data;
@@ -27,7 +30,7 @@ export async function updateCollegeListItem(id, updates) {
     .from('college_list_items')
     .update(updates)
     .eq('id', id)
-    .select('*, universities(*)')
+    .select(COLLEGE_LIST_SELECT)
     .single();
   if (error) throw error;
   return data;
@@ -43,7 +46,7 @@ export async function removeFromCollegeList(id) {
 export async function fetchTasks(profileId) {
   const { data, error } = await supabase
     .from('tasks')
-    .select('*, universities(name, logo_url, logo_style, fallback)')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
     .eq('profile_id', profileId)
     .order('due_date', { ascending: true, nullsFirst: false });
   if (error) throw error;
@@ -54,7 +57,7 @@ export async function addTask(profileId, task) {
   const { data, error } = await supabase
     .from('tasks')
     .insert({ profile_id: profileId, ...task })
-    .select('*, universities(name, logo_url, logo_style, fallback)')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
     .single();
   if (error) throw error;
   return data;
@@ -65,7 +68,7 @@ export async function updateTask(id, updates) {
     .from('tasks')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('*, universities(name, logo_url, logo_style, fallback)')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
     .single();
   if (error) throw error;
   return data;
@@ -76,12 +79,41 @@ export async function deleteTask(id) {
   if (error) throw error;
 }
 
+/* ─────────────── Task Suggestions (AI) ─────────────── */
+
+export async function fetchTaskSuggestions(profileId) {
+  const { data, error } = await supabase
+    .from('task_suggestions')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
+    .eq('profile_id', profileId)
+    .eq('status', 'suggested')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function dismissSuggestion(id) {
+  const { error } = await supabase
+    .from('task_suggestions')
+    .update({ status: 'dismissed' })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function markSuggestionAdded(id) {
+  const { error } = await supabase
+    .from('task_suggestions')
+    .update({ status: 'added' })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 /* ─────────────── Essays ─────────────── */
 
 export async function fetchEssays(profileId) {
   const { data, error } = await supabase
     .from('essays')
-    .select('*, universities(name, logo_url, logo_style, fallback)')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
     .eq('profile_id', profileId)
     .order('updated_at', { ascending: false });
   if (error) throw error;
@@ -92,7 +124,7 @@ export async function addEssay(profileId, essay) {
   const { data, error } = await supabase
     .from('essays')
     .insert({ profile_id: profileId, ...essay })
-    .select('*, universities(name, logo_url, logo_style, fallback)')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
     .single();
   if (error) throw error;
   return data;
@@ -103,7 +135,7 @@ export async function updateEssay(id, updates) {
     .from('essays')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('*, universities(name, logo_url, logo_style, fallback)')
+    .select('*, universities(name, short_name, logo_url, logo_style, fallback)')
     .single();
   if (error) throw error;
   return data;

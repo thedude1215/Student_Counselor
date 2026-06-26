@@ -293,4 +293,63 @@ router.post('/recommendations', async (req, res) => {
   }
 });
 
+/* ─── Task Suggestions ─── */
+
+router.post('/suggest-tasks', async (req, res) => {
+  const { universityId, universityName } = req.body;
+  if (!universityName?.trim()) return res.status(400).json({ error: 'universityName is required' });
+
+  try {
+    // Cache: if we already generated suggestions for this (user, university),
+    // return the still-pending ones without re-calling the LLM.
+    if (universityId) {
+      const { data: existing } = await supabase
+        .from('task_suggestions')
+        .select('*')
+        .eq('profile_id', req.userId)
+        .eq('university_id', universityId);
+
+      if (existing && existing.length) {
+        return res.json({ suggestions: existing.filter(s => s.status === 'suggested') });
+      }
+    }
+
+    if (!checkRate(req.userId, 'suggest', 15)) {
+      return res.status(429).json({ error: 'Rate limit reached (15 suggestion sets/hour). Please wait.' });
+    }
+
+    const data = await proxyToAgent('/api/tasks/suggest', {
+      user_id: req.userId,
+      university_id: universityId || null,
+      university_name: universityName.trim(),
+    });
+
+    const generated = data.suggestions || [];
+    if (!generated.length) {
+      return res.json({ suggestions: [] });
+    }
+
+    const rows = generated.map(s => ({
+      profile_id: req.userId,
+      university_id: universityId || null,
+      title: s.title,
+      category: s.category || null,
+      priority: s.priority || 'medium',
+      status: 'suggested',
+    }));
+
+    const { data: inserted, error } = await supabase
+      .from('task_suggestions')
+      .insert(rows)
+      .select('*');
+    if (error) throw error;
+
+    res.json({ suggestions: inserted });
+  } catch (err) {
+    console.error('[Nova] /suggest-tasks error:', err.message, '| status:', err.status);
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to suggest tasks' });
+  }
+});
+
 export default router;

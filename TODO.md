@@ -44,10 +44,15 @@ stops shadowing the React `/dashboard` route in Vite.
 - [x] pgvector embeddings — semantic search via Gemini text-embedding-004 + Supabase pgvector
 - [x] Supabase RPC functions for similarity search (match_universities, match_programs, match_stories)
 - [x] Python LangGraph service (FastAPI + ReAct agent) at `nova-agent/`
-- [ ] Wire Express to proxy chat to Python service (currently both work independently)
-- [ ] Run embed-catalog backfill script (needs SUPABASE_SERVICE_ROLE_KEY)
-- [ ] SSE streaming from Python → Express → React
-- [ ] LangGraph workflow subgraphs (college list builder, strategy review, deadline prep)
+- [x] Wire Express to proxy chat/essay-review/recommendations to Python service
+- [x] Run embed-catalog backfill script (embeddings already populated)
+- [x] RAG pipeline in Python (semantic search + student context + conversation-aware query rewriting)
+- [x] Thread-safe user context via contextvars (replaced global _current_user_id)
+- [x] Updated Gemini model to gemini-2.5-flash in Python service
+- [x] SSE streaming from Python → Express → React (progressive text rendering in chat UI)
+- [x] Intent-aware workflow routing (college list builder, strategy review, deadline prep)
+- [x] 3 new tools: create_task, get_activities_and_honors, get_application_readiness (11 total)
+- [x] Enhanced system prompts with multi-step workflow instructions
 
 ## Phase 4 — Core features on real data ✅ done
 - [x] College list builder: add from Universities page, reach/match/likely tagging, remove
@@ -77,4 +82,4 @@ stops shadowing the React `/dashboard` route in Vite.
 - [ ] Basic error/loading states across all data-backed pages
 
 ---
-**Next up:** Add SUPABASE_SERVICE_ROLE_KEY to `.env`, run embedding backfill, wire Express→Python proxy. Then Phase 5 polish.
+**Next up:** Phase 5 polish. To run: start Python (`cd nova-agent && .venv/bin/uvicorn app.main:app --port 8000`) then Express (`node --env-file=.env server/index.js`).

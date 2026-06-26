@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js';
+import { UNIVERSITY_COLUMNS, PROGRAM_COLUMNS, STORY_COLUMNS } from './columns.js';
 import { stories as staticStories } from '../../shared/data/stories.js';
 import {
   comparisonRows,
@@ -27,7 +28,7 @@ export function getFeaturedUniversities(limit = 16) {
 }
 
 export async function fetchUniversities(filters = {}) {
-  let query = supabase.from('universities').select('*');
+  let query = supabase.from('universities').select(UNIVERSITY_COLUMNS);
 
   if (filters.q) {
     const term = `%${filters.q}%`;
@@ -49,7 +50,7 @@ export async function fetchUniversities(filters = {}) {
 }
 
 export async function fetchPrograms(filters = {}) {
-  let query = supabase.from('programs').select('*');
+  let query = supabase.from('programs').select(PROGRAM_COLUMNS);
 
   if (filters.q) {
     const term = `%${filters.q}%`;
@@ -71,7 +72,7 @@ export async function fetchPrograms(filters = {}) {
 }
 
 export async function fetchStories(filters = {}) {
-  let query = supabase.from('stories').select('*');
+  let query = supabase.from('stories').select(STORY_COLUMNS);
 
   if (filters.q) {
     const term = `%${filters.q}%`;

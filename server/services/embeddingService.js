@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase.js';
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const EMBED_MODEL = 'text-embedding-004';
+const EMBED_MODEL = 'gemini-embedding-001';
 const EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent`;
+const OUTPUT_DIMENSIONALITY = 768;
 
 export async function embedText(text) {
   if (!API_KEY) throw new Error('GEMINI_API_KEY not configured');
@@ -13,6 +14,7 @@ export async function embedText(text) {
     body: JSON.stringify({
       model: `models/${EMBED_MODEL}`,
       content: { parts: [{ text }] },
+      outputDimensionality: OUTPUT_DIMENSIONALITY,
     }),
   });
 

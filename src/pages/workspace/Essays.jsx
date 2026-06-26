@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, PenLine, Save, Sparkles, X } from 'lucide-react';
+import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { fetchEssays, addEssay, updateEssay, deleteEssay } from '../../api/workspace.js';
+import { fetchEssays, addEssay, updateEssay, deleteEssay, fetchCollegeList } from '../../api/workspace.js';
 import { reviewEssay } from '../../api/nova.js';
 import './workspace.css';
+
+const GENERAL = { id: '', name: 'Common App / General' };
 
 export default function Essays() {
   const { user } = useAuth();
   const [essays, setEssays] = useState([]);
+  const [colleges, setColleges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
-  const [draft, setDraft] = useState({ title: '', prompt: '', content: '' });
+  const [draft, setDraft] = useState({ title: '', prompt: '', content: '', university_id: '' });
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
   const [feedback, setFeedback] = useState(null);
@@ -19,15 +23,16 @@ export default function Essays() {
 
   useEffect(() => {
     if (!user) return;
-    fetchEssays(user.id).then(list => {
+    Promise.all([fetchEssays(user.id), fetchCollegeList(user.id)]).then(([list, cl]) => {
       setEssays(list);
+      setColleges(cl.map(i => i.universities).filter(Boolean));
       if (list.length) selectEssay(list[0]);
     }).catch(console.error).finally(() => setLoading(false));
   }, [user]);
 
   function selectEssay(essay) {
     setSelectedId(essay.id);
-    setDraft({ title: essay.title, prompt: essay.prompt || '', content: essay.content || '' });
+    setDraft({ title: essay.title, prompt: essay.prompt || '', content: essay.content || '', university_id: essay.university_id || '' });
     setSavedAt(null);
     setFeedback(essay.ai_feedback || null);
     setShowFeedback(false);
@@ -62,7 +67,7 @@ export default function Essays() {
   async function save() {
     if (!selectedId) return;
     setSaving(true);
-    const updated = await updateEssay(selectedId, draft);
+    const updated = await updateEssay(selectedId, { ...draft, university_id: draft.university_id || null });
     setEssays(essays.map(e => (e.id === selectedId ? updated : e)));
     setSaving(false);
     setSavedAt(new Date());
@@ -108,9 +113,16 @@ export default function Essays() {
                 className={`ws-essay-item ${selectedId === e.id ? 'active' : ''}`}
                 onClick={() => selectEssay(e)}
               >
-                <span className="ws-essay-item-title">{e.title || 'Untitled'}</span>
-                <span className="ws-essay-item-meta">
-                  {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}
+                {e.universities ? (
+                  <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={26} radius={7} />
+                ) : (
+                  <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={26} radius={7} />
+                )}
+                <span className="ws-essay-item-text">
+                  <span className="ws-essay-item-title">{e.title || 'Untitled'}</span>
+                  <span className="ws-essay-item-meta">
+                    {e.universities ? e.universities.short_name || e.universities.name : 'Common App'} · {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}
+                  </span>
                 </span>
               </button>
             ))}
@@ -124,6 +136,14 @@ export default function Essays() {
                 value={draft.title}
                 onChange={e => setDraft({ ...draft, title: e.target.value })}
               />
+              <select
+                className="ws-input ws-essay-uni-select"
+                value={draft.university_id}
+                onChange={e => setDraft({ ...draft, university_id: e.target.value })}
+              >
+                <option value={GENERAL.id}>{GENERAL.name}</option>
+                {colleges.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
               <input
                 className="ws-essay-prompt-input"
                 placeholder="Prompt (e.g. Why this university? — 250 words)"

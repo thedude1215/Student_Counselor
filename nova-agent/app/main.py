@@ -8,11 +8,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from app.models import ChatRequest, ChatResponse, EssayReviewRequest, EssayReviewResponse
+from app.models import (
+    ChatRequest, ChatResponse, EssayReviewRequest, EssayReviewResponse,
+    TaskSuggestRequest, TaskSuggestResponse, SuggestedTask,
+)
 from app.graphs.chat_graph import run_chat, stream_chat
 from app.llm import llm
 from app.tools.student_tools import set_current_user
-from app.prompts.system_prompts import ESSAY_REVIEW_PROMPT
+from app.prompts.system_prompts import ESSAY_REVIEW_PROMPT, SUGGEST_TASKS_PROMPT
 from app.supabase_client import supabase
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -179,3 +182,125 @@ def essay_review(req: EssayReviewRequest):
     ])
 
     return EssayReviewResponse(feedback=result.content)
+
+
+# ── Task suggestions ──
+
+_ALLOWED_CATEGORIES = {
+    "Essays", "Testing", "Documents", "Recommendations", "Financial Aid", "General",
+}
+_ALLOWED_PRIORITIES = {"low", "medium", "high"}
+
+
+def _parse_suggested_tasks(raw: str) -> list[SuggestedTask]:
+    """Robustly parse the LLM's JSON array of tasks.
+
+    Llama-on-Groq sometimes wraps output in code fences or adds stray prose, so
+    we strip fences and slice to the outer [...] before json.loads. Each item is
+    validated and clamped to the allowed enums; invalid rows are dropped. Returns
+    [] on any failure so the endpoint never 500s on a bad generation.
+    """
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text[:4].lower() == "json":
+            text = text[4:]
+    start, end = text.find("["), text.rfind("]")
+    if start == -1 or end == -1 or end < start:
+        return []
+    try:
+        items = json.loads(text[start:end + 1])
+    except Exception:
+        return []
+    if not isinstance(items, list):
+        return []
+
+    out: list[SuggestedTask] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title", "")).strip()[:70]
+        if not title:
+            continue
+        category = item.get("category")
+        if category not in _ALLOWED_CATEGORIES:
+            category = None
+        priority = str(item.get("priority", "medium")).lower()
+        if priority not in _ALLOWED_PRIORITIES:
+            priority = "medium"
+        out.append(SuggestedTask(title=title, category=category, priority=priority))
+        if len(out) >= 6:
+            break
+    return out
+
+
+def _suggest_university_context(university_id: str | None, university_name: str) -> str:
+    if not university_id:
+        return f"University: {university_name}."
+    try:
+        row = (
+            supabase.table("universities")
+            .select("name, location, country, type, acceptance_rate, description")
+            .eq("id", university_id)
+            .single()
+            .execute()
+        ).data or {}
+    except Exception:
+        row = {}
+    name = row.get("name") or university_name
+    parts = [f"University: {name}"]
+    loc = row.get("location") or row.get("country")
+    if loc:
+        parts.append(f"Location: {loc}")
+    if row.get("type"):
+        parts.append(f"Type: {row['type']}")
+    if row.get("acceptance_rate") is not None:
+        parts.append(f"Acceptance rate: ~{row['acceptance_rate']}%")
+    if row.get("description"):
+        parts.append(str(row["description"])[:300])
+    return ". ".join(parts)
+
+
+def _suggest_student_context(user_id: str) -> str:
+    try:
+        profile = (
+            supabase.table("profiles")
+            .select("grade_level, intended_major, country, goals")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        ).data or {}
+    except Exception:
+        profile = {}
+    bits = []
+    if profile.get("grade_level"):
+        bits.append(f"Grade {profile['grade_level']}")
+    if profile.get("intended_major"):
+        bits.append(f"intended major {profile['intended_major']}")
+    if profile.get("country"):
+        bits.append(f"from {profile['country']}")
+    if profile.get("goals"):
+        bits.append(f"goal: {str(profile['goals'])[:160]}")
+    return "Student: " + ", ".join(bits) + "." if bits else ""
+
+
+@app.post("/api/tasks/suggest", response_model=TaskSuggestResponse)
+def suggest_tasks(req: TaskSuggestRequest):
+    if not _check_rate(req.user_id, "suggest", 10):
+        raise HTTPException(status_code=429, detail="Rate limit reached (10 suggestions/hour).")
+
+    uni_ctx = _suggest_university_context(req.university_id, req.university_name)
+    student_ctx = _suggest_student_context(req.user_id)
+    human = uni_ctx + ("\n" + student_ctx if student_ctx else "")
+
+    try:
+        result = llm.invoke([
+            SystemMessage(content=SUGGEST_TASKS_PROMPT),
+            HumanMessage(content=human),
+        ])
+        raw = result.content if isinstance(result.content, str) else str(result.content)
+    except Exception as exc:
+        print(f"[Nova] suggest_tasks LLM error: {type(exc).__name__}: {exc}")
+        return TaskSuggestResponse(suggestions=[])
+
+    return TaskSuggestResponse(suggestions=_parse_suggested_tasks(raw))

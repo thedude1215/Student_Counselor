@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, ListChecks, GripVertical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { fetchTasks, addTask, updateTask, deleteTask } from '../../api/workspace.js';
+import {
+  fetchTasks, addTask, updateTask, deleteTask,
+  fetchCollegeList, fetchTaskSuggestions, dismissSuggestion, markSuggestionAdded,
+} from '../../api/workspace.js';
+import { suggestTasks } from '../../api/nova.js';
+import SuggestionInbox from './SuggestionInbox.jsx';
 import './workspace.css';
 
 const COLUMNS = [
@@ -20,11 +25,62 @@ export default function Tasks() {
   const [priority, setPriority] = useState('medium');
   const [category, setCategory] = useState('General');
   const [dragId, setDragId] = useState(null);
+  const [colleges, setColleges] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [generatedIds, setGeneratedIds] = useState(new Set());
+  const [generatingId, setGeneratingId] = useState(null);
 
   useEffect(() => {
     if (!user) return;
-    fetchTasks(user.id).then(setTasks).catch(console.error).finally(() => setLoading(false));
+    Promise.all([
+      fetchTasks(user.id),
+      fetchCollegeList(user.id),
+      fetchTaskSuggestions(user.id),
+    ])
+      .then(([tasksData, collegesData, suggestionsData]) => {
+        setTasks(tasksData);
+        setColleges(collegesData);
+        setSuggestions(suggestionsData);
+        // A college is "already generated" if it has any suggestion rows we know
+        // of (i.e. currently-pending ones). The Express cache prevents re-spend
+        // even after dismiss-all, so this also avoids showing the button again.
+        setGeneratedIds(new Set(suggestionsData.map(s => s.university_id)));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [user]);
+
+  async function generateSuggestions(college) {
+    const uniId = college.university_id;
+    setGeneratingId(uniId);
+    try {
+      const { suggestions: generated } = await suggestTasks(uniId, college.universities?.name || '');
+      setSuggestions(prev => [...prev, ...(generated || [])]);
+      setGeneratedIds(prev => new Set(prev).add(uniId));
+    } catch (err) {
+      console.error('Suggestion generation failed:', err);
+    } finally {
+      setGeneratingId(null);
+    }
+  }
+
+  async function acceptSuggestion(s) {
+    setSuggestions(prev => prev.filter(x => x.id !== s.id));
+    const task = await addTask(user.id, {
+      title: s.title,
+      category: s.category || null,
+      priority: s.priority || 'medium',
+      university_id: s.university_id || null,
+      status: 'todo',
+    });
+    setTasks(prev => [...prev, task]);
+    await markSuggestionAdded(s.id);
+  }
+
+  async function dismiss(id) {
+    setSuggestions(prev => prev.filter(x => x.id !== id));
+    await dismissSuggestion(id);
+  }
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -61,6 +117,16 @@ export default function Tasks() {
           <p className="ws-subtitle">{open} to do · {done} done · drag cards between columns</p>
         </div>
       </header>
+
+      <SuggestionInbox
+        colleges={colleges}
+        suggestions={suggestions}
+        generatedIds={generatedIds}
+        generatingId={generatingId}
+        onGenerate={generateSuggestions}
+        onAccept={acceptSuggestion}
+        onDismiss={dismiss}
+      />
 
       <form className="ws-task-form" onSubmit={handleAdd}>
         <input className="ws-input" placeholder="Add a task… (e.g. Finish Yale supplement)" value={title} onChange={e => setTitle(e.target.value)} />
