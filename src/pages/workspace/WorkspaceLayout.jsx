@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, GraduationCap, ListChecks, PenLine, CalendarDays, Trophy, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './workspace.css';
@@ -31,6 +31,7 @@ const GROUPS = [
 export default function WorkspaceLayout() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -116,7 +117,9 @@ export default function WorkspaceLayout() {
             Talk to Nova
           </Link>
         </div>
-        <Outlet />
+        <div key={location.pathname} className="ws-page-anim">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
