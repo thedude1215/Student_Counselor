@@ -230,6 +230,76 @@
 .ws-btn-primary:hover:not(:disabled) { background: var(--blue-dark); transform: translateY(-1px); }
 .ws-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.ws-btn-ghost {
+  background: transparent; color: var(--ink-3); border: 1.5px solid var(--border);
+}
+.ws-btn-ghost:hover { background: var(--bg); color: var(--ink-2); }
+
+/* ── Modal ── */
+.ws-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(17,17,24,0.45);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: ws-fade-up 0.18s ease both;
+}
+.ws-modal {
+  background: var(--white); border-radius: 20px;
+  width: 100%; max-width: 480px; margin: 1rem;
+  box-shadow: 0 24px 64px rgba(17,17,24,0.2);
+  overflow: hidden;
+}
+.ws-modal-header {
+  display: flex; align-items: flex-start; gap: 0.85rem;
+  padding: 1.4rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.ws-modal-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--blue-light); color: var(--blue);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ws-modal-title { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; color: var(--ink); }
+.ws-modal-sub { font-size: 0.8rem; color: var(--ink-3); font-weight: 600; margin-top: 1px; }
+.ws-modal-close { margin-left: auto; }
+
+.ws-modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.ws-modal-field { display: flex; flex-direction: column; gap: 0.4rem; }
+.ws-modal-label {
+  font-size: 0.75rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-3);
+}
+.ws-modal-optional {
+  font-size: 0.7rem; font-weight: 600; text-transform: none;
+  letter-spacing: 0; color: var(--ink-4); margin-left: 4px;
+}
+.ws-modal-input, .ws-modal-select {
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 0.65rem 0.85rem; font-size: 0.92rem;
+  font-family: var(--font); color: var(--ink); background: var(--white);
+  outline: none; transition: border-color var(--t);
+  width: 100%;
+}
+.ws-modal-input:focus, .ws-modal-select:focus { border-color: var(--blue); }
+.ws-modal-select { cursor: pointer; }
+
+/* Word limit pill buttons */
+.ws-modal-word-limits { display: flex; flex-wrap: wrap; gap: 6px; }
+.ws-modal-wl-btn {
+  padding: 5px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 800;
+  border: 1.5px solid var(--border); background: var(--white); color: var(--ink-3);
+  cursor: pointer; font-family: var(--font);
+  transition: border-color var(--t), background var(--t), color var(--t);
+}
+.ws-modal-wl-btn:hover { border-color: var(--blue); color: var(--blue); }
+.ws-modal-wl-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+.ws-modal-footer {
+  display: flex; justify-content: flex-end; gap: 0.6rem;
+  padding: 0.85rem 1.5rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
 .ws-icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px;

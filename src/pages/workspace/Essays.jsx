@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, PenLine, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchEssays, addEssay, updateEssay, deleteEssay, fetchCollegeList } from '../../api/workspace.js';
 import { reviewEssay } from '../../api/nova.js';
+import NewEssayModal from './NewEssayModal.jsx';
 import './workspace.css';
 
 const WORD_LIMIT = 650;
@@ -25,6 +26,7 @@ export default function Essays() {
   const [feedback, setFeedback] = useState(null);
   const [reviewing, setReviewing] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showNewModal, setShowNewModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -54,10 +56,11 @@ export default function Essays() {
     } finally { setReviewing(false); }
   }
 
-  async function createEssay() {
-    const essay = await addEssay(user.id, { title: 'Untitled essay', prompt: '', content: '' });
+  async function createEssay({ title, university_id, prompt, word_limit, content }) {
+    const essay = await addEssay(user.id, { title, university_id: university_id || null, prompt, word_limit, content });
     setEssays([essay, ...essays]);
     selectEssay(essay);
+    setShowNewModal(false);
   }
 
   async function save() {
@@ -79,10 +82,11 @@ export default function Essays() {
     }
   }
 
+  const activeEssay = essays.find(e => e.id === selectedId);
+  const essayLimit = activeEssay?.word_limit || WORD_LIMIT;
   const wc = wordCount(draft.content);
-  const pct = Math.min(100, Math.round((wc / WORD_LIMIT) * 100));
-  const overLimit = wc > WORD_LIMIT;
-  const selectedEssay = essays.find(e => e.id === selectedId);
+  const pct = Math.min(100, Math.round((wc / essayLimit) * 100));
+  const overLimit = wc > essayLimit;
 
   if (loading) return <div className="ws-loading">Loading your essays…</div>;
 
@@ -93,7 +97,7 @@ export default function Essays() {
           <h1 className="ws-title">Essays</h1>
           <p className="ws-subtitle">{essays.length} draft{essays.length !== 1 ? 's' : ''}</p>
         </div>
-        <button className="ws-btn ws-btn-primary" onClick={createEssay}><Plus size={16} /> New essay</button>
+        <button className="ws-btn ws-btn-primary" onClick={() => setShowNewModal(true)}><Plus size={16} /> New essay</button>
       </header>
 
       {essays.length === 0 ? (
@@ -101,7 +105,7 @@ export default function Essays() {
           <PenLine size={40} />
           <h3>No essays yet</h3>
           <p>Start a draft and refine it over time.</p>
-          <button className="ws-btn ws-btn-primary" onClick={createEssay}>Start writing</button>
+          <button className="ws-btn ws-btn-primary" onClick={() => setShowNewModal(true)}>Start writing</button>
         </div>
       ) : (
         <div className="ws-essay-layout">
@@ -185,7 +189,7 @@ export default function Essays() {
                   />
                 </div>
                 <span className={`ws-essay-words ${overLimit ? 'over' : ''}`}>
-                  {wc} / {WORD_LIMIT} words {overLimit ? '— over limit' : pct >= 80 ? '— almost there' : ''}
+                  {wc} / {essayLimit} words {overLimit ? '— over limit' : pct >= 80 ? '— almost there' : ''}
                 </span>
               </div>
 
@@ -227,6 +231,14 @@ export default function Essays() {
             </div>
           )}
         </div>
+      )}
+
+      {showNewModal && (
+        <NewEssayModal
+          colleges={colleges}
+          onConfirm={createEssay}
+          onClose={() => setShowNewModal(false)}
+        />
       )}
     </div>
   );
