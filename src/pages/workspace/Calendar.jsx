@@ -50,9 +50,9 @@ export default function Calendar() {
           <p className="ws-subtitle">Every deadline and test date in one view.</p>
         </div>
         <div className="ws-cal-nav">
-          <button className="ws-icon-btn" onClick={() => setCursor(new Date(year, month - 1, 1))}><ChevronLeft size={18} /></button>
+          <button className="ws-icon-btn" onClick={() => setCursor(new Date(year, month - 1, 1))}><ChevronLeft size={16} /></button>
           <span className="ws-cal-month">{cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-          <button className="ws-icon-btn" onClick={() => setCursor(new Date(year, month + 1, 1))}><ChevronRight size={18} /></button>
+          <button className="ws-icon-btn" onClick={() => setCursor(new Date(year, month + 1, 1))}><ChevronRight size={16} /></button>
         </div>
       </header>
 

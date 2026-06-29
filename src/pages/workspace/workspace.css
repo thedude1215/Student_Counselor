@@ -815,20 +815,114 @@ a.ws-nudge:hover { transform: translateX(2px); }
 }
 
 /* ── Calendar ── */
-.ws-cal-nav { display: flex; align-items: center; gap: 0.5rem; }
-.ws-cal-month { font-size: 0.95rem; font-weight: 800; color: var(--ink); min-width: 140px; text-align: center; }
-.ws-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-.ws-cal-dow { text-align: center; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-4); padding-bottom: 4px; }
-.ws-cal-cell { min-height: 84px; border: 1px solid var(--border); border-radius: 10px; padding: 5px 6px; background: var(--bg); display: flex; flex-direction: column; gap: 3px; }
-.ws-cal-cell.empty { background: transparent; border: none; }
-.ws-cal-cell.today { border-color: var(--blue); background: var(--blue-light); }
-.ws-cal-day { font-size: 0.76rem; font-weight: 800; color: var(--ink-3); }
-.ws-cal-cell.today .ws-cal-day { color: var(--blue); }
+.ws-cal-nav {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.ws-cal-month {
+  font-family: var(--font-serif);
+  font-size: 1.15rem; font-weight: 700; color: var(--ink);
+  min-width: 160px; text-align: center; letter-spacing: -0.01em;
+}
+
+/* Grid */
+.ws-cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1px;
+  overflow: hidden;
+}
+
+/* Day-of-week header row */
+.ws-cal-dow {
+  text-align: center;
+  font-size: 0.68rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--ink-4);
+  padding: 10px 0 8px;
+  background: var(--white);
+}
+
+/* Calendar cells */
+.ws-cal-cell {
+  min-height: 96px;
+  background: var(--white);
+  padding: 8px 10px 6px;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: background var(--t);
+}
+.ws-cal-cell:hover { background: #F9F9FD; }
+.ws-cal-cell.empty { background: #F5F5FA; }
+.ws-cal-cell.today { background: #EEF3FF; }
+
+/* Day number */
+.ws-cal-day {
+  font-size: 0.82rem; font-weight: 800; color: var(--ink-3);
+  line-height: 1;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.ws-cal-cell.today .ws-cal-day {
+  background: var(--blue);
+  color: #fff;
+}
+
+/* Task pills in cells */
 .ws-cal-items { display: flex; flex-direction: column; gap: 3px; }
-.ws-cal-pill { font-size: 0.66rem; font-weight: 700; border-radius: 5px; padding: 2px 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ws-cal-pill.done { opacity: 0.5; text-decoration: line-through; }
-.ws-cal-more { font-size: 0.64rem; color: var(--ink-4); font-weight: 700; }
-.ws-cal-upcoming { margin-top: 1.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; }
+.ws-cal-pill {
+  font-size: 0.68rem; font-weight: 700;
+  border-radius: 6px; padding: 2px 7px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-left: 2.5px solid transparent;
+}
+.ws-cal-pill.prio-high   { background: #FEE8E6; color: #C0392B; border-left-color: #C0392B; }
+.ws-cal-pill.prio-medium { background: #FEF9E6; color: #B7791F; border-left-color: #B7791F; }
+.ws-cal-pill.prio-low    { background: #F0F1FF; color: #6366f1; border-left-color: #6366f1; }
+.ws-cal-pill.done        { opacity: 0.45; text-decoration: line-through; }
+.ws-cal-more { font-size: 0.63rem; color: var(--ink-4); font-weight: 800; padding-left: 4px; }
+
+/* Upcoming section */
+.ws-cal-upcoming {
+  margin-top: 1.75rem;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+}
+.ws-cal-upcoming .ws-agenda-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.88rem; font-weight: 900; color: var(--ink);
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.ws-cal-upcoming .ws-agenda-row {
+  display: flex; align-items: center; gap: 0.85rem;
+  padding: 0.8rem 1.25rem;
+  transition: background var(--t);
+}
+.ws-cal-upcoming .ws-agenda-row:hover { background: #F9F9FD; }
+.ws-cal-upcoming .ws-agenda-row + .ws-agenda-row { border-top: 1px solid var(--border); }
+.ws-cal-upcoming .ws-agenda-title {
+  flex: 1; font-size: 0.92rem; font-weight: 600; color: var(--ink);
+}
+.ws-cal-upcoming .ws-task-due {
+  font-size: 0.8rem; font-weight: 700; color: var(--ink-3); flex-shrink: 0;
+}
+.ws-cal-upcoming .ws-agenda-empty {
+  padding: 1.25rem; font-size: 0.88rem; color: var(--ink-4); text-align: center;
+}
+/* Priority badge inside upcoming */
+.ws-cal-upcoming .ws-prio {
+  font-size: 0.65rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; flex-shrink: 0;
+}
+.ws-cal-upcoming .ws-prio.prio-high   { background: #FEE8E6; color: #C0392B; }
+.ws-cal-upcoming .ws-prio.prio-medium { background: #FEF9E6; color: #B7791F; }
+.ws-cal-upcoming .ws-prio.prio-low    { background: #F0F1FF; color: #6366f1; }
 
 /* ── Card Kanban (Tasks page) ── */
 
