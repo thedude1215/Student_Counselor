@@ -58,8 +58,7 @@ export default function WorkspaceLayout() {
     <div className="ws-page">
       <aside className="ws-sidebar">
         <div className="ws-side-brand">
-          <img src="/scholarpath-logo.svg" alt="" className="ws-side-brand-logo" />
-          <span>Scholarpath</span>
+          <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-side-brand-logo" />
         </div>
 
         <nav className="ws-nav">
