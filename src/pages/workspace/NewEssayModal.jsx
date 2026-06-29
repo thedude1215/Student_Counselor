@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, PenLine } from 'lucide-react';
 
 const WORD_LIMITS = [650, 500, 350, 250, 150];
@@ -26,7 +27,7 @@ export default function NewEssayModal({ colleges, onConfirm, onClose }) {
     });
   }
 
-  return (
+  return createPortal(
     <div className="ws-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="ws-modal">
         <div className="ws-modal-header">
@@ -121,6 +122,7 @@ export default function NewEssayModal({ colleges, onConfirm, onClose }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
