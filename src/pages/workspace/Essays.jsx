@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, PenLine, Save, Sparkles, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Trash2, PenLine, Sparkles, X, CheckCircle2 } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchEssays, addEssay, updateEssay, deleteEssay, fetchCollegeList } from '../../api/workspace.js';
 import { reviewEssay } from '../../api/nova.js';
 import './workspace.css';
 
+const WORD_LIMIT = 650;
 const GENERAL = { id: '', name: 'Common App / General' };
+
+function wordCount(text) {
+  return text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+}
 
 export default function Essays() {
   const { user } = useAuth();
@@ -39,23 +44,14 @@ export default function Essays() {
   }
 
   async function getAiFeedback() {
-    if (!selectedId || wordCount < 20) return;
+    if (!selectedId || wc < 20) return;
     setReviewing(true);
     try {
-      const { feedback: text } = await reviewEssay({
-        essayId: selectedId,
-        essayContent: draft.content,
-        essayPrompt: draft.prompt,
-        essayTitle: draft.title,
-      });
-      setFeedback(text);
-      setShowFeedback(true);
+      const { feedback: text } = await reviewEssay({ essayId: selectedId, essayContent: draft.content, essayPrompt: draft.prompt, essayTitle: draft.title });
+      setFeedback(text); setShowFeedback(true);
     } catch (err) {
-      setFeedback(`Failed to get feedback: ${err.message}`);
-      setShowFeedback(true);
-    } finally {
-      setReviewing(false);
-    }
+      setFeedback(`Failed to get feedback: ${err.message}`); setShowFeedback(true);
+    } finally { setReviewing(false); }
   }
 
   async function createEssay() {
@@ -83,7 +79,10 @@ export default function Essays() {
     }
   }
 
-  const wordCount = draft.content.trim() ? draft.content.trim().split(/\s+/).length : 0;
+  const wc = wordCount(draft.content);
+  const pct = Math.min(100, Math.round((wc / WORD_LIMIT) * 100));
+  const overLimit = wc > WORD_LIMIT;
+  const selectedEssay = essays.find(e => e.id === selectedId);
 
   if (loading) return <div className="ws-loading">Loading your essays…</div>;
 
@@ -106,65 +105,103 @@ export default function Essays() {
         </div>
       ) : (
         <div className="ws-essay-layout">
+
+          {/* ── Left: essay list ── */}
           <div className="ws-essay-list">
-            {essays.map(e => (
-              <button
-                key={e.id}
-                className={`ws-essay-item ${selectedId === e.id ? 'active' : ''}`}
-                onClick={() => selectEssay(e)}
-              >
-                {e.universities ? (
-                  <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={26} radius={7} />
-                ) : (
-                  <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={26} radius={7} />
-                )}
-                <span className="ws-essay-item-text">
-                  <span className="ws-essay-item-title">{e.title || 'Untitled'}</span>
-                  <span className="ws-essay-item-meta">
-                    {e.universities ? e.universities.short_name || e.universities.name : 'Common App'} · {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}
-                  </span>
-                </span>
-              </button>
-            ))}
+            {essays.map(e => {
+              const wc2 = wordCount(e.content || '');
+              const pct2 = Math.min(100, Math.round((wc2 / WORD_LIMIT) * 100));
+              const uni = e.universities;
+              return (
+                <button
+                  key={e.id}
+                  className={`ws-essay-item ${selectedId === e.id ? 'active' : ''}`}
+                  onClick={() => selectEssay(e)}
+                >
+                  <div className="ws-essay-item-logo">
+                    {uni ? (
+                      <LogoTile item={{ logoUrl: uni.logo_url, logoStyle: uni.logo_style, fallback: uni.fallback, name: uni.name }} size={32} radius={8} />
+                    ) : (
+                      <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={32} radius={8} />
+                    )}
+                  </div>
+                  <div className="ws-essay-item-body">
+                    <div className="ws-essay-item-title">{e.title || 'Untitled'}</div>
+                    <div className="ws-essay-item-meta">
+                      {uni ? (uni.short_name || uni.name) : 'Common App'} · {wc2} words
+                    </div>
+                    <div className="ws-essay-item-bar">
+                      <div className="ws-essay-item-bar-fill" style={{ width: `${pct2}%` }} />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
+          {/* ── Right: editor ── */}
           {selectedId && (
             <div className="ws-essay-editor">
-              <input
-                className="ws-essay-title-input"
-                placeholder="Essay title"
-                value={draft.title}
-                onChange={e => setDraft({ ...draft, title: e.target.value })}
-              />
-              <select
-                className="ws-input ws-essay-uni-select"
-                value={draft.university_id}
-                onChange={e => setDraft({ ...draft, university_id: e.target.value })}
-              >
-                <option value={GENERAL.id}>{GENERAL.name}</option>
-                {colleges.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-              <input
-                className="ws-essay-prompt-input"
-                placeholder="Prompt (e.g. Why this university? — 250 words)"
-                value={draft.prompt}
-                onChange={e => setDraft({ ...draft, prompt: e.target.value })}
-              />
+              {/* Editor header: school + prompt */}
+              <div className="ws-essay-editor-top">
+                <div className="ws-essay-meta-row">
+                  <select
+                    className="ws-essay-uni-select"
+                    value={draft.university_id}
+                    onChange={e => setDraft({ ...draft, university_id: e.target.value })}
+                  >
+                    <option value={GENERAL.id}>{GENERAL.name}</option>
+                    {colleges.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                </div>
+                <input
+                  className="ws-essay-title-input"
+                  placeholder="Essay title"
+                  value={draft.title}
+                  onChange={e => setDraft({ ...draft, title: e.target.value })}
+                />
+                <input
+                  className="ws-essay-prompt-input"
+                  placeholder="Paste your prompt here (e.g. Describe a challenge you've overcome…)"
+                  value={draft.prompt}
+                  onChange={e => setDraft({ ...draft, prompt: e.target.value })}
+                />
+              </div>
+
+              {/* Writing area */}
               <textarea
                 className="ws-essay-textarea"
-                placeholder="Start writing your essay here…"
+                placeholder="Start writing… your story matters."
                 value={draft.content}
                 onChange={e => setDraft({ ...draft, content: e.target.value })}
               />
+
+              {/* Word count progress */}
+              <div className="ws-essay-progress">
+                <div className="ws-essay-progress-bar">
+                  <div
+                    className={`ws-essay-progress-fill ${overLimit ? 'over' : pct >= 80 ? 'near' : ''}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className={`ws-essay-words ${overLimit ? 'over' : ''}`}>
+                  {wc} / {WORD_LIMIT} words {overLimit ? '— over limit' : pct >= 80 ? '— almost there' : ''}
+                </span>
+              </div>
+
+              {/* Footer actions */}
               <div className="ws-essay-footer">
-                <span className="ws-essay-words">{wordCount} words</span>
+                <div className="ws-essay-saved-state">
+                  {savedAt && (
+                    <span className="ws-essay-saved"><CheckCircle2 size={13} /> Saved</span>
+                  )}
+                </div>
                 <div className="ws-essay-actions">
-                  {savedAt && <span className="ws-essay-saved">Saved</span>}
                   <button
                     className="ws-btn ws-btn-ai"
                     onClick={getAiFeedback}
-                    disabled={reviewing || wordCount < 20}
-                    title={wordCount < 20 ? 'Write at least 20 words first' : 'Get AI feedback'}
+                    disabled={reviewing || wc < 20}
+                    title={wc < 20 ? 'Write at least 20 words first' : 'Get Nova feedback'}
                   >
                     <Sparkles size={15} /> {reviewing ? 'Reviewing…' : 'AI Feedback'}
                   </button>
@@ -172,11 +209,12 @@ export default function Essays() {
                     <Trash2 size={16} />
                   </button>
                   <button className="ws-btn ws-btn-primary" onClick={save} disabled={saving}>
-                    <Save size={15} /> {saving ? 'Saving…' : 'Save'}
+                    {saving ? 'Saving…' : 'Save'}
                   </button>
                 </div>
               </div>
 
+              {/* Nova feedback panel */}
               {showFeedback && feedback && (
                 <div className="ws-feedback-panel">
                   <div className="ws-feedback-header">
