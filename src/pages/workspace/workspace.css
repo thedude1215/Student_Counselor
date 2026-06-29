@@ -20,14 +20,14 @@
 }
 
 .ws-side-brand {
-  color: var(--blue);
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   padding: 0 0.2rem 1rem;
   margin-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
+}
+.ws-side-brand-logo {
+  width: 32px;
+  height: 32px;
+  display: block;
 }
 
 .ws-nav-group { margin-bottom: 0.6rem; }
@@ -140,6 +140,7 @@
   height: 100%;
   overflow-y: auto;
   padding: 2.25rem 2.5rem 3rem;
+  background: var(--white);
 }
 
 /* ── Talk to Nova (top bar inside main) ── */
@@ -793,24 +794,399 @@ a.ws-nudge:hover { transform: translateX(2px); }
 .ws-cal-more { font-size: 0.64rem; color: var(--ink-4); font-weight: 700; }
 .ws-cal-upcoming { margin-top: 1.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; }
 
-/* ── Kanban board ── */
-.ws-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; align-items: start; }
-.ws-board-col { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 0.85rem; transition: border-color var(--t), background var(--t); }
-.ws-board-col.droppable { border-color: var(--blue-mid); border-style: dashed; }
-.ws-board-head { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; font-weight: 900; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.7rem; padding: 0 0.2rem; }
-.ws-board-count { background: var(--border); color: var(--ink-3); font-size: 0.72rem; border-radius: 999px; padding: 1px 8px; }
-.ws-board-cards { display: flex; flex-direction: column; gap: 0.5rem; min-height: 40px; }
-.ws-board-empty { font-size: 0.78rem; color: var(--ink-4); text-align: center; padding: 1rem 0; }
-.ws-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.75rem; cursor: grab; box-shadow: 0 1px 3px rgba(17,17,24,0.05); }
-.ws-card:active { cursor: grabbing; }
-.ws-card.done { opacity: 0.6; }
-.ws-card.done .ws-card-title { text-decoration: line-through; }
-.ws-card-top { display: flex; align-items: center; gap: 5px; }
-.ws-card-grip { color: var(--ink-4); flex-shrink: 0; }
-.ws-card-title { flex: 1; min-width: 0; font-size: 0.86rem; font-weight: 700; color: var(--ink); }
-.ws-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 0.5rem; padding-left: 19px; }
-.ws-card-tag { background: var(--blue-light); color: var(--blue); font-size: 0.66rem; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
-.ws-card-due { font-size: 0.72rem; font-weight: 800; color: var(--ink-3); }
+/* ── Card Kanban (Tasks page) ── */
+
+/* 3-column board */
+.ws-kanban { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; align-items: start; }
+@media (max-width: 860px) { .ws-kanban { grid-template-columns: 1fr; } }
+
+/* Column */
+.ws-kcol { display: flex; flex-direction: column; gap: 0.5rem; }
+.ws-kcol-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; padding: 0 2px; }
+.ws-kcol-label { font-size: 0.9rem; font-weight: 800; color: var(--ink-2); }
+.ws-kcol-count {
+  background: var(--border); color: var(--ink-3);
+  font-size: 0.72rem; font-weight: 800; border-radius: 999px; padding: 1px 9px;
+}
+.ws-kcol-body { display: flex; flex-direction: column; gap: 0.6rem; min-height: 60px; border-radius: 12px; padding: 2px; transition: background var(--t), padding var(--t); }
+.ws-kcol.droppable .ws-kcol-body { background: var(--blue-light); padding: 8px; }
+.ws-kcol-empty { font-size: 0.82rem; color: var(--ink-4); text-align: center; padding: 1rem 0; font-style: italic; }
+
+/* Nova suggestion toggle inside column */
+.ws-kcol-suggest-toggle {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  border: 1px dashed var(--cb-lavender); border-radius: 10px;
+  background: #FDFCFF; cursor: pointer; font-family: var(--font);
+  font-size: 0.78rem; font-weight: 700; color: var(--ink-3);
+  padding: 8px 12px; transition: background var(--t), color var(--t);
+}
+.ws-kcol-suggest-toggle:hover { background: #F4F1FC; color: var(--purple); border-color: var(--purple); }
+.ws-kcol-suggest-toggle svg { flex-shrink: 0; color: var(--purple); }
+.ws-kcol-suggest-toggle span { flex: 1; text-align: left; }
+.ws-kcol-suggest-toggle .collapsed { transform: rotate(-90deg); }
+
+/* Nova generate footer */
+.ws-kcol-nova { display: flex; flex-direction: column; gap: 4px; padding: 2px 0; }
+
+/* Suggestion panel — card-like container */
+.ws-kcol-suggest-panel {
+  background: #FDFCFF;
+  border: 1.5px solid var(--cb-lavender);
+  border-radius: 12px;
+  padding: 4px 4px 6px;
+  overflow: hidden;
+}
+
+/* Suggestion groups (by school) inside the expand panel */
+.ws-kcol-suggest-groups { display: flex; flex-direction: column; gap: 0; }
+.ws-kcol-suggest-school { display: flex; flex-direction: column; }
+.ws-kcol-suggest-school + .ws-kcol-suggest-school {
+  border-top: 1px solid rgba(194,181,255,0.3);
+}
+
+/* School section header */
+.ws-kcol-suggest-school-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px 6px;
+}
+.ws-kcol-suggest-school-name {
+  font-size: 0.82rem; font-weight: 800; color: var(--ink-2);
+  flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ws-kcol-suggest-school-count {
+  font-size: 0.68rem; font-weight: 800; color: var(--ink-4);
+  background: rgba(194,181,255,0.35); border-radius: 999px; padding: 1px 7px;
+  flex-shrink: 0;
+}
+
+/* Rows container */
+.ws-kcol-suggest-rows { display: flex; flex-direction: column; padding-bottom: 4px; }
+
+/* Compact suggestion rows (replaces full SuggestionCard inside school groups) */
+.ws-suggest-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 8px;
+  transition: background var(--t);
+}
+.ws-suggest-row:hover { background: #F7F4FD; }
+.ws-suggest-row-dot {
+  width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0;
+  background: var(--cb-lavender); border: 1.5px solid var(--purple); opacity: 0.7;
+}
+.ws-suggest-row-title {
+  flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ws-suggest-row-meta { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.ws-suggest-row-actions {
+  display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+  opacity: 0; transition: opacity var(--t);
+}
+.ws-suggest-row:hover .ws-suggest-row-actions { opacity: 1; }
+.ws-suggest-row-leaving {
+  max-height: 0; opacity: 0; overflow: hidden; padding-top: 0; padding-bottom: 0;
+  transition: max-height 0.18s ease, opacity 0.18s ease, padding 0.18s ease;
+}
+
+/* ── Task card (ws-card2) ── */
+.ws-card2 {
+  background: var(--white);
+  border: 1.5px solid var(--ink-4);
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  cursor: grab;
+  position: relative;
+  box-shadow: 2px 3px 0 0 rgba(17,17,24,0.08);
+  transition: box-shadow var(--t), transform var(--t);
+}
+.ws-card2:hover { box-shadow: 4px 6px 0 0 rgba(17,17,24,0.11); transform: translateY(-1px); }
+.ws-card2:active { cursor: grabbing; }
+.ws-card2.done { opacity: 0.55; border-color: var(--border-2); box-shadow: none; }
+.ws-card2.dragging { opacity: 0.4; }
+
+.ws-card2-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; margin-bottom: 14px;
+}
+.ws-card2-title {
+  font-size: 1rem; font-weight: 700; color: var(--ink); line-height: 1.45;
+  flex: 1; min-width: 0;
+}
+.ws-card2.done .ws-card2-title { text-decoration: line-through; color: var(--ink-3); }
+
+/* Category chip sits flush top-right — same color classes as ws-row-cat */
+.ws-card2-chip { flex-shrink: 0; align-self: flex-start; }
+
+.ws-card2-bottom {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.ws-card2-due {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.78rem; font-weight: 600; color: var(--ink-3);
+}
+.ws-card2-due.overdue { color: var(--prio-high); }
+.ws-card2-due.today   { color: var(--prio-med); }
+.ws-card2-due.muted   { color: var(--ink-4); }
+
+.ws-card2-del {
+  position: absolute; top: 10px; right: 10px;
+  opacity: 0; transition: opacity var(--t);
+}
+.ws-card2:hover .ws-card2-del { opacity: 1; }
+
+/* Suggestion card variant */
+.ws-card2.suggested {
+  border-style: dashed; border-color: var(--cb-lavender);
+  background: #FDFCFF; box-shadow: none; cursor: default;
+}
+.ws-card2-leaving {
+  max-height: 0 !important; opacity: 0; padding: 0; overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+}
+.ws-card2-nova {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 800; color: var(--purple);
+  background: #EDE8FC; border: 1px solid var(--cb-lavender);
+  border-radius: 999px; padding: 3px 9px; flex-shrink: 0;
+}
+.ws-card2-bottom-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.ws-card2-actions { display: flex; align-items: center; gap: 4px; }
+
+/* ── Inline card composer ── */
+.ws-composer-card {
+  background: var(--white);
+  border: 1.5px solid var(--blue);
+  border-radius: 14px;
+  box-shadow: 0 0 0 3px rgba(21,94,239,0.07), 2px 3px 0 0 rgba(17,17,24,0.06);
+  overflow: hidden;
+}
+.ws-composer-title {
+  display: block; width: 100%; border: none; outline: none;
+  font-size: 1rem; font-weight: 600; color: var(--ink); font-family: var(--font);
+  padding: 16px 18px 12px; background: transparent; resize: none;
+}
+.ws-composer-title::placeholder { color: var(--ink-4); font-weight: 500; }
+.ws-composer-divider { height: 1px; background: var(--border); }
+.ws-composer-controls {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 10px 12px; background: #FAFBFF;
+}
+.ws-composer-field {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 8px; cursor: pointer;
+  transition: border-color var(--t);
+}
+.ws-composer-field:focus-within { border-color: var(--blue); }
+.ws-composer-field-icon { color: var(--ink-4); flex-shrink: 0; }
+.ws-composer-date {
+  border: none; outline: none; background: transparent;
+  font-size: 0.78rem; font-weight: 600; color: var(--ink-2);
+  font-family: var(--font); cursor: pointer; width: 110px;
+}
+.ws-composer-select {
+  border: none; outline: none; background: transparent;
+  font-size: 0.72rem; font-weight: 800; font-family: var(--font);
+  cursor: pointer; padding: 0 2px;
+}
+.ws-composer-select.ws-row-cat { padding: 0 2px; border-radius: 0; }
+.ws-composer-prio[data-prio="low"]    { color: var(--ink-3); }
+.ws-composer-prio[data-prio="medium"] { color: var(--prio-med); }
+.ws-composer-prio[data-prio="high"]   { color: var(--prio-high); }
+.ws-composer-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.ws-composer-cancel {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: transparent; cursor: pointer; font-family: var(--font);
+  font-size: 0.8rem; font-weight: 700; color: var(--ink-3); padding: 5px 8px;
+  border-radius: 8px; transition: background var(--t), color var(--t);
+}
+.ws-composer-cancel:hover { background: var(--bg); color: var(--ink-2); }
+.ws-composer-submit { padding: 0.42rem 0.85rem; font-size: 0.82rem; }
+.ws-composer-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+
+/* ── High-density task list (group toggle + rows) ── */
+
+/* Header controls: group-by toggle + add button */
+.ws-tasks-controls { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+.ws-seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+.ws-seg button {
+  border: none; background: transparent; cursor: pointer; font-family: var(--font);
+  font-size: 0.78rem; font-weight: 800; color: var(--ink-3);
+  padding: 0.32rem 0.7rem; border-radius: 7px; transition: background var(--t), color var(--t);
+}
+.ws-seg button.active { background: var(--white); color: var(--ink); box-shadow: 0 1px 2px rgba(17,17,24,0.06); }
+
+/* Groups — card-based sections */
+.ws-groups { display: flex; flex-direction: column; gap: 0.75rem; }
+.ws-group {
+  display: flex; flex-direction: column;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 4px rgba(17,17,24,0.04);
+}
+.ws-group-head {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  border-top: none; border-left: none; border-right: none;
+  width: 100%; text-align: left; cursor: pointer; font-family: var(--font);
+  transition: background var(--t);
+}
+.ws-group-head:hover { background: #E2E5EE; }
+.ws-group-caret { color: var(--ink-4); flex-shrink: 0; transition: transform var(--t); }
+.ws-group-caret.collapsed { transform: rotate(-90deg); }
+.ws-group-label { font-size: 0.85rem; font-weight: 900; color: var(--ink-2); letter-spacing: 0.03em; text-transform: uppercase; }
+.ws-group-count {
+  font-size: 0.72rem; font-weight: 800; color: var(--ink-3);
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 999px; padding: 1px 8px;
+}
+.ws-group-spacer { flex: 1; }
+.ws-group.droppable .ws-group-head { background: var(--blue-light); border-bottom-color: var(--blue); }
+.ws-group-rows { display: flex; flex-direction: column; padding: 0.35rem 0.25rem; }
+.ws-group-empty { font-size: 0.82rem; color: var(--ink-4); padding: 0.7rem 1rem; font-style: italic; }
+
+/* Inline Nova generate affordance (school-mode group header) */
+.ws-nova-gen {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: transparent; cursor: pointer; font-family: var(--font);
+  font-size: 0.76rem; font-weight: 800; color: var(--ink-3);
+  padding: 2px 6px; border-radius: 7px; transition: background var(--t), color var(--t);
+}
+.ws-nova-gen:hover:not(:disabled) { background: #F4F1FC; color: var(--purple); }
+.ws-nova-gen:disabled { color: var(--ink-4); cursor: default; }
+.ws-nova-gen svg { color: var(--purple); }
+
+/* Task row */
+.ws-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 8px; cursor: default;
+  transition: background var(--t);
+  position: relative;
+}
+.ws-row + .ws-row { border-top: 1px solid var(--border); border-radius: 0; }
+.ws-row + .ws-row:last-child { border-radius: 0 0 8px 8px; }
+.ws-row:first-child { border-radius: 8px 8px 0 0; }
+.ws-row:only-child { border-radius: 8px; }
+.ws-row:hover { background: #F8F9FD; }
+.ws-row.done .ws-row-title { text-decoration: line-through; color: var(--ink-3); }
+.ws-row.dragging { opacity: 0.4; }
+.ws-row.prio-high-row { border-left: 3px solid #FBCAC4; padding-left: 11px; }
+
+.ws-row-status {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+  border: none; background: transparent; cursor: pointer; padding: 0;
+  color: var(--ink-4); transition: color var(--t), background var(--t);
+}
+.ws-row-status:hover { background: var(--border); color: var(--ink-2); }
+.ws-row-status.s-done { color: var(--blue); }
+.ws-row-status.s-in_progress { color: var(--blue); }
+
+.ws-row-title { flex: 1; min-width: 0; font-size: 0.95rem; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-row-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+/* University logo in row (via LogoTile at 22px) */
+.ws-row .logo-tile { flex-shrink: 0; }
+
+/* Category chip — colored by type */
+.ws-row-cat {
+  font-size: 0.72rem; font-weight: 800; border-radius: 999px;
+  padding: 2px 9px; letter-spacing: 0.01em; flex-shrink: 0;
+  /* default/general */
+  background: #F3F4F6; color: #52525B;
+}
+.ws-row-cat.cat-essays      { background: #FEE8E6; color: #C0392B; }
+.ws-row-cat.cat-testing     { background: #FEF9E6; color: #B7791F; }
+.ws-row-cat.cat-documents   { background: var(--blue-light); color: var(--blue); }
+.ws-row-cat.cat-recs        { background: #E8F5EF; color: #138A5E; }
+.ws-row-cat.cat-finaid      { background: #FEF1E6; color: #D97706; }
+.ws-row-cat.cat-search      { background: #EDE9FF; color: #6B5CE7; }
+.ws-row-cat.cat-general     { background: #F3F4F6; color: #52525B; }
+.ws-row-prio { display: inline-flex; align-items: center; gap: 4px; }
+.ws-prio-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
+.ws-prio-dot.prio-high { background: var(--prio-high); }
+.ws-prio-dot.prio-medium { background: var(--prio-med); }
+.ws-prio-dot.prio-low { background: var(--prio-low); }
+.ws-prio-label { font-size: 0.75rem; font-weight: 800; color: var(--prio-high); }
+.ws-row-due { font-size: 0.78rem; font-weight: 700; color: var(--ink-3); min-width: 50px; text-align: right; }
+.ws-row-due.overdue { color: var(--prio-high); }
+
+/* Trailing actions — revealed on hover */
+.ws-row-actions { display: flex; align-items: center; gap: 2px; width: 26px; justify-content: flex-end; flex-shrink: 0; }
+.ws-row-actions .ws-icon-sm { opacity: 0; transition: opacity var(--t); }
+.ws-row:hover .ws-row-actions .ws-icon-sm { opacity: 1; }
+.ws-icon-sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;
+  border: none; background: transparent; cursor: pointer; padding: 0;
+  color: var(--ink-4); transition: background var(--t), color var(--t);
+}
+.ws-icon-sm:hover { background: var(--border); color: var(--ink-2); }
+.ws-icon-sm.danger:hover { background: #FEF2F2; color: #DC2626; }
+.ws-icon-sm.accept { color: var(--blue); }
+.ws-icon-sm.accept:hover { background: var(--blue-light); color: var(--blue); }
+
+/* Status popover */
+.ws-status-pop {
+  position: absolute; z-index: 30; margin-top: 4px;
+  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow-hover); padding: 4px; min-width: 130px;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.ws-status-pop button {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  border: none; background: transparent; cursor: pointer; font-family: var(--font);
+  font-size: 0.8rem; font-weight: 700; color: var(--ink-2);
+  padding: 0.4rem 0.5rem; border-radius: 7px; transition: background var(--t);
+}
+.ws-status-pop button:hover { background: var(--bg); }
+.ws-status-pop button.current { color: var(--blue); }
+
+/* Suggestion toggle (collapsed by default) */
+.ws-suggest-toggle {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  border: none; border-bottom: 1px solid var(--border); background: #FDFCFF;
+  cursor: pointer; font-family: var(--font);
+  font-size: 0.8rem; font-weight: 700; color: var(--ink-3);
+  padding: 8px 14px; margin: 0;
+  transition: background var(--t), color var(--t);
+}
+.ws-suggest-toggle:hover { background: #F7F4FD; color: var(--ink-2); }
+.ws-suggest-toggle svg { color: var(--purple); flex-shrink: 0; }
+.ws-suggest-toggle span:first-of-type { flex: 1; text-align: left; }
+.ws-suggest-toggle-action {
+  font-size: 0.7rem; font-weight: 800; color: var(--purple);
+  padding: 2px 9px; border-radius: 999px;
+  background: #EDE8FC; border: 1px solid var(--cb-lavender);
+  flex-shrink: 0; letter-spacing: 0.01em;
+}
+
+/* School sub-groups inside suggestion drawer */
+.ws-suggest-school-groups { display: flex; flex-direction: column; gap: 0; }
+.ws-suggest-school-group { display: flex; flex-direction: column; }
+.ws-suggest-school-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.72rem; font-weight: 800; color: var(--ink-2);
+  padding: 10px 14px 5px;
+}
+.ws-suggest-school-label span { flex: 1; }
+.ws-suggest-school-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Suggested row (provisional) */
+.ws-row.suggested { animation: wsRowIn var(--t) ease; }
+.ws-row-suggest-dot {
+  width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0;
+  background: var(--cb-lavender); border: 1.5px solid var(--purple); opacity: 0.6;
+}
+.ws-row.leaving { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; transition: max-height var(--t), opacity var(--t), padding var(--t); }
+/* Suggestion row actions stay hover-only, same as task rows */
+.ws-row-actions-suggest { width: auto; }
+@keyframes wsRowIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+/* Inline composer (revealed via + Add task) */
+.ws-composer { margin: 0.4rem 0 1rem; }
 
 /* ── Stack forms (Activities/Honors) ── */
 .ws-block-title { display: flex; align-items: center; gap: 7px; font-size: 1.05rem; font-weight: 900; color: var(--ink); margin-bottom: 0.85rem; letter-spacing: -0.02em; }
@@ -824,7 +1200,6 @@ a.ws-nudge:hover { transform: translateX(2px); }
 @media (max-width: 820px) {
   .ws-agenda { grid-template-columns: 1fr; }
   .ws-profile-grid { grid-template-columns: 1fr; }
-  .ws-board { grid-template-columns: 1fr; }
   .ws-cal-cell { min-height: 64px; }
 }
 
@@ -892,34 +1267,6 @@ a.ws-nudge:hover { transform: translateX(2px); }
   .ws-home { grid-template-columns: 1fr; }
   .ws-home-rail { margin-top: 1rem; }
 }
-
-/* ── AI Suggestion Inbox (Tasks page) ── */
-.ws-suggest {
-  border: 1.5px solid #E4D4FB;
-  border-radius: var(--r-lg);
-  background: linear-gradient(180deg, #FBF8FF, var(--white));
-  padding: 1.25rem 1.4rem 1.4rem;
-  margin-bottom: 1.5rem;
-}
-.ws-suggest-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; }
-.ws-suggest-title { font-size: 1rem; font-weight: 800; color: var(--ink); margin: 0; }
-.ws-suggest-sub { font-size: 0.8rem; color: var(--ink-3); margin: 2px 0 0; font-weight: 500; }
-
-.ws-suggest-generate { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
-
-.ws-suggest-group { margin-top: 1rem; }
-.ws-suggest-group-head {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #7C3AED;
-  margin-bottom: 0.6rem;
-}
-.ws-suggest-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.6rem; }
-.ws-suggest-card { background: var(--white); cursor: default; }
-.ws-suggest-card .ws-card-title { cursor: default; }
-.ws-suggest-actions { display: flex; gap: 2px; flex-shrink: 0; }
-.ws-icon-btn.ws-suggest-add { color: var(--blue); }
-.ws-icon-btn.ws-suggest-add:hover { background: var(--blue-light); color: var(--blue); }
 
 .ws-spin { animation: wsSpin 0.8s linear infinite; }
 @keyframes wsSpin { to { transform: rotate(360deg); } }

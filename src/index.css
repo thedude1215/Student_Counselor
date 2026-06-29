@@ -21,6 +21,11 @@
   /* ── Purple accent (for italic accents, "counselor" word) ── */
   --purple:        #6B5CE7;
 
+  /* ── Priority dots (calm, low-chroma) ── */
+  --prio-high:     #C0392B;
+  --prio-med:      #B7791F;
+  --prio-low:      #AEAEC8;
+
   /* ── Text ── */
   --ink:           #111118;   /* near-black for big headings */
   --ink-2:         #3A3A4C;   /* body text */

@@ -57,7 +57,9 @@ export default function WorkspaceLayout() {
   return (
     <div className="ws-page">
       <aside className="ws-sidebar">
-        <div className="ws-side-brand">ScholarPath</div>
+        <div className="ws-side-brand">
+          <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-side-brand-logo" />
+        </div>
 
         <nav className="ws-nav">
           {GROUPS.map((group, gi) => (
