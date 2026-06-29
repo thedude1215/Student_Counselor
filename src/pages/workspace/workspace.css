@@ -200,7 +200,7 @@
   margin-bottom: 1.5rem;
 }
 
-.ws-title { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em; color: var(--ink); }
+.ws-title { font-family: var(--font-serif); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
 .ws-subtitle { font-size: 0.9rem; color: var(--ink-3); font-weight: 600; margin-top: 0.2rem; }
 
 .ws-date { color: var(--ink-3); font-size: 0.82rem; font-weight: 700; margin-bottom: 0.4rem; }
