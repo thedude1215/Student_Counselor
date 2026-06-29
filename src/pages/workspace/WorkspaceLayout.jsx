@@ -34,6 +34,17 @@ export default function WorkspaceLayout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const navRef = useRef(null);
+  const [pill, setPill] = useState({ top: 0, height: 0, opacity: 0 });
+
+  useEffect(() => {
+    if (!navRef.current) return;
+    const active = navRef.current.querySelector('.ws-nav-item.active');
+    if (!active) return;
+    const navRect = navRef.current.getBoundingClientRect();
+    const itemRect = active.getBoundingClientRect();
+    setPill({ top: itemRect.top - navRect.top, height: itemRect.height, opacity: 1 });
+  }, [location.pathname]);
 
   const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
   const initial = name.charAt(0).toUpperCase();
@@ -62,7 +73,8 @@ export default function WorkspaceLayout() {
           <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-side-brand-logo" />
         </div>
 
-        <nav className="ws-nav">
+        <nav className="ws-nav" ref={navRef}>
+          <div className="ws-nav-pill" style={{ top: pill.top, height: pill.height, opacity: pill.opacity }} />
           {GROUPS.map((group, gi) => (
             <div key={gi} className="ws-nav-group">
               {group.label && <div className="ws-nav-label">{group.label}</div>}
