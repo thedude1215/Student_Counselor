@@ -253,29 +253,73 @@
 .ws-empty p { font-size: 0.9rem; margin-bottom: 1.25rem; }
 
 /* ── College list tiers ── */
-.ws-tiers { display: flex; flex-direction: column; gap: 1.5rem; }
-.ws-tier-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
-.ws-tier-badge {
-  font-size: 0.72rem; font-weight: 900; letter-spacing: 0.04em;
-  padding: 3px 10px; border-radius: 999px; text-transform: uppercase;
+/* ── College List table ── */
+.ws-clist-table {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
 }
-.tier-reach  { background: #FEE8E6; color: #C0392B; }
-.tier-match  { background: #EAE8FF; color: #4055F5; }
-.tier-likely { background: #E8F5EF; color: #138A5E; }
-.ws-tier-hint { font-size: 0.8rem; color: var(--ink-3); font-weight: 600; flex: 1; }
-.ws-tier-count { font-size: 0.85rem; color: var(--ink-4); font-weight: 800; }
-.ws-tier-empty { font-size: 0.82rem; color: var(--ink-4); padding: 0.5rem 0; }
 
-.ws-college-rows { display: flex; flex-direction: column; gap: 0.5rem; }
-.ws-college-row {
-  display: flex; align-items: center; gap: 0.85rem;
-  padding: 0.7rem 0.85rem;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 12px;
+.ws-clist-head {
+  display: grid;
+  grid-template-columns: 1fr 120px 130px 48px;
+  padding: 0 1.25rem;
+  background: #F7F7FB;
+  border-bottom: 1.5px solid var(--border);
 }
-.ws-college-info { flex: 1; min-width: 0; }
-.ws-college-name { font-weight: 800; font-size: 0.92rem; color: var(--ink); }
-.ws-college-meta { font-size: 0.78rem; color: var(--ink-3); font-weight: 600; }
+.ws-clist-th {
+  display: flex; align-items: center; gap: 5px;
+  padding: 0.65rem 0;
+  font-size: 0.72rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-3);
+  background: none; border: none; cursor: pointer;
+  transition: color var(--t);
+}
+.ws-clist-th:hover { color: var(--ink); }
+
+.ws-clist-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 130px 48px;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  transition: background var(--t);
+}
+.ws-clist-row + .ws-clist-row { border-top: 1px solid var(--border); }
+.ws-clist-row:hover { background: #F9F9FD; }
+
+.ws-clist-col-name {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
+.ws-clist-name {
+  font-size: 0.95rem; font-weight: 800; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ws-clist-city {
+  font-size: 0.78rem; color: var(--ink-3); font-weight: 600; margin-top: 1px;
+}
+.ws-clist-col-rate {
+  font-size: 0.88rem; font-weight: 700; color: var(--ink-2);
+}
+.ws-clist-col-tier { display: flex; align-items: center; }
+.ws-clist-col-actions { display: flex; justify-content: flex-end; }
+
+/* Tier pill — styled select */
+.ws-tier-pill {
+  border: none; border-radius: 999px;
+  padding: 4px 12px; font-size: 0.78rem; font-weight: 800;
+  font-family: var(--font); cursor: pointer; outline: none;
+  appearance: none; -webkit-appearance: none;
+}
+.ws-tier-pill.tier-reach  { background: #FEE8E6; color: #C0392B; }
+.ws-tier-pill.tier-match  { background: #FEF9C3; color: #92400E; }
+.ws-tier-pill.tier-likely { background: #D1FAE5; color: #065F46; }
+
+/* Keep old tier colors for any legacy usage */
+.tier-reach  { background: #FEE8E6; color: #C0392B; }
+.tier-match  { background: #FEF9C3; color: #92400E; }
+.tier-likely { background: #D1FAE5; color: #065F46; }
+
 .ws-tier-select, .ws-input-select {
   border: 1px solid var(--border-2); border-radius: 8px;
   padding: 0.4rem 0.5rem; font-size: 0.82rem; font-weight: 700;
