@@ -138,10 +138,23 @@
   font-size: 0.9rem;
   font-weight: 700;
   text-decoration: none;
-  transition: background var(--t), color var(--t);
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
 }
-.ws-nav-item:hover { background: var(--bg); color: var(--ink-2); }
-.ws-nav-item.active { background: var(--blue-light); color: var(--blue); }
+.ws-nav-item:hover {
+  background: var(--bg);
+  color: var(--ink-2);
+  transform: translateX(2px);
+}
+.ws-nav-item:active {
+  transform: scale(0.95);
+  transition-duration: 0.07s;
+}
+.ws-nav-item.active {
+  background: var(--blue-light);
+  color: var(--blue);
+  transform: translateX(3px);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
 
 /* ── Main ── */
 .ws-main {
