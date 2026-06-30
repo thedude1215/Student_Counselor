@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120">
+  <!-- MIT classic block letter logo -->
+  <!-- Red: #8C1515 / Gray: #8B8B8B -->
+
+  <!-- M: left pillar -->
+  <rect x="4"  y="4"  width="24" height="112" fill="#8C1515"/>
+  <!-- M: top-left inner notch fill -->
+  <rect x="4"  y="4"  width="56" height="24"  fill="#8C1515"/>
+  <!-- M: top-right small square -->
+  <rect x="36" y="4"  width="24" height="24"  fill="#8C1515"/>
+  <!-- M: right pillar -->
+  <rect x="36" y="4"  width="24" height="112" fill="#8C1515"/>
+
+  <!-- gap -->
+
+  <!-- I: top block -->
+  <rect x="76" y="4"  width="24" height="24"  fill="#8C1515"/>
+  <!-- I: middle gray bar -->
+  <rect x="76" y="44" width="24" height="32"  fill="#8B8B8B"/>
+  <!-- I: bottom block -->
+  <rect x="76" y="92" width="24" height="24"  fill="#8C1515"/>
+
+  <!-- gap -->
+
+  <!-- T: top bar -->
+  <rect x="106" y="4"  width="110" height="24" fill="#8C1515"/>
+  <!-- T: top-right small square (matches M) -->
+  <rect x="192" y="4"  width="24" height="24" fill="#8C1515"/>
+  <!-- T: center pillar -->
+  <rect x="151" y="4"  width="24" height="112" fill="#8C1515"/>
+</svg>

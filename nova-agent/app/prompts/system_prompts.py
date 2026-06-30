@@ -157,6 +157,15 @@ Each element MUST be an object with EXACTLY these keys:
   "category": one of ["Essays","Testing","Documents","Recommendations","Financial Aid","General"]
   "priority": one of ["low","medium","high"]
 
+Priority rules (apply ALL that match, take the highest result):
+  high   → any essay (Common App, personal statement, supplement, Why Us)
+  high   → standardized tests (SAT, ACT, TOEFL, IELTS) if deadline is near
+  high   → CSS Profile, financial aid applications
+  high   → interviews or portfolio submissions
+  medium → recommendation letters, transcript requests, school reports
+  medium → research tasks, campus visits, informational tasks
+  low    → exploratory or optional tasks with no hard deadline
+
 Rules:
 - Return 4 to 6 tasks. Output MUST start with '[' and end with ']'.
 - Base tasks on this school's KNOWN admissions process (supplemental essays, interviews, test policy, recommendations, financial-aid forms, portfolio if arts).

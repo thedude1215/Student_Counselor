@@ -176,6 +176,7 @@ export async function fetchActivities(profileId) {
     .from('activities')
     .select('*')
     .eq('profile_id', profileId)
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data;
@@ -185,6 +186,17 @@ export async function addActivity(profileId, activity) {
   const { data, error } = await supabase
     .from('activities')
     .insert({ profile_id: profileId, ...activity })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateActivity(id, updates) {
+  const { data, error } = await supabase
+    .from('activities')
+    .update(updates)
+    .eq('id', id)
     .select('*')
     .single();
   if (error) throw error;
@@ -203,6 +215,7 @@ export async function fetchHonors(profileId) {
     .from('honors')
     .select('*')
     .eq('profile_id', profileId)
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data;
@@ -218,7 +231,34 @@ export async function addHonor(profileId, honor) {
   return data;
 }
 
+export async function updateHonor(id, updates) {
+  const { data, error } = await supabase
+    .from('honors')
+    .update(updates)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteHonor(id) {
   const { error } = await supabase.from('honors').delete().eq('id', id);
   if (error) throw error;
+}
+
+/* ─────────────── PDF Import ─────────────── */
+
+export async function parsePdf(file) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const fd = new FormData();
+  fd.append('pdf', file);
+  const res = await fetch('/api/activities/parse-pdf', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body: fd,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'PDF parse failed');
+  return json; // { activities, honors }
 }

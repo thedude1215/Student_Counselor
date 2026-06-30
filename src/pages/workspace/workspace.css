@@ -266,6 +266,7 @@
 .ws-modal-label {
   font-size: 0.75rem; font-weight: 900; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--ink-3);
+  display: flex; align-items: center;
 }
 .ws-modal-optional {
   font-size: 0.7rem; font-weight: 600; text-transform: none;
@@ -1934,6 +1935,229 @@ a.ws-nudge:hover { transform: translateX(2px); }
   white-space: nowrap;
 }
 
+/* ── v2 card layout (shared by activity + honor) ── */
+.ah-card-v2 {
+  position: relative;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  display: flex; align-items: stretch;
+  overflow: hidden;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  gap: 0;
+}
+.ah-card-v2:hover {
+  border-color: #C7D2FE;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* Type icon tile — holds icon + rank overlay */
+.ah-type-icon {
+  flex-shrink: 0; width: 52px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  align-self: stretch;
+  border-right: 1.5px solid var(--border);
+  position: relative;
+}
+
+/* Medal tile (honors) — same layout */
+.ah-medal {
+  flex-shrink: 0; width: 52px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  align-self: stretch; border-right: 1.5px solid;
+}
+/* Rank number sits below the icon */
+.ah-tile-rank {
+  font-size: 0.62rem; font-weight: 800; opacity: 0.45; line-height: 1;
+}
+
+/* Card body — click to edit */
+.ah-card-v2 .ah-card-body {
+  flex: 1; padding: 0.75rem 0.9rem;
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+
+/* Time info row */
+.ah-card-time {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; color: var(--ink-3); font-weight: 600;
+}
+.ah-time-sep { opacity: 0.4; }
+
+/* Type pill (small tag on card) */
+.ah-type-pill {
+  font-size: 0.64rem; font-weight: 700; color: var(--ink-3);
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+
+/* Card action buttons (arrows + edit + delete) — right side, show on hover */
+.ah-card-actions {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 0 8px; flex-shrink: 0;
+  opacity: 0; transition: opacity 0.15s;
+}
+.ah-card-v2:hover .ah-card-actions { opacity: 1; }
+
+.ah-arrow-btn {
+  background: none; border: none; padding: 3px; cursor: pointer;
+  color: var(--ink-3); display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; transition: background 0.1s, color 0.1s; line-height: 1;
+}
+.ah-arrow-btn:hover:not(:disabled) { background: var(--border); color: var(--ink); }
+.ah-arrow-btn:disabled { opacity: 0.25; cursor: default; }
+
+.ah-actions-sep {
+  width: 20px; height: 1px; background: var(--border); margin: 3px 0;
+}
+
+.ah-action-btn {
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: var(--ink-3); border-radius: 6px;
+  transition: background 0.1s, color 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.ah-action-btn:hover { background: var(--bg); color: var(--ink); }
+.ah-action-del:hover { background: #FEF2F2 !important; color: #e53e3e !important; }
+
+/* Char counter in modal labels */
+.ah-char-count {
+  margin-left: auto; font-size: 0.7rem; font-weight: 600; color: var(--ink-3);
+  font-family: var(--font); text-transform: none; letter-spacing: 0;
+}
+.ah-char-warn { color: #D97706; }
+.ah-char-over { color: #e53e3e; }
+
+/* Textarea in modal */
+.ah-textarea {
+  resize: vertical; min-height: 70px; font-family: var(--font);
+  font-size: 0.85rem; line-height: 1.5;
+}
+
+/* Nova review button — outlined violet pill */
+.ws-btn-nova {
+  background: #F5F3FF;
+  color: #7C3AED;
+  border: 1.5px solid #C4B5FD;
+  border-radius: 12px;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ws-btn-nova:hover {
+  background: #EDE9FE;
+  border-color: #7C3AED;
+  color: #6D28D9;
+}
+
+/* Import PDF button */
+.ws-btn-import {
+  background: var(--bg);
+  color: var(--ink-2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ws-btn-import:hover {
+  background: var(--white);
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+/* ── Import PDF modal content ── */
+.ah-import-drop {
+  border: 2px dashed #C7D2FE;
+  border-radius: 16px;
+  background: #FAFBFF;
+  padding: 3rem 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  cursor: pointer; text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--ink-3);
+}
+.ah-import-drop:hover, .ah-import-drop-over {
+  border-color: #6366f1;
+  background: #EEF2FF;
+  color: #6366f1;
+}
+.ah-import-drop-title {
+  font-size: 1rem; font-weight: 800; color: var(--ink); margin: 0;
+}
+.ah-import-drop-sub {
+  font-size: 0.8rem; color: var(--ink-3); margin: 0;
+}
+
+.ah-import-parsing {
+  padding: 3rem 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  color: var(--ink-3); text-align: center;
+}
+.ah-import-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ah-import-parsing-text {
+  font-size: 1rem; font-weight: 800; color: var(--ink); margin: 0;
+}
+.ah-import-parsing-sub {
+  font-size: 0.82rem; color: var(--ink-3); margin: 0;
+}
+
+.ah-import-error {
+  padding: 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  text-align: center;
+}
+.ah-import-error-msg {
+  font-size: 0.88rem; color: #B91C1C; background: #FEF2F2;
+  border: 1px solid #FECACA; border-radius: 10px;
+  padding: 0.75rem 1rem; margin: 0; max-width: 380px;
+}
+
+.ah-import-preview { display: flex; flex-direction: column; gap: 1rem; }
+.ah-import-preview-note {
+  font-size: 0.82rem; color: var(--ink-3); margin: 0;
+}
+.ah-import-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.ah-import-section-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--ink-3);
+}
+.ah-import-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 220px; overflow-y: auto;
+}
+.ah-import-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 0.55rem 0.75rem; cursor: pointer;
+  transition: border-color 0.1s;
+}
+.ah-import-item:hover { border-color: #C7D2FE; }
+.ah-import-check {
+  width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
+  accent-color: #6366f1;
+}
+.ah-import-item-icon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.ah-import-item-body {
+  flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+}
+.ah-import-item-title {
+  font-size: 0.85rem; font-weight: 700; color: var(--ink);
+}
+.ah-import-item-meta {
+  font-size: 0.72rem; color: var(--ink-3); font-weight: 600;
+}
+
+/* wider modal for activities */
+.ws-modal-wide { max-width: 560px; }
+
 /* ── Deadlines Panel ── */
 .dl-panel {
   background: var(--white);
@@ -2042,6 +2266,14 @@ a.ws-nudge:hover { transform: translateX(2px); }
 
 /* Priority 3 — lavender */
 .dl-prio-3 { background: #F3E8FF; color: #7E22CE; }
+
+/* Priority pill as editable select */
+.dl-prio-select {
+  border: none; outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  font-family: var(--font); transition: opacity 0.15s;
+}
+.dl-prio-select:hover { opacity: 0.8; }
 
 /* Board section title that sits between Deadlines and Kanban */
 .dl-board-title {

@@ -1,29 +1,24 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ListChecks } from 'lucide-react';
+import { calcPriority } from '../../lib/taskPriority.js';
 
 const CATEGORIES = ['General', 'Essays', 'Extracurriculars', 'Testing', 'Documents', 'Financial Aid', 'Interviews', 'Other'];
-const PRIORITIES = [
-  { value: 'high',   label: 'Priority 1 — High' },
-  { value: 'medium', label: 'Priority 2 — Medium' },
-  { value: 'low',    label: 'Priority 3 — Low' },
-];
 
 export default function NewTaskModal({ colleges = [], onConfirm, onClose }) {
-  const [title,       setTitle]       = useState('');
-  const [dueDate,     setDueDate]     = useState('');
-  const [category,    setCategory]    = useState('General');
-  const [priority,    setPriority]    = useState('medium');
+  const [title,        setTitle]        = useState('');
+  const [dueDate,      setDueDate]      = useState('');
+  const [category,     setCategory]     = useState('General');
   const [universityId, setUniversityId] = useState('');
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!title.trim()) return;
     onConfirm({
-      title:       title.trim(),
-      due_date:    dueDate || null,
-      category:    category === 'General' ? null : category,
-      priority,
+      title:         title.trim(),
+      due_date:      dueDate || null,
+      category:      category === 'General' ? null : category,
+      priority:      calcPriority(title, dueDate || null),
       university_id: universityId || null,
     });
     onClose();
@@ -89,23 +84,6 @@ export default function NewTaskModal({ colleges = [], onConfirm, onClose }) {
               >
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            </div>
-          </div>
-
-          {/* Priority */}
-          <div className="ws-modal-field">
-            <label className="ws-modal-label">Priority</label>
-            <div className="ws-modal-prio-row">
-              {PRIORITIES.map(p => (
-                <button
-                  key={p.value}
-                  type="button"
-                  className={`ws-modal-prio-btn prio-${p.value} ${priority === p.value ? 'active' : ''}`}
-                  onClick={() => setPriority(p.value)}
-                >
-                  {p.label}
-                </button>
-              ))}
             </div>
           </div>
 

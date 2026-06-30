@@ -36,29 +36,17 @@ function AppLayout() {
         <Route path="/acceptances"  element={<Acceptances />} />
         <Route path="/nova"         element={<Nova />} />
         <Route path="/auth"         element={<Auth />} />
-        <Route
-          path="/dashboard/add-schools"
-          element={
-            <ProtectedRoute>
-              <DashboardAddSchools />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <WorkspaceLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Overview />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="colleges" element={<CollegeList />} />
-          <Route path="essays" element={<Essays />} />
-          <Route path="activities" element={<Activities />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="calendar" element={<Calendar />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard/add-schools" element={<DashboardAddSchools />} />
+          <Route path="/dashboard" element={<WorkspaceLayout />}>
+            <Route index element={<Overview />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="colleges" element={<CollegeList />} />
+            <Route path="essays" element={<Essays />} />
+            <Route path="activities" element={<Activities />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="calendar" element={<Calendar />} />
+          </Route>
         </Route>
       </Routes>
       {!hideFooter && <Footer />}

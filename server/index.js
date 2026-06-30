@@ -3,6 +3,7 @@ import express from 'express';
 import catalogRoutes from './routes/catalogRoutes.js';
 import novaRoutes from './routes/novaRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import activityRoutes from './routes/activityRoutes.js';
 import './services/reminderCron.js';
 
 const app = express();
@@ -13,6 +14,7 @@ app.use(express.json({ limit: '100kb' }));
 app.use('/api', catalogRoutes);
 app.use('/api/nova', novaRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/activities', activityRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

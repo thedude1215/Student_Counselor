@@ -146,7 +146,7 @@ function groupByMonth(tasks) {
   return [...groups.values()];
 }
 
-function DeadlinesPanel({ tasks, colleges }) {
+function DeadlinesPanel({ tasks, colleges, onPriorityChange }) {
   const groups = groupByMonth(tasks);
   if (groups.length === 0) return null;
 
@@ -202,7 +202,16 @@ function DeadlinesPanel({ tasks, colleges }) {
                       {logo?.type === 'uni' && <span className="dl-item-school">{logo.uni.name}</span>}
                     </span>
                   </span>
-                  <span className={`dl-prio ${prio.cls}`}>{prio.label}</span>
+                  <select
+                    className={`dl-prio dl-prio-select ${prio.cls}`}
+                    value={t.priority || 'medium'}
+                    onClick={e => e.stopPropagation()}
+                    onChange={e => onPriorityChange(t.id, e.target.value)}
+                  >
+                    <option value="high">Priority 1</option>
+                    <option value="medium">Priority 2</option>
+                    <option value="low">Priority 3</option>
+                  </select>
                 </div>
               );
             })}
@@ -330,7 +339,14 @@ export default function Tasks() {
         </button>
       </header>
 
-      <DeadlinesPanel tasks={tasks} colleges={colleges} />
+      <DeadlinesPanel
+        tasks={tasks}
+        colleges={colleges}
+        onPriorityChange={async (id, priority) => {
+          setTasks(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
+          await updateTask(id, { priority });
+        }}
+      />
 
       {showNewModal && (
         <NewTaskModal
