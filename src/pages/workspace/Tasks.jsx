@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, ListChecks, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import NewTaskModal from './NewTaskModal.jsx';
 import {
   fetchTasks, addTask, updateTask, deleteTask,
   fetchCollegeList, fetchTaskSuggestions, dismissSuggestion, markSuggestionAdded,
@@ -131,7 +132,7 @@ function ServiceTile({ bg, color, label, logoUrl, size = 38, radius = 10 }) {
 
 function groupByMonth(tasks) {
   const withDue = tasks
-    .filter(t => t.due_date)
+    .filter(t => t.due_date && t.status !== 'done')
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
 
   const groups = new Map();
@@ -151,14 +152,16 @@ function DeadlinesPanel({ tasks, colleges }) {
 
   return (
     <div className="dl-panel">
-      {groups.map(({ label, tasks: monthTasks }) => (
+      {groups.map(({ label, tasks: monthTasks }, gi) => (
         <div key={label} className="dl-month">
           <div className="dl-month-head">
             <span className="dl-month-label">{label}</span>
-            <span className="dl-nova-badge">
-              <Check size={12} strokeWidth={2.5} />
-              Organized by Nova
-            </span>
+            {gi === 0 && (
+              <span className="dl-nova-badge">
+                <Check size={12} strokeWidth={2.5} />
+                Organized by Nova
+              </span>
+            )}
           </div>
 
           <div className="dl-table">
@@ -214,7 +217,7 @@ export default function Tasks() {
   const { user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [showNewModal, setShowNewModal] = useState(false);
   const [dragId, setDragId] = useState(null);
   const [colleges, setColleges] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -271,13 +274,14 @@ export default function Tasks() {
     await dismissSuggestion(id);
   }
 
-  async function handleAdd({ title, due_date, category, priority }) {
+  async function handleAdd({ title, due_date, category, priority, university_id }) {
     const task = await addTask(user.id, {
       title, due_date: due_date || null, priority,
-      category: category === 'General' ? null : category, status: 'todo',
+      category: category === 'General' ? null : category,
+      university_id: university_id || null,
+      status: 'todo',
     });
     setTasks(prev => [...prev, task]);
-    setComposerOpen(false);
   }
 
   async function moveTo(task, status) {
@@ -321,12 +325,20 @@ export default function Tasks() {
           <h1 className="ws-title">Tasks &amp; Deadlines</h1>
           <p className="ws-subtitle">{open} open · {done} done</p>
         </div>
-        <button className="ws-btn ws-btn-primary" onClick={() => setComposerOpen(true)}>
+        <button className="ws-btn ws-btn-primary" onClick={() => setShowNewModal(true)}>
           <Plus size={16} /> Add task
         </button>
       </header>
 
       <DeadlinesPanel tasks={tasks} colleges={colleges} />
+
+      {showNewModal && (
+        <NewTaskModal
+          colleges={colleges}
+          onConfirm={handleAdd}
+          onClose={() => setShowNewModal(false)}
+        />
+      )}
 
       {editingTask && (
         <TaskEditModal
@@ -354,9 +366,7 @@ export default function Tasks() {
                 tasks={tasks.filter(t => t.status === col.key)}
                 suggestions={col.key === 'todo' ? suggestions : []}
                 nova={col.key === 'todo' ? { colleges, generatedIds, generatingId, onGenerate: generateSuggestions } : {}}
-                composerOpen={col.key === 'todo' && composerOpen}
                 onAdd={handleAdd}
-                onComposerClose={() => setComposerOpen(false)}
                 onDelete={remove}
                 onEdit={setEditingTask}
                 onAccept={acceptSuggestion}

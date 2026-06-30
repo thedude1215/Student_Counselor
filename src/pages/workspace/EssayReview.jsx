@@ -34,31 +34,22 @@ const CARD_W   = 300;
 const CARD_R   = 44;
 const CARD_GAP = 14;
 
-/* Animation timings (seconds) */
-const ANIM = {
-  BASE:       0.15,   // first highlight starts
-  STEP:       0.32,   // stagger between each suggestion
-  HL_DUR:     0.50,   // highlight sweep duration (match CSS)
-  LINE_DUR:   0.65,   // connector line draw duration
-  LINE_EXTRA: 0.44,   // line starts this many seconds after highlight starts
-  CARD_EXTRA: 0.92,   // card appears this many seconds after highlight starts
+/* Per-suggestion timing — all relative to when the mark enters the viewport */
+const TRIG = {
+  HL_DUR:    0.70,  // highlight sweep duration (must match CSS)
+  LINE_DUR:  0.90,  // connector line draw duration
+  LINE_AFTER: 0.60, // line starts N seconds after mark becomes visible
+  CARD_AFTER: 1.20, // card slides in N seconds after mark becomes visible
 };
 
-/* Natural S-curve bezier:
-   - Departs horizontally from the highlight right-edge
-   - Arrives horizontally at the card left-edge
-   - When endpoints are at similar Y, adds a gentle bow to stay visible */
+/* Natural S-curve bezier */
 function bezier(x1, y1, x2, y2) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   if (Math.abs(dy) < 55) {
-    // Nearly same height — add a downward bow so it never looks like a flat rule
     const bow = 44;
-    const cpx1 = x1 + dx * 0.42;
-    const cpx2 = x2 - dx * 0.18;
-    return `M ${x1} ${y1} C ${cpx1} ${y1 + bow}, ${cpx2} ${y2 + bow * 0.5}, ${x2} ${y2}`;
+    return `M ${x1} ${y1} C ${x1 + dx * 0.42} ${y1 + bow}, ${x2 - dx * 0.18} ${y2 + bow * 0.5}, ${x2} ${y2}`;
   }
-  // True S-curve: same horizontal X for both control points (natural elbow)
   const cpx = x1 + dx * 0.7;
   return `M ${x1} ${y1} C ${cpx} ${y1}, ${cpx} ${y2}, ${x2} ${y2}`;
 }
@@ -92,11 +83,13 @@ function buildSegments(text, suggestions) {
   return segs;
 }
 
-export default function EssayReview({ review, content, title, university, prompt, onClose }) {
+export default function EssayReview({ review, content, title, university, prompt, onClose, onReanalyze, reviewing }) {
   const [mounted,    setMounted]    = useState(false);
   const [active,     setActive]     = useState(null);
   const [cardTops,   setCardTops]   = useState({});
   const [paths,      setPaths]      = useState([]);
+  // seenMarks[i] = true once suggestion i's mark has scrolled into view
+  const [seenMarks,  setSeenMarks]  = useState({});
   const [drawnLines, setDrawnLines] = useState({});
 
   const bodyRef  = useRef(null);
@@ -104,7 +97,6 @@ export default function EssayReview({ review, content, title, university, prompt
   const cardRefs = useRef({});
 
   const suggestions = review.suggestions || [];
-  // Stable key: resets drawnLines only when a new review is loaded (new quotes), not on scroll.
   const suggestionsKey = suggestions.map(s => s.quote).join('|');
   const strengths = (review.strengths || [])
     .map(s => (typeof s === 'string' ? s : s.comment || s.quote || ''))
@@ -115,6 +107,7 @@ export default function EssayReview({ review, content, title, university, prompt
     [content, suggestions],
   );
 
+  /* Open / close */
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
     const esc = e => { if (e.key === 'Escape') onClose(); };
@@ -122,18 +115,22 @@ export default function EssayReview({ review, content, title, university, prompt
     return () => { cancelAnimationFrame(raf); window.removeEventListener('keydown', esc); };
   }, [onClose]);
 
-  // Reset drawn-line tracker when a new review is loaded (different quotes)
-  useEffect(() => { setDrawnLines({}); }, [suggestionsKey]);
+  /* Reset animation state when a new review is loaded */
+  useEffect(() => {
+    setSeenMarks({});
+    setDrawnLines({});
+  }, [suggestionsKey]);
 
+  /* Compute card positions + bezier paths; update on scroll */
   useEffect(() => {
     if (!mounted) return;
 
     function compute() {
       const body = bodyRef.current;
       if (!body) return;
-      const bb  = body.getBoundingClientRect();
-      const st  = body.scrollTop;
-      const bw  = body.offsetWidth;
+      const bb = body.getBoundingClientRect();
+      const st = body.scrollTop;
+      const bw = body.offsetWidth;
 
       const centers = {};
       suggestions.forEach((_, i) => {
@@ -157,13 +154,13 @@ export default function EssayReview({ review, content, title, university, prompt
       }
       setCardTops(resolved);
 
-      const cardX    = bw - CARD_R - CARD_W;
+      const cardX = bw - CARD_R - CARD_W;
       const newPaths = [];
       suggestions.forEach((s, i) => {
         const mark = markRefs.current[i];
         if (!mark || resolved[i] == null) return;
         const mr = mark.getBoundingClientRect();
-        const x1 = mr.right - bb.left;
+        const x1 = mr.right  - bb.left;
         const y1 = (mr.top + mr.bottom) / 2 - bb.top + st;
         const h  = cardRefs.current[i]?.offsetHeight || 140;
         const x2 = cardX;
@@ -171,7 +168,7 @@ export default function EssayReview({ review, content, title, university, prompt
         newPaths.push({ i, d: bezier(x1, y1, x2, y2), color: LC[s.category] || '#94A3B8' });
       });
       setPaths(newPaths);
-      // NOTE: do NOT reset drawnLines here — lines must stay solid on scroll
+      // Do NOT reset drawnLines here — lines must stay solid on scroll
     }
 
     const t1 = setTimeout(compute, 60);
@@ -182,6 +179,33 @@ export default function EssayReview({ review, content, title, university, prompt
       clearTimeout(t1); clearTimeout(t2);
       body?.removeEventListener('scroll', compute);
     };
+  }, [mounted, suggestions]);
+
+  /* IntersectionObserver — trigger each suggestion's animation when its mark enters view */
+  useEffect(() => {
+    if (!mounted) return;
+    const body = bodyRef.current;
+    if (!body) return;
+
+    const observers = [];
+    suggestions.forEach((_, i) => {
+      const el = markRefs.current[i];
+      if (!el) return;
+
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setSeenMarks(prev => ({ ...prev, [i]: true }));
+            obs.disconnect(); // fire once per mark
+          }
+        },
+        { root: body, threshold: 0.5 },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+
+    return () => observers.forEach(o => o.disconnect());
   }, [mounted, suggestions]);
 
   function activate(i) {
@@ -211,6 +235,17 @@ export default function EssayReview({ review, content, title, university, prompt
                 {review.score}/10
               </span>
             )}
+            {onReanalyze && (
+              <button
+                className="erv-reanalyze"
+                onClick={onReanalyze}
+                disabled={reviewing}
+                title="Run a fresh review"
+              >
+                <Sparkles size={12} />
+                {reviewing ? 'Analyzing…' : 'Re-analyze'}
+              </button>
+            )}
             <button className="erv-close" onClick={onClose} title="Close"><X size={17} /></button>
           </div>
         </div>
@@ -235,27 +270,25 @@ export default function EssayReview({ review, content, title, university, prompt
               </div>
             )}
 
-            {/* Prompt box (if available) */}
             {prompt && (
               <div className="erv-prompt-box">{prompt}</div>
             )}
 
-            {/* Essay body with animated highlights */}
+            {/* Essay body — each mark animates when it scrolls into view */}
             <div className="erv-essay-text">
               {segments.map((seg, si) =>
                 seg.idx === null ? (
                   <span key={si}>{seg.text}</span>
                 ) : (() => {
-                  const i     = seg.idx;
-                  const delay = ANIM.BASE + i * ANIM.STEP;
+                  const i = seg.idx;
                   return (
                     <mark
                       key={si}
                       ref={el => { markRefs.current[i] = el; }}
-                      className={`erv-mark ${mounted ? 'lit' : ''} ${active === i ? 'active' : ''}`}
+                      className={`erv-mark ${seenMarks[i] ? 'lit' : ''} ${active === i ? 'active' : ''}`}
                       style={{
                         '--hl':       HL[suggestions[i]?.category] || 'rgba(99,102,241,0.20)',
-                        '--hl-delay': `${delay}s`,
+                        '--hl-delay': '0s', // delay is 0 — fires exactly when mark enters view
                       }}
                       onMouseEnter={() => setActive(i)}
                       onMouseLeave={() => setActive(null)}
@@ -269,22 +302,23 @@ export default function EssayReview({ review, content, title, university, prompt
             </div>
           </div>
 
-          {/* Floating annotation cards */}
+          {/* Floating annotation cards — slide in after their mark is seen */}
           {suggestions.map((s, i) => {
-            const chip      = CHIP[s.category] || dfChip;
-            const top       = cardTops[i];
-            const cardDelay = ANIM.BASE + i * ANIM.STEP + ANIM.CARD_EXTRA;
+            const chip = CHIP[s.category] || dfChip;
+            const top  = cardTops[i];
+            const seen = seenMarks[i];
             return (
               <div
                 key={i}
                 ref={el => { cardRefs.current[i] = el; }}
-                className={`erv-card ${active === i ? 'active' : ''} ${mounted && top != null ? 'in' : ''}`}
+                className={`erv-card ${active === i ? 'active' : ''} ${seen && top != null ? 'in' : ''}`}
                 style={{
                   position: 'absolute',
                   right: CARD_R + 'px',
                   top: (top ?? -9999) + 'px',
                   width: CARD_W + 'px',
-                  transitionDelay: top != null ? `${cardDelay}s` : '0s',
+                  // Delay is relative to when .in class is added (= when mark entered view)
+                  transitionDelay: seen && top != null ? `${TRIG.CARD_AFTER}s` : '0s',
                 }}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
@@ -306,12 +340,12 @@ export default function EssayReview({ review, content, title, university, prompt
             <p className="erv-no-sug">No line-level changes flagged — clean draft.</p>
           )}
 
-          {/* SVG bezier connectors — solid reveal, not dotted */}
+          {/* SVG bezier connectors — drawn when their mark enters view */}
           <svg className="erv-svg" aria-hidden="true">
             {paths.map(({ i, d, color }) => {
-              const lineDelay = ANIM.BASE + i * ANIM.STEP + ANIM.LINE_EXTRA;
-              const isDrawn   = drawnLines[i];
-              const isActive  = active === i;
+              const seen     = seenMarks[i];
+              const isDrawn  = drawnLines[i];
+              const isActive = active === i;
               return (
                 <path
                   key={i}
@@ -320,13 +354,16 @@ export default function EssayReview({ review, content, title, university, prompt
                   stroke={color}
                   strokeWidth={isActive ? 2.2 : 1.7}
                   strokeLinecap="round"
-                  opacity={isActive ? 0.9 : 0.55}
+                  opacity={seen ? (isActive ? 0.9 : 0.55) : 0}
                   pathLength={isDrawn ? undefined : 1}
                   strokeDasharray={isDrawn ? undefined : '1'}
-                  className={isDrawn ? undefined : 'erv-line-draw'}
+                  // Animation class is only applied when seen AND not yet drawn.
+                  // CSS --line-delay is relative to when this class is first applied
+                  // (= when the mark entered view), so the line draws after the highlight.
+                  className={seen && !isDrawn ? 'erv-line-draw' : undefined}
                   style={{
-                    '--line-delay': `${lineDelay}s`,
-                    '--line-dur':   `${ANIM.LINE_DUR}s`,
+                    '--line-delay': `${TRIG.LINE_AFTER}s`,
+                    '--line-dur':   `${TRIG.LINE_DUR}s`,
                     transition: isDrawn ? 'stroke-width 0.15s, opacity 0.15s' : undefined,
                   }}
                   onAnimationEnd={() =>
