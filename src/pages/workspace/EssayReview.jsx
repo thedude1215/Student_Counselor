@@ -34,12 +34,18 @@ const CARD_W   = 264;
 const CARD_R   = 22;
 const CARD_GAP = 12;
 
-/* Stagger timings (seconds) — each suggestion gets its own beat */
-const HIGHLIGHT_BASE  = 0.35;  // first highlight fades in after modal opens
-const HIGHLIGHT_STEP  = 0.18;  // gap between consecutive highlights
-const LINE_DELAY_EXTRA = 0.22; // line starts drawing after the highlight appears
-const LINE_DURATION   = 0.7;   // how long each line takes to draw
-const CARD_DELAY_EXTRA = 0.55; // card slides in after the line finishes drawing
+/* Animation timings — per suggestion i:
+   highlight starts at: BASE + i * STEP
+   line       starts at: BASE + i * STEP + HL_DUR + 0.05   (after highlight finishes)
+   card       starts at: BASE + i * STEP + HL_DUR + LINE_DUR * 0.85 (just before line arrives) */
+const ANIM = {
+  BASE:     0.30,   // first highlight starts (s)
+  STEP:     0.28,   // stagger between suggestions (s)
+  HL_DUR:   0.45,   // highlight sweep duration — must match CSS
+  LINE_DUR: 0.65,   // line draw duration
+  LINE_EXTRA: 0.50, // = HL_DUR + tiny gap
+  CARD_EXTRA: 0.95, // = HL_DUR + LINE_DUR * ~0.85
+};
 
 function buildSegments(text, suggestions) {
   const lower = text.toLowerCase();
@@ -72,12 +78,26 @@ function buildSegments(text, suggestions) {
   return segs;
 }
 
+/* Build a bezier path that always curves even when start/end are at same Y.
+   Control points bow the line downward so it never looks like a flat rule. */
+function bezier(x1, y1, x2, y2) {
+  const dx   = x2 - x1;
+  const dy   = y2 - y1;
+  const bow  = Math.max(Math.abs(dy) * 0.3, 32); // minimum bow of 32px
+  const sign = dy >= 0 ? 1 : -1;
+  const cp1x = x1 + dx * 0.45;
+  const cp1y = y1 + sign * bow;
+  const cp2x = x2 - dx * 0.18;
+  const cp2y = y2 - sign * (bow * 0.4);
+  return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+}
+
 export default function EssayReview({ review, content, title, university, onClose }) {
-  const [active,    setActive]    = useState(null);
-  const [mounted,   setMounted]   = useState(false);
-  const [cardTops,  setCardTops]  = useState({});
-  const [paths,     setPaths]     = useState([]);
-  // Track which lines have finished drawing so we can flip them to solid
+  const [mounted,    setMounted]    = useState(false);
+  const [active,     setActive]     = useState(null);
+  const [cardTops,   setCardTops]   = useState({});
+  const [paths,      setPaths]      = useState([]);
+  // Once a line's draw animation ends, flip it to its final solid resting state
   const [drawnLines, setDrawnLines] = useState({});
 
   const bodyRef  = useRef(null);
@@ -94,7 +114,7 @@ export default function EssayReview({ review, content, title, university, onClos
     [content, suggestions],
   );
 
-  /* Fade backdrop in on next frame */
+  /* Open: fade backdrop in */
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
     const esc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -102,7 +122,7 @@ export default function EssayReview({ review, content, title, university, onClos
     return () => { cancelAnimationFrame(raf); window.removeEventListener('keydown', esc); };
   }, [onClose]);
 
-  /* Compute card positions + SVG paths */
+  /* Compute card positions + bezier paths after mount */
   useEffect(() => {
     if (!mounted) return;
 
@@ -113,6 +133,7 @@ export default function EssayReview({ review, content, title, university, onClos
       const st = body.scrollTop;
       const bw = body.offsetWidth;
 
+      /* Vertical centre of each highlight in scroll-content coordinates */
       const centers = {};
       suggestions.forEach((_, i) => {
         const el = markRefs.current[i];
@@ -121,6 +142,7 @@ export default function EssayReview({ review, content, title, university, onClos
         centers[i] = (r.top + r.bottom) / 2 - bb.top + st;
       });
 
+      /* Sort by Y, push cards down so they don't overlap */
       const sorted = Object.entries(centers)
         .map(([k, y]) => [+k, y])
         .sort((a, b) => a[1] - b[1]);
@@ -128,13 +150,14 @@ export default function EssayReview({ review, content, title, university, onClos
       let lastBottom = -Infinity;
       const resolved = {};
       for (const [i, y] of sorted) {
-        const h   = cardRefs.current[i]?.offsetHeight || 120;
+        const h   = cardRefs.current[i]?.offsetHeight || 130;
         const top = Math.max(y - h / 2, lastBottom + CARD_GAP, 8);
         resolved[i] = top;
         lastBottom   = top + h;
       }
       setCardTops(resolved);
 
+      /* Bezier from mark's right-centre → card's left-centre */
       const cardX    = bw - CARD_R - CARD_W;
       const newPaths = [];
       suggestions.forEach((s, i) => {
@@ -143,29 +166,25 @@ export default function EssayReview({ review, content, title, university, onClos
         const mr = mark.getBoundingClientRect();
         const x1 = mr.right - bb.left;
         const y1 = (mr.top + mr.bottom) / 2 - bb.top + st;
-        const h  = cardRefs.current[i]?.offsetHeight || 120;
+        const h  = cardRefs.current[i]?.offsetHeight || 130;
         const x2 = cardX;
         const y2 = resolved[i] + h / 2;
-        const cx = x1 + (x2 - x1) * 0.52;
         newPaths.push({
           i,
-          d: `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`,
+          d: bezier(x1, y1, x2, y2),
           color: LC[s.category] || '#94A3B8',
         });
       });
       setPaths(newPaths);
-      // Reset drawn state so lines re-animate if paths recompute
       setDrawnLines({});
     }
 
     const t1 = setTimeout(compute, 60);
-    const t2 = setTimeout(compute, 380);
+    const t2 = setTimeout(compute, 400);
     const body = bodyRef.current;
     body?.addEventListener('scroll', compute);
-
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(t1); clearTimeout(t2);
       body?.removeEventListener('scroll', compute);
     };
   }, [mounted, suggestions]);
@@ -175,17 +194,13 @@ export default function EssayReview({ review, content, title, university, onClos
     markRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function markLineDrawn(i) {
-    setDrawnLines(prev => ({ ...prev, [i]: true }));
-  }
-
   const essayPadRight = CARD_W + CARD_R + 44;
 
   return createPortal(
     <div className={`erv-backdrop ${mounted ? 'in' : ''}`} onMouseDown={onClose}>
       <div className="erv-modal" onMouseDown={e => e.stopPropagation()}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="erv-head">
           <div className="erv-head-l">
             <span className="erv-nova-badge"><Sparkles size={12} /> Nova · Essay review</span>
@@ -205,39 +220,36 @@ export default function EssayReview({ review, content, title, university, onClos
           </div>
         </div>
 
-        {/* ── Single-scroll body ── */}
+        {/* Single-scroll body */}
         <div className="erv-body" ref={bodyRef}>
 
-          {review.overall && (
-            <p className="erv-overall">{review.overall}</p>
-          )}
+          {review.overall && <p className="erv-overall">{review.overall}</p>}
 
           {strengths.length > 0 && (
             <div className="erv-strengths">
               {strengths.map((s, i) => (
                 <div key={i} className="erv-strength">
-                  <span className="erv-strength-tick">✓</span>
-                  {s}
+                  <span className="erv-strength-tick">✓</span>{s}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Essay with staggered highlight sweep-in */}
+          {/* Essay text — highlights sweep in one-by-one */}
           <div className="erv-essay-text" style={{ paddingRight: essayPadRight + 'px' }}>
             {segments.map((seg, si) =>
               seg.idx === null ? (
                 <span key={si}>{seg.text}</span>
               ) : (() => {
-                const i = seg.idx;
-                const delay = HIGHLIGHT_BASE + i * HIGHLIGHT_STEP;
+                const i     = seg.idx;
+                const delay = ANIM.BASE + i * ANIM.STEP;
                 return (
                   <mark
                     key={si}
                     ref={el => { markRefs.current[i] = el; }}
                     className={`erv-mark ${mounted ? 'lit' : ''} ${active === i ? 'active' : ''}`}
                     style={{
-                      '--hl': HL[suggestions[i]?.category] || 'rgba(99,102,241,0.20)',
+                      '--hl':       HL[suggestions[i]?.category] || 'rgba(99,102,241,0.20)',
                       '--hl-delay': `${delay}s`,
                     }}
                     onMouseEnter={() => setActive(i)}
@@ -251,11 +263,11 @@ export default function EssayReview({ review, content, title, university, onClos
             )}
           </div>
 
-          {/* Floating suggestion cards — slide in after their line draws */}
+          {/* Floating cards — slide in after their line arrives */}
           {suggestions.map((s, i) => {
-            const chip = CHIP[s.category] || dfChip;
-            const top  = cardTops[i];
-            const cardDelay = HIGHLIGHT_BASE + i * HIGHLIGHT_STEP + CARD_DELAY_EXTRA;
+            const chip      = CHIP[s.category] || dfChip;
+            const top       = cardTops[i];
+            const cardDelay = ANIM.BASE + i * ANIM.STEP + ANIM.CARD_EXTRA;
             return (
               <div
                 key={i}
@@ -288,10 +300,13 @@ export default function EssayReview({ review, content, title, university, onClos
             <p className="erv-no-sug">No line-level changes flagged — clean draft.</p>
           )}
 
-          {/* SVG bezier connector lines — draw-on animation, then snap to solid */}
+          {/* Bezier connector lines.
+              While drawing: pathLength=1 + strokeDasharray="1" + dashoffset 1→0
+                → solid line that reveals itself (NOT dotted).
+              After drawing: isDrawn=true strips those attrs → plain solid path. */}
           <svg className="erv-svg" aria-hidden="true">
             {paths.map(({ i, d, color }) => {
-              const lineDelay = HIGHLIGHT_BASE + i * HIGHLIGHT_STEP + LINE_DELAY_EXTRA;
+              const lineDelay = ANIM.BASE + i * ANIM.STEP + ANIM.LINE_EXTRA;
               const isDrawn   = drawnLines[i];
               const isActive  = active === i;
               return (
@@ -300,22 +315,23 @@ export default function EssayReview({ review, content, title, university, onClos
                   d={d}
                   fill="none"
                   stroke={color}
-                  strokeWidth={isActive ? 2 : 1.6}
+                  strokeWidth={isActive ? 2.2 : 1.8}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  opacity={isActive ? 0.9 : 0.55}
-                  /* While drawing: pathLength normalised draw-on (dotted during travel).
-                     After drawn: solid line (no dasharray). */
+                  opacity={isActive ? 1 : 0.6}
+                  /* Solid reveal: dasharray=1 covers the whole normalised path length,
+                     dashoffset goes 1→0 in CSS animation — exactly like HeroConnectionLine */
                   pathLength={isDrawn ? undefined : 1}
-                  strokeDasharray={isDrawn ? undefined : '0.04 0.06'}
-                  strokeDashoffset={isDrawn ? undefined : undefined}
+                  strokeDasharray={isDrawn ? undefined : '1'}
                   className={isDrawn ? undefined : 'erv-line-draw'}
                   style={{
                     '--line-delay': `${lineDelay}s`,
-                    '--line-dur':   `${LINE_DURATION}s`,
+                    '--line-dur':   `${ANIM.LINE_DUR}s`,
                     transition: isDrawn ? 'stroke-width 0.15s, opacity 0.15s' : undefined,
                   }}
-                  onAnimationEnd={() => markLineDrawn(i)}
+                  onAnimationEnd={() =>
+                    setDrawnLines(prev => ({ ...prev, [i]: true }))
+                  }
                 />
               );
             })}

@@ -2196,40 +2196,30 @@ a.ws-nudge:hover { transform: translateX(2px); }
   white-space: pre-wrap; word-wrap: break-word;
 }
 
-/* Highlights — sweep in left-to-right on a staggered delay */
+/* Highlights — sweep in left→right using background-size animation.
+   Works correctly on inline <mark> elements unlike ::before absolute tricks. */
 .erv-mark {
-  background: transparent; border-radius: 3px;
-  padding: 1px 1px 2px; cursor: pointer;
-  /* clip-path reveals the background fill from left to right */
-  background-clip: text;
-  -webkit-background-clip: unset;
-  position: relative;
+  /* gradient that matches --hl colour, starts at 0% width */
+  background: linear-gradient(var(--hl, rgba(99,102,241,0.20)), var(--hl, rgba(99,102,241,0.20))) no-repeat left center;
+  background-size: 0% 100%;
+  border-radius: 3px;
+  padding: 1px 2px 2px;
+  cursor: pointer;
+  color: inherit;
+  transition: outline 0.15s;
 }
-/* The highlight colour lives on a pseudo-element so we can clip-animate it */
-.erv-mark::before {
-  content: '';
-  position: absolute; inset: -2px;
-  border-radius: 4px;
-  background: var(--hl);
-  transform-origin: left center;
-  transform: scaleX(0);
-  transition: none;
-  z-index: -1;
-}
-.erv-mark.lit::before {
-  animation: ervSweep 0.5s cubic-bezier(0.22, 1, 0.36, 1) var(--hl-delay, 0s) forwards;
+.erv-mark.lit {
+  animation: ervSweep var(--hl-dur, 0.45s) cubic-bezier(0.22, 1, 0.36, 1) var(--hl-delay, 0s) forwards;
 }
 @keyframes ervSweep {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+  from { background-size: 0%   100%; }
+  to   { background-size: 100% 100%; }
 }
-.erv-mark:hover::before, .erv-mark.active::before {
-  transform: scaleX(1);
-  background: var(--hl);
-  animation: none;
-}
+/* Keep the highlight visible after animation finishes */
+.erv-mark.lit { background-size: 100% 100%; animation-fill-mode: forwards; }
 .erv-mark:hover, .erv-mark.active {
-  outline: 2px solid color-mix(in srgb, var(--hl) 300%, transparent);
+  background-size: 100% 100% !important;
+  outline: 2px solid color-mix(in srgb, var(--hl) 600%, transparent);
   outline-offset: 1px;
 }
 
@@ -2281,14 +2271,14 @@ a.ws-nudge:hover { transform: translateX(2px); }
   pointer-events: none; overflow: visible;
 }
 
-/* Line draw-on animation (mirrors the hero connection line pattern).
-   pathLength="1" normalises the path length so dasharray values are
-   fractions of the total path — works regardless of actual pixel length.
-   During animation: dotted (0.04 gap 0.06) traveling stroke.
-   onAnimationEnd: React sets isDrawn=true → removes dasharray → solid. */
+/* Line draw-on animation — mirrors HeroConnectionLine exactly.
+   pathLength="1" normalises the path, strokeDasharray="1" = one full-length
+   solid dash (no gap), dashoffset goes 1→0 revealing a SOLID line from left
+   to right. onAnimationEnd removes pathLength+dasharray → plain solid path. */
 .erv-line-draw {
   stroke-dashoffset: 1;
-  animation: ervLineDraw var(--line-dur, 0.7s) ease-out var(--line-delay, 0s) forwards;
+  animation: ervLineDraw var(--line-dur, 0.65s) cubic-bezier(0.4, 0, 0.2, 1)
+             var(--line-delay, 0s) forwards;
 }
 @keyframes ervLineDraw {
   from { stroke-dashoffset: 1; }
@@ -2296,6 +2286,6 @@ a.ws-nudge:hover { transform: translateX(2px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .erv-line-draw  { animation-duration: 0.01s; }
-  .erv-mark.lit::before { animation-duration: 0.01s; }
+  .erv-line-draw { animation-duration: 0.01s; }
+  .erv-mark.lit  { animation-duration: 0.01s; }
 }
