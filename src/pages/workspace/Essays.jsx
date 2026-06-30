@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, PenLine, Sparkles, X, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, PenLine, Sparkles, CheckCircle2 } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchEssays, addEssay, updateEssay, deleteEssay, fetchCollegeList } from '../../api/workspace.js';
 import { reviewEssay } from '../../api/nova.js';
 import NewEssayModal from './NewEssayModal.jsx';
+import EssayReview from './EssayReview.jsx';
 import './workspace.css';
+
+/* ai_feedback may be a structured JSON review (new) or a legacy markdown blob (old). */
+function parseReview(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && typeof obj === 'object' && ('suggestions' in obj || 'overall' in obj)) return obj;
+  } catch { /* legacy string */ }
+  return { overall: String(raw), score: 0, strengths: [], suggestions: [] };
+}
 
 const WORD_LIMIT = 650;
 const GENERAL = { id: '', name: 'Common App / General' };
@@ -282,7 +294,7 @@ export default function Essays() {
     setSelectedId(essay.id);
     setDraft({ title: essay.title, prompt: essay.prompt || '', content: essay.content || '', university_id: essay.university_id || '' });
     setSavedAt(null);
-    setFeedback(essay.ai_feedback || null);
+    setFeedback(parseReview(essay.ai_feedback));
     setShowFeedback(false);
   }
 
@@ -290,10 +302,20 @@ export default function Essays() {
     if (!selectedId || wc < 20) return;
     setReviewing(true);
     try {
-      const { feedback: text } = await reviewEssay({ essayId: selectedId, essayContent: draft.content, essayPrompt: draft.prompt, essayTitle: draft.title });
-      setFeedback(text); setShowFeedback(true);
+      const uni = colleges.find(u => u.id === draft.university_id);
+      const result = await reviewEssay({
+        essayId: selectedId,
+        essayContent: draft.content,
+        essayPrompt: draft.prompt,
+        essayTitle: draft.title,
+        universityName: uni?.name || null,
+      });
+      // result.review = new structured format; result.feedback = legacy string
+      const parsed = result.review ? result.review : parseReview(result.feedback || JSON.stringify(result));
+      setFeedback(parsed); setShowFeedback(true);
     } catch (err) {
-      setFeedback(`Failed to get feedback: ${err.message}`); setShowFeedback(true);
+      setFeedback({ overall: `Failed to get feedback: ${err.message}`, score: 0, strengths: [], suggestions: [] });
+      setShowFeedback(true);
     } finally { setReviewing(false); }
   }
 
@@ -471,19 +493,20 @@ export default function Essays() {
                 </div>
               </div>
 
-              {/* Nova feedback panel */}
-              {showFeedback && feedback && (
-                <div className="ws-feedback-panel">
-                  <div className="ws-feedback-header">
-                    <span><Sparkles size={14} /> Nova's Feedback</span>
-                    <button className="ws-icon-btn" onClick={() => setShowFeedback(false)}><X size={14} /></button>
-                  </div>
-                  <div className="ws-feedback-body">{feedback}</div>
-                </div>
-              )}
             </div>
           )}
         </div>
+      )}
+
+      {/* Nova essay review — highlighted essay + suggestions */}
+      {showFeedback && feedback && (
+        <EssayReview
+          review={feedback}
+          content={draft.content}
+          title={draft.title}
+          university={colleges.find(u => u.id === draft.university_id)?.name || (draft.university_id ? '' : 'Common App')}
+          onClose={() => setShowFeedback(false)}
+        />
       )}
 
       {showNewModal && (
