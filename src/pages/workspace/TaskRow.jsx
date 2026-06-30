@@ -12,13 +12,18 @@ const PRIO_LABEL = { high: 'High', medium: 'Med', low: 'Low' };
 
 /* Map category name → CSS modifier */
 const CAT_CLASS = {
-  'Essays': 'cat-essays',
-  'Testing': 'cat-testing',
-  'Documents': 'cat-documents',
-  'Recommendations': 'cat-recs',
-  'Financial Aid': 'cat-finaid',
-  'College Search': 'cat-search',
-  'General': 'cat-general',
+  'Essays':           'cat-essays',
+  'Extracurriculars': 'cat-ec',
+  'Testing':          'cat-testing',
+  'Documents':        'cat-documents',
+  'Recommendations':  'cat-recs',
+  'Interviews':       'cat-interviews',
+  'Financial Aid':    'cat-finaid',
+  'College Search':   'cat-search',
+  'Scholarships':     'cat-scholarships',
+  'Campus Visits':    'cat-visits',
+  'Housing':          'cat-housing',
+  'General':          'cat-general',
 };
 
 export default function TaskRow({ task, onMove, onDelete, draggable, onDragStart, onDragEnd, isDragging }) {

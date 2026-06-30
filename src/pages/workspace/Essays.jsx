@@ -117,7 +117,7 @@ export default function Essays() {
               const pct2 = Math.min(100, Math.round((wc2 / WORD_LIMIT) * 100));
               const uni = e.universities;
               return (
-                <button
+                <div
                   key={e.id}
                   className={`ws-essay-item ${selectedId === e.id ? 'active' : ''}`}
                   onClick={() => selectEssay(e)}
@@ -138,7 +138,14 @@ export default function Essays() {
                       <div className="ws-essay-item-bar-fill" style={{ width: `${pct2}%` }} />
                     </div>
                   </div>
-                </button>
+                  <button
+                    className="ws-essay-item-delete"
+                    onClick={ev => { ev.stopPropagation(); remove(e.id); }}
+                    title="Delete essay"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -208,9 +215,6 @@ export default function Essays() {
                     title={wc < 20 ? 'Write at least 20 words first' : 'Get Nova feedback'}
                   >
                     <Sparkles size={15} /> {reviewing ? 'Reviewing…' : 'AI Feedback'}
-                  </button>
-                  <button className="ws-icon-btn danger" onClick={() => remove(selectedId)} title="Delete essay">
-                    <Trash2 size={16} />
                   </button>
                   <button className="ws-btn ws-btn-primary" onClick={save} disabled={saving}>
                     {saving ? 'Saving…' : 'Save'}
