@@ -554,7 +554,10 @@
 .ws-essay-saved-state { min-width: 80px; }
 .ws-essay-saved {
   display: flex; align-items: center; gap: 5px;
-  font-size: 0.8rem; color: #16a34a; font-weight: 800;
+  font-size: 0.8rem; color: #16a34a; font-weight: 600;
+}
+.ws-essay-saving {
+  font-size: 0.8rem; color: var(--ink-4); font-weight: 400;
 }
 .ws-essay-actions { display: flex; align-items: center; gap: 0.6rem; }
 
@@ -2108,46 +2111,44 @@ a.ws-nudge:hover { transform: translateX(2px); }
 }
 
 /* ─────────────────────────────────────────────
-   Essay Review — inline highlighted essay + floating cards
+   Essay Review — full-page layout with highlighted essay + floating cards
    ───────────────────────────────────────────── */
+
+/* Full-page takeover — warm paper background, no dark overlay */
 .erv-backdrop {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(28, 24, 20, 0.45);
-  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 3vh 3vw;
-  opacity: 0; transition: opacity 0.25s ease;
+  background: #F1EDE6;
+  opacity: 0; transition: opacity 0.22s ease;
 }
 .erv-backdrop.in { opacity: 1; }
 
+/* Modal fills the full backdrop */
 .erv-modal {
-  width: min(1080px, 96vw); height: min(88vh, 860px);
-  background: #FAFAF8;
-  border: 1.5px solid rgba(0,0,0,0.09);
-  border-radius: 20px; overflow: hidden;
+  position: absolute; inset: 0;
   display: flex; flex-direction: column;
-  box-shadow: 0 28px 80px rgba(20, 14, 8, 0.28);
-  transform: translateY(16px) scale(0.982);
-  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  background: #F1EDE6;
 }
-.erv-backdrop.in .erv-modal { transform: translateY(0) scale(1); }
 
-/* Header */
+/* Sticky header — frosted white bar */
 .erv-head {
+  position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0.85rem 1.4rem; border-bottom: 1.5px solid var(--border);
-  flex-shrink: 0; background: var(--white);
+  padding: 0.8rem 3vw;
+  background: rgba(241, 237, 230, 0.92);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
 }
 .erv-head-l { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .erv-nova-badge {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
   color: #7C3AED; background: #F3F0FF;
   padding: 4px 10px; border-radius: 999px; white-space: nowrap;
 }
 .erv-head-title {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.2rem; font-weight: 700; color: var(--ink); margin: 0;
+  font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;
 }
 .erv-head-uni { font-size: 0.82rem; color: var(--ink-3); }
 .erv-head-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
@@ -2161,23 +2162,32 @@ a.ws-nudge:hover { transform: translateX(2px); }
 .erv-score-pill[data-level="low"]  { background: #FEE2E2; color: #B91C1C; }
 .erv-close {
   display: grid; place-items: center; width: 32px; height: 32px;
-  border: none; background: transparent; color: var(--ink-3);
+  border: none; background: rgba(0,0,0,0.05); color: var(--ink-3);
   border-radius: 8px; cursor: pointer; transition: all 0.15s;
 }
-.erv-close:hover { background: var(--bg); color: var(--ink); }
+.erv-close:hover { background: rgba(0,0,0,0.10); color: var(--ink); }
 
-/* Body — single scrollable canvas; cards sit absolute inside */
+/* Body — single scrollable canvas; cards and SVG sit absolute inside */
 .erv-body {
   position: relative;
   flex: 1; min-height: 0;
   overflow-y: auto;
-  padding: 2rem 2rem 4rem;
+  padding: 3rem 3vw 8rem;
+}
+
+/* White essay card — fills the full body, right padding reserves space for floating cards */
+.erv-essay-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 24px rgba(24, 16, 8, 0.08);
+  padding: 2.5rem 2.8rem;
+  /* NO max-width — fills body width; paddingRight set inline in JSX creates card lane */
 }
 
 /* Overall impression */
 .erv-overall {
   font-size: 0.87rem; line-height: 1.65; color: var(--ink-2);
-  background: var(--white); border: 1.5px solid var(--border);
+  background: #FAF8F5; border: 1px solid rgba(0,0,0,0.08);
   border-radius: 12px; padding: 0.85rem 1.1rem;
   margin-bottom: 1.25rem;
 }
@@ -2190,16 +2200,23 @@ a.ws-nudge:hover { transform: translateX(2px); }
 }
 .erv-strength-tick { color: #16A34A; font-weight: 800; flex-shrink: 0; }
 
-/* Essay text — right padding reserves space for the cards */
-.erv-essay-text {
-  font-size: 1.04rem; line-height: 2.1; color: #2C2620;
-  white-space: pre-wrap; word-wrap: break-word;
+/* Essay prompt indicator */
+.erv-prompt-box {
+  font-size: 0.82rem; font-style: italic; color: var(--ink-3);
+  border-left: 3px solid #DDD9D2; padding-left: 0.85rem;
+  margin-bottom: 1.5rem; line-height: 1.55;
 }
 
-/* Highlights — sweep in left→right using background-size animation.
-   Works correctly on inline <mark> elements unlike ::before absolute tricks. */
+/* Essay text — right padding reserves space for floating cards.
+   pre-line collapses extra spaces but honours \n for paragraph breaks. */
+.erv-essay-text {
+  font-size: 1.04rem; line-height: 1.82; color: #2C2620;
+  white-space: pre-line; word-wrap: break-word;
+}
+
+/* Highlights — left-to-right sweep via @keyframes.
+   forwards fill keeps the highlight at 100% permanently after the sweep. */
 .erv-mark {
-  /* gradient that matches --hl colour, starts at 0% width */
   background: linear-gradient(var(--hl, rgba(99,102,241,0.20)), var(--hl, rgba(99,102,241,0.20))) no-repeat left center;
   background-size: 0% 100%;
   border-radius: 3px;
@@ -2209,14 +2226,12 @@ a.ws-nudge:hover { transform: translateX(2px); }
   transition: outline 0.15s;
 }
 .erv-mark.lit {
-  animation: ervSweep var(--hl-dur, 0.45s) cubic-bezier(0.22, 1, 0.36, 1) var(--hl-delay, 0s) forwards;
+  animation: ervSweep 0.50s cubic-bezier(0.22, 1, 0.36, 1) var(--hl-delay, 0s) forwards;
 }
 @keyframes ervSweep {
   from { background-size: 0%   100%; }
   to   { background-size: 100% 100%; }
 }
-/* Keep the highlight visible after animation finishes */
-.erv-mark.lit { background-size: 100% 100%; animation-fill-mode: forwards; }
 .erv-mark:hover, .erv-mark.active {
   background-size: 100% 100% !important;
   outline: 2px solid color-mix(in srgb, var(--hl) 600%, transparent);
@@ -2225,18 +2240,18 @@ a.ws-nudge:hover { transform: translateX(2px); }
 
 /* Floating annotation cards */
 .erv-card {
-  background: var(--white);
+  background: #fff;
   border-radius: 14px;
-  box-shadow: 0 2px 14px rgba(18,12,6,0.10), 0 0 0 1px rgba(18,12,6,0.07);
-  padding: 0.8rem 0.9rem;
+  box-shadow: 0 2px 16px rgba(18,12,6,0.10), 0 0 0 1px rgba(18,12,6,0.06);
+  padding: 0.85rem 0.95rem;
   cursor: pointer;
-  opacity: 0; transform: translateX(18px);
-  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22,1,0.36,1),
+  opacity: 0; transform: translateX(20px);
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.22,1,0.36,1),
               box-shadow 0.18s;
 }
 .erv-card.in  { opacity: 1; transform: translateX(0); }
 .erv-card:hover, .erv-card.active {
-  box-shadow: 0 6px 22px rgba(18,12,6,0.16), 0 0 0 1.5px rgba(18,12,6,0.10);
+  box-shadow: 0 6px 24px rgba(18,12,6,0.15), 0 0 0 1.5px rgba(18,12,6,0.10);
 }
 
 .erv-card-meta {
@@ -2271,10 +2286,8 @@ a.ws-nudge:hover { transform: translateX(2px); }
   pointer-events: none; overflow: visible;
 }
 
-/* Line draw-on animation — mirrors HeroConnectionLine exactly.
-   pathLength="1" normalises the path, strokeDasharray="1" = one full-length
-   solid dash (no gap), dashoffset goes 1→0 revealing a SOLID line from left
-   to right. onAnimationEnd removes pathLength+dasharray → plain solid path. */
+/* Line draw-on animation — solid reveal (pathLength="1" + dasharray="1" trick).
+   onAnimationEnd removes those attrs so it becomes a plain solid path. */
 .erv-line-draw {
   stroke-dashoffset: 1;
   animation: ervLineDraw var(--line-dur, 0.65s) cubic-bezier(0.4, 0, 0.2, 1)

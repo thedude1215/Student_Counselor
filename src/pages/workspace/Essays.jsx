@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, PenLine, Sparkles, CheckCircle2 } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -285,9 +285,10 @@ export default function Essays() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState({ title: '', prompt: '', content: '', university_id: '' });
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState(null);
+  const [saveState, setSaveState] = useState('idle'); // 'idle' | 'pending' | 'saving' | 'saved'
+  const autoSaveTimer = useRef(null);
   const [feedback, setFeedback] = useState(null);
+  const [reviewedContent, setReviewedContent] = useState(''); // content snapshot at review time
   const [reviewing, setReviewing] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -303,20 +304,24 @@ export default function Essays() {
 
   function selectEssay(essay) {
     setSelectedId(essay.id);
-    setDraft({ title: essay.title, prompt: essay.prompt || '', content: essay.content || '', university_id: essay.university_id || '' });
-    setSavedAt(null);
+    const content = essay.content || '';
+    setDraft({ title: essay.title, prompt: essay.prompt || '', content, university_id: essay.university_id || '' });
+    setReviewedContent(content); // seed so saved reviews also show essay text
+    setSaveState('idle');
     setFeedback(parseReview(essay.ai_feedback));
     setShowFeedback(false);
   }
 
   async function getAiFeedback() {
     if (!selectedId || wc < 20) return;
+    // Snapshot content NOW before any async state changes can clear draft
+    const contentSnap = draft.content;
     setReviewing(true);
     try {
       const uni = colleges.find(u => u.id === draft.university_id);
       const result = await reviewEssay({
         essayId: selectedId,
-        essayContent: draft.content,
+        essayContent: contentSnap,
         essayPrompt: draft.prompt,
         essayTitle: draft.title,
         universityName: uni?.name || null,
@@ -325,9 +330,11 @@ export default function Essays() {
       const parsed = result.review
         ? result.review
         : parseReview(typeof result.feedback === 'string' ? result.feedback : null);
+      setReviewedContent(contentSnap);
       setFeedback(parsed || { overall: 'Feedback received but could not be parsed.', score: 0, strengths: [], suggestions: [] });
       setShowFeedback(true);
     } catch (err) {
+      setReviewedContent(contentSnap);
       setFeedback({ overall: `Failed to get feedback: ${err.message}`, score: 0, strengths: [], suggestions: [] });
       setShowFeedback(true);
     } finally { setReviewing(false); }
@@ -345,14 +352,23 @@ export default function Essays() {
     }
   }
 
-  async function save() {
+  // Auto-save: debounce 1.2s after any draft change
+  useEffect(() => {
     if (!selectedId) return;
-    setSaving(true);
-    const updated = await updateEssay(selectedId, { ...draft, university_id: draft.university_id || null });
-    setEssays(essays.map(e => (e.id === selectedId ? updated : e)));
-    setSaving(false);
-    setSavedAt(new Date());
-  }
+    setSaveState('pending');
+    clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      setSaveState('saving');
+      try {
+        const updated = await updateEssay(selectedId, { ...draft, university_id: draft.university_id || null });
+        setEssays(prev => prev.map(e => (e.id === selectedId ? updated : e)));
+        setSaveState('saved');
+      } catch {
+        setSaveState('idle');
+      }
+    }, 1200);
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [draft, selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function remove(id) {
     await deleteEssay(id);
@@ -488,7 +504,10 @@ export default function Essays() {
               {/* Footer actions */}
               <div className="ws-essay-footer">
                 <div className="ws-essay-saved-state">
-                  {savedAt && (
+                  {saveState === 'saving' && (
+                    <span className="ws-essay-saving">Saving…</span>
+                  )}
+                  {saveState === 'saved' && (
                     <span className="ws-essay-saved"><CheckCircle2 size={13} /> Saved</span>
                   )}
                 </div>
@@ -500,9 +519,6 @@ export default function Essays() {
                     title={wc < 20 ? 'Write at least 20 words first' : 'Get Nova feedback'}
                   >
                     <Sparkles size={15} /> {reviewing ? 'Reviewing…' : 'AI Feedback'}
-                  </button>
-                  <button className="ws-btn ws-btn-primary" onClick={save} disabled={saving}>
-                    {saving ? 'Saving…' : 'Save'}
                   </button>
                 </div>
               </div>
@@ -516,9 +532,10 @@ export default function Essays() {
       {showFeedback && feedback && (
         <EssayReview
           review={feedback}
-          content={draft.content}
+          content={reviewedContent}
           title={draft.title}
           university={colleges.find(u => u.id === draft.university_id)?.name || (draft.university_id ? '' : 'Common App')}
+          prompt={draft.prompt || ''}
           onClose={() => setShowFeedback(false)}
         />
       )}
