@@ -5,6 +5,7 @@ import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchCollegeList, fetchTasks, fetchEssays, fetchProfile, updateTask } from '../../api/workspace.js';
 import { computeReadiness } from '../../lib/readiness.js';
+import { overviewCardStyle } from '../../lib/brandColors.js';
 import './workspace.css';
 
 export default function Overview() {
@@ -124,20 +125,30 @@ export default function Overview() {
             <Plus size={16} /> Start your first essay
           </Link>
         ) : (
-          essays.slice(0, 5).map((e, i) => (
-            <Link key={e.id} to="/dashboard/essays" className={`ws-essay-card c${i % 4}`}>
-              {e.universities ? (
-                <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={32} radius={8} />
-              ) : (
-                <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={32} radius={8} />
-              )}
-              <div className="ws-essay-card-body">
-                <div className="ws-essay-card-uni">{e.universities ? (e.universities.short_name || e.universities.name) : 'Common App'}</div>
-                <div className="ws-essay-card-title">{e.title || 'Untitled'}</div>
-                <div className="ws-essay-card-meta">{new Date(e.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}</div>
-              </div>
-            </Link>
-          ))
+          essays.slice(0, 5).map((e) => {
+            const cs = overviewCardStyle(e.universities);
+            return (
+              <Link
+                key={e.id}
+                to="/dashboard/essays"
+                className="ws-essay-card"
+                style={{ background: cs.background, borderColor: cs.borderColor, boxShadow: cs.boxShadow }}
+              >
+                {e.universities ? (
+                  <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={32} radius={8} />
+                ) : (
+                  <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={32} radius={8} />
+                )}
+                <div className="ws-essay-card-body">
+                  <div className="ws-essay-card-uni" style={{ color: cs.uniColor }}>
+                    {e.universities ? (e.universities.short_name || e.universities.name) : 'Common App'}
+                  </div>
+                  <div className="ws-essay-card-title">{e.title || 'Untitled'}</div>
+                  <div className="ws-essay-card-meta">{new Date(e.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}</div>
+                </div>
+              </Link>
+            );
+          })
         )}
       </aside>
     </div>

@@ -73,6 +73,11 @@ export default function WorkspaceLayout() {
           <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-side-brand-logo" />
         </Link>
 
+        <Link to="/nova" className="ws-nova-sidebar-btn">
+          <span className="nav-dot" />
+          Talk to Nova
+        </Link>
+
         <nav className="ws-nav" ref={navRef}>
           <div className="ws-nav-pill" style={{ top: pill.top, height: pill.height, opacity: pill.opacity }} />
           {GROUPS.map((group, gi) => (
@@ -123,12 +128,6 @@ export default function WorkspaceLayout() {
       </aside>
 
       <main className="ws-main">
-        <div className="ws-topbar">
-          <Link to="/nova" className="ws-nova-btn">
-            <span className="nav-dot" />
-            Talk to Nova
-          </Link>
-        </div>
         <div key={location.pathname} className="ws-page-anim">
           <Outlet />
         </div>

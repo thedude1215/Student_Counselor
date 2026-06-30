@@ -235,7 +235,7 @@ router.delete('/conversations/:id', async (req, res) => {
 /* ─── Essay Review ─── */
 
 router.post('/essay-review', async (req, res) => {
-  const { essayId, essayContent, essayPrompt, essayTitle } = req.body;
+  const { essayId, essayContent, essayPrompt, essayTitle, universityName } = req.body;
   if (!essayContent?.trim()) return res.status(400).json({ error: 'Essay content is required' });
 
   if (!checkRate(req.userId, 'essay', 5)) {
@@ -248,20 +248,30 @@ router.post('/essay-review', async (req, res) => {
       essay_content: essayContent.trim(),
       essay_title: essayTitle || null,
       essay_prompt: essayPrompt || null,
+      university_name: universityName || null,
     });
+
+    // Structured review: { overall, score, strengths[], suggestions[] }.
+    const review = {
+      overall: data.overall || '',
+      score: data.score || 0,
+      strengths: data.strengths || [],
+      suggestions: data.suggestions || [],
+      feedback: data.feedback || '',
+    };
 
     if (essayId) {
       await supabase
         .from('essays')
         .update({
-          ai_feedback: data.feedback,
+          ai_feedback: JSON.stringify(review),
           feedback_updated_at: new Date().toISOString(),
         })
         .eq('id', essayId)
         .eq('profile_id', req.userId);
     }
 
-    res.json({ feedback: data.feedback });
+    res.json({ review });
   } catch (err) {
     console.error('Essay review error:', err);
     const status = err.status || 503;

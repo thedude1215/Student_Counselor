@@ -96,10 +96,10 @@ export function deleteConversation(conversationId) {
   return novaFetch(`/conversations/${conversationId}`, { method: 'DELETE' });
 }
 
-export function reviewEssay({ essayId, essayContent, essayPrompt, essayTitle }) {
+export function reviewEssay({ essayId, essayContent, essayPrompt, essayTitle, universityName }) {
   return novaFetch('/essay-review', {
     method: 'POST',
-    body: JSON.stringify({ essayId, essayContent, essayPrompt, essayTitle }),
+    body: JSON.stringify({ essayId, essayContent, essayPrompt, essayTitle, universityName }),
   });
 }
 

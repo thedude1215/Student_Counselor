@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, Check, Search, X, UserRound, BookOpen, SlidersHorizontal } from 'lucide-react';
+import { Save, Check, Search, X, UserRound, BookOpen, SlidersHorizontal, Bell, BellOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchProfile, updateProfile } from '../../api/workspace.js';
+import {
+  notificationsSupported,
+  getPermissionState,
+  subscribeToNotifications,
+  unsubscribeFromNotifications,
+  getCachedToken,
+} from '../../lib/notifications.js';
 import './workspace.css';
 
 const GRADE_OPTIONS = ['8', '9', '10', '11', '12', 'Gap Year'];
@@ -324,11 +331,38 @@ function validateSatAct(val) {
 }
 
 export default function Profile() {
-  const { user, refreshProfile } = useAuth();
+  const { user, session, refreshProfile } = useAuth();
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Notification state
+  const [notifSupported] = useState(() => notificationsSupported());
+  const [notifPermission, setNotifPermission] = useState(() => getPermissionState());
+  const [notifEnabled, setNotifEnabled] = useState(() => !!getCachedToken());
+  const [notifBusy, setNotifBusy] = useState(false);
+  const [notifError, setNotifError] = useState(null);
+
+  async function toggleNotifications() {
+    if (notifBusy) return;
+    setNotifBusy(true);
+    setNotifError(null);
+    try {
+      if (notifEnabled) {
+        await unsubscribeFromNotifications(session);
+        setNotifEnabled(false);
+      } else {
+        const token = await subscribeToNotifications(session);
+        setNotifEnabled(!!token);
+        setNotifPermission(getPermissionState());
+      }
+    } catch (err) {
+      setNotifError(err.message);
+    } finally {
+      setNotifBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -530,6 +564,41 @@ export default function Profile() {
             <textarea className="ws-input ws-profile-textarea" placeholder="What are you aiming for?"
               value={form.goals || ''} onChange={e => set('goals', e.target.value)} />
           </label>
+        </div>
+      </section>
+
+      {/* ── Notifications ── */}
+      <section className="ws-form-section sec-amber">
+        <h2 className="ws-section-head">
+          <span className="ws-section-icon acc-amber"><Bell size={15} /></span>
+          Notifications
+        </h2>
+        <div className="ws-profile-grid">
+          <div className="ws-profile-field span-2 ws-notif-row">
+            <div className="ws-notif-info">
+              <span className="ws-profile-label">Deadline reminders</span>
+              <span className="ws-profile-hint">
+                {!notifSupported
+                  ? 'Push notifications are not supported in this browser.'
+                  : notifPermission === 'denied'
+                  ? 'Notifications are blocked. Allow them in your browser settings, then reload.'
+                  : notifEnabled
+                  ? 'You\'ll be notified 7 days before, 24 hours before, and when a task is overdue.'
+                  : 'Get browser notifications for upcoming and overdue deadlines.'}
+              </span>
+              {notifError && <span className="ws-profile-hint ws-notif-error">{notifError}</span>}
+            </div>
+            <button
+              className={`ws-notif-toggle ${notifEnabled ? 'on' : 'off'}`}
+              onClick={toggleNotifications}
+              disabled={!notifSupported || notifPermission === 'denied' || notifBusy}
+              aria-pressed={notifEnabled}
+              title={notifEnabled ? 'Turn off notifications' : 'Turn on notifications'}
+            >
+              {notifEnabled ? <Bell size={15} /> : <BellOff size={15} />}
+              {notifBusy ? 'Working…' : notifEnabled ? 'On' : 'Off'}
+            </button>
+          </div>
         </div>
       </section>
     </div>

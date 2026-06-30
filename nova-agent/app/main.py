@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from app.models import (
-    ChatRequest, ChatResponse, EssayReviewRequest, EssayReviewResponse,
+    ChatRequest, ChatResponse, EssayReviewRequest, EssayReviewResponse, EssaySuggestion,
     TaskSuggestRequest, TaskSuggestResponse, SuggestedTask,
 )
 from app.graphs.chat_graph import run_chat, stream_chat
@@ -167,6 +167,8 @@ def essay_review(req: EssayReviewRequest):
     set_current_user(req.user_id)
 
     context_parts = []
+    if req.university_name:
+        context_parts.append(f"Target University: {req.university_name}")
     if req.essay_title:
         context_parts.append(f"Essay Title: {req.essay_title}")
     if req.essay_prompt:
@@ -174,14 +176,91 @@ def essay_review(req: EssayReviewRequest):
     word_count = len(req.essay_content.strip().split())
     context_parts.append(f"Word Count: {word_count}")
 
-    system = ESSAY_REVIEW_PROMPT + "\n\n" + "\n".join(context_parts)
+    system = ESSAY_REVIEW_PROMPT + "\n\n--- ESSAY CONTEXT ---\n" + "\n".join(context_parts)
 
     result = llm.invoke([
         SystemMessage(content=system),
         HumanMessage(content=req.essay_content.strip()),
     ])
 
-    return EssayReviewResponse(feedback=result.content)
+    return _parse_essay_review(result.content, req.essay_content)
+
+
+_ESSAY_CATEGORIES = {
+    "specificity", "clarity", "impact", "structure", "authenticity", "grammar",
+}
+
+
+def _parse_essay_review(raw: str, essay_content: str) -> EssayReviewResponse:
+    """Parse the LLM's JSON essay review.
+
+    Strips code fences / stray prose, slices to the outer {...}, validates each
+    suggestion, and keeps only quotes that actually appear in the essay (so the
+    frontend can always locate and highlight them). Falls back to a single
+    markdown-style blob in `overall` if JSON parsing fails, so the endpoint never
+    500s on a bad generation.
+    """
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text[:4].lower() == "json":
+            text = text[4:]
+    start, end = text.find("{"), text.rfind("}")
+    parsed = None
+    if start != -1 and end != -1 and end > start:
+        try:
+            parsed = json.loads(text[start:end + 1])
+        except Exception:
+            parsed = None
+
+    if not isinstance(parsed, dict):
+        # Graceful fallback: surface the raw text so the user still sees something.
+        return EssayReviewResponse(
+            overall=(raw or "").strip()[:1200],
+            score=0,
+            strengths=[],
+            suggestions=[],
+            feedback=(raw or "").strip(),
+        )
+
+    overall = str(parsed.get("overall", "")).strip()
+    try:
+        score = int(parsed.get("score", 0))
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(10, score))
+
+    strengths = [
+        str(s).strip() for s in (parsed.get("strengths") or [])
+        if isinstance(s, (str, int, float)) and str(s).strip()
+    ][:6]
+
+    haystack = essay_content or ""
+    haystack_lower = haystack.lower()
+    suggestions: list[EssaySuggestion] = []
+    for item in (parsed.get("suggestions") or []):
+        if not isinstance(item, dict):
+            continue
+        quote = str(item.get("quote", "")).strip()
+        suggestion = str(item.get("suggestion", "")).strip()
+        if not quote or not suggestion:
+            continue
+        # Only keep quotes the frontend can actually locate in the essay.
+        if quote.lower() not in haystack_lower:
+            continue
+        category = str(item.get("category", "")).strip().lower()
+        if category not in _ESSAY_CATEGORIES:
+            category = "clarity"
+        issue = str(item.get("issue", "")).strip()
+        suggestions.append(EssaySuggestion(
+            quote=quote, category=category, issue=issue, suggestion=suggestion,
+        ))
+        if len(suggestions) >= 8:
+            break
+
+    return EssayReviewResponse(
+        overall=overall, score=score, strengths=strengths, suggestions=suggestions, feedback="",
+    )
 
 
 # ── Task suggestions ──

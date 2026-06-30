@@ -172,30 +172,25 @@
   background: var(--white);
 }
 
-/* ── Talk to Nova (top bar inside main) ── */
-.ws-topbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.75rem;
-}
-
-.ws-nova-btn {
+/* ── Talk to Nova (sidebar button) ── */
+.ws-nova-sidebar-btn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0.5rem 1.2rem;
+  gap: 8px;
+  margin: 0 0.75rem 0.5rem;
+  padding: 0.55rem 1rem;
   background: var(--white);
   color: var(--ink);
   border: 1.5px solid var(--border-2);
   border-radius: var(--r-pill);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
   transition: all var(--t);
   font-family: var(--font);
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
-.ws-nova-btn:hover { border-color: var(--blue); color: var(--blue); }
+.ws-nova-sidebar-btn:hover { border-color: var(--blue); color: var(--blue); }
 
 .ws-loading { padding: 3rem; text-align: center; color: var(--ink-3); font-weight: 600; }
 
@@ -271,6 +266,7 @@
 .ws-modal-label {
   font-size: 0.75rem; font-weight: 900; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--ink-3);
+  display: flex; align-items: center;
 }
 .ws-modal-optional {
   font-size: 0.7rem; font-weight: 600; text-transform: none;
@@ -302,6 +298,20 @@
   padding: 0.85rem 1.5rem 1.25rem;
   border-top: 1px solid var(--border);
 }
+
+/* New-task modal extras */
+.ws-modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+.ws-modal-prio-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.ws-modal-prio-btn {
+  flex: 1; padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--border);
+  font-size: 0.78rem; font-weight: 700; font-family: var(--font);
+  background: var(--bg); color: var(--ink-2); cursor: pointer;
+  transition: all 0.15s; white-space: nowrap;
+}
+.ws-modal-prio-btn.prio-high.active   { background: #FEE2E2; color: #B91C1C; border-color: #FCA5A5; }
+.ws-modal-prio-btn.prio-medium.active { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
+.ws-modal-prio-btn.prio-low.active    { background: #DCFCE7; color: #166534; border-color: #86EFAC; }
+.ws-modal-prio-btn:hover:not(.active) { background: var(--border); }
 
 .ws-icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -465,6 +475,18 @@
 .ws-essay-item-delete:hover {
   color: #e53e3e; background: #FFF0F0;
 }
+.ws-essay-item-confirm {
+  display: flex; gap: 4px; align-items: center; flex-shrink: 0;
+}
+.ws-confirm-yes, .ws-confirm-no {
+  font-size: 0.7rem; font-weight: 700; border: none; border-radius: 6px;
+  padding: 3px 8px; cursor: pointer; font-family: var(--font);
+  transition: all 0.15s;
+}
+.ws-confirm-yes { background: #FEE2E2; color: #B91C1C; }
+.ws-confirm-yes:hover { background: #FCA5A5; }
+.ws-confirm-no  { background: var(--bg); color: var(--ink-3); }
+.ws-confirm-no:hover { background: var(--border); }
 .ws-essay-item-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .ws-essay-item-title {
   font-weight: 800; font-size: 0.88rem; color: var(--ink);
@@ -518,12 +540,11 @@
 
 /* Writing area */
 .ws-essay-textarea {
-  border: none; outline: none; resize: none;
+  border: none; outline: none; resize: none; overflow: hidden;
   font-family: var(--font); font-size: 1rem; line-height: 1.85;
   color: var(--ink); background: transparent;
   padding: 1.25rem 1.5rem;
-  min-height: 520px; width: 100%;
-  flex: 1;
+  min-height: 360px; width: 100%;
 }
 .ws-essay-textarea::placeholder { color: var(--ink-4); font-style: italic; }
 
@@ -554,7 +575,10 @@
 .ws-essay-saved-state { min-width: 80px; }
 .ws-essay-saved {
   display: flex; align-items: center; gap: 5px;
-  font-size: 0.8rem; color: #16a34a; font-weight: 800;
+  font-size: 0.8rem; color: #16a34a; font-weight: 600;
+}
+.ws-essay-saving {
+  font-size: 0.8rem; color: var(--ink-4); font-weight: 400;
 }
 .ws-essay-actions { display: flex; align-items: center; gap: 0.6rem; }
 
@@ -918,11 +942,30 @@ a.ws-nudge:hover { transform: translateX(2px); }
 .ws-section-icon.acc-blue    { background: var(--blue-light); color: var(--blue); }
 .ws-section-icon.acc-violet  { background: #EEE9FF; color: #6D45D6; }
 .ws-section-icon.acc-emerald { background: #DCFCE7; color: #059669; }
+.ws-section-icon.acc-amber   { background: #FEF3C7; color: #D97706; }
 
 /* Per-section accent (drives the card's top bar) */
 .ws-form-section.sec-blue    { --accent: var(--blue); }
 .ws-form-section.sec-violet  { --accent: #6D45D6; }
 .ws-form-section.sec-emerald { --accent: #059669; }
+.ws-form-section.sec-amber   { --accent: #D97706; }
+
+/* Notification toggle row */
+.ws-notif-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.ws-notif-info { display: flex; flex-direction: column; gap: 4px; }
+.ws-notif-error { color: #DC2626; }
+.ws-notif-toggle {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 0.82rem; font-weight: 700;
+  font-family: var(--font); cursor: pointer; transition: all 0.18s;
+  white-space: nowrap;
+}
+.ws-notif-toggle.off { background: var(--bg); color: var(--ink-3); }
+.ws-notif-toggle.off:hover:not(:disabled) { background: var(--border); color: var(--ink); }
+.ws-notif-toggle.on  { background: #FEF3C7; color: #92400E; border-color: #FCD34D; }
+.ws-notif-toggle.on:hover:not(:disabled)  { background: #FDE68A; }
+.ws-notif-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Typographic hierarchy: grounded labels ── */
 .ws-form-section .ws-profile-label { font-size: 0.875rem; font-weight: 500; color: var(--ink-2); }
@@ -1688,13 +1731,9 @@ a.ws-nudge:hover { transform: translateX(2px); }
   transition: transform var(--t), box-shadow var(--t);
 }
 .ws-essay-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover, 0 8px 20px rgba(17,17,24,0.10)); }
-.ws-essay-card.c0 { background: #EEF0FF; border-color: #D5D9F5; }
-.ws-essay-card.c1 { background: #FFF1F0; border-color: #F5D5D2; }
-.ws-essay-card.c2 { background: #FFF8E8; border-color: #F0E4C2; }
-.ws-essay-card.c3 { background: #E9F8F1; border-color: #C8E8D8; }
 .ws-essay-card-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.7rem; font-weight: 900; }
 .ws-essay-card-body { min-width: 0; }
-.ws-essay-card-uni { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-3); }
+.ws-essay-card-uni { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
 .ws-essay-card-title { font-size: 0.9rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ws-essay-card-meta { font-size: 0.74rem; color: var(--ink-3); font-weight: 600; }
 .ws-essay-uni-select { width: 100%; cursor: pointer; }
@@ -1896,6 +1935,229 @@ a.ws-nudge:hover { transform: translateX(2px); }
   white-space: nowrap;
 }
 
+/* ── v2 card layout (shared by activity + honor) ── */
+.ah-card-v2 {
+  position: relative;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  display: flex; align-items: stretch;
+  overflow: hidden;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  gap: 0;
+}
+.ah-card-v2:hover {
+  border-color: #C7D2FE;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* Type icon tile — holds icon + rank overlay */
+.ah-type-icon {
+  flex-shrink: 0; width: 52px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  align-self: stretch;
+  border-right: 1.5px solid var(--border);
+  position: relative;
+}
+
+/* Medal tile (honors) — same layout */
+.ah-medal {
+  flex-shrink: 0; width: 52px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  align-self: stretch; border-right: 1.5px solid;
+}
+/* Rank number sits below the icon */
+.ah-tile-rank {
+  font-size: 0.62rem; font-weight: 800; opacity: 0.45; line-height: 1;
+}
+
+/* Card body — click to edit */
+.ah-card-v2 .ah-card-body {
+  flex: 1; padding: 0.75rem 0.9rem;
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+
+/* Time info row */
+.ah-card-time {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; color: var(--ink-3); font-weight: 600;
+}
+.ah-time-sep { opacity: 0.4; }
+
+/* Type pill (small tag on card) */
+.ah-type-pill {
+  font-size: 0.64rem; font-weight: 700; color: var(--ink-3);
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+
+/* Card action buttons (arrows + edit + delete) — right side, show on hover */
+.ah-card-actions {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 0 8px; flex-shrink: 0;
+  opacity: 0; transition: opacity 0.15s;
+}
+.ah-card-v2:hover .ah-card-actions { opacity: 1; }
+
+.ah-arrow-btn {
+  background: none; border: none; padding: 3px; cursor: pointer;
+  color: var(--ink-3); display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; transition: background 0.1s, color 0.1s; line-height: 1;
+}
+.ah-arrow-btn:hover:not(:disabled) { background: var(--border); color: var(--ink); }
+.ah-arrow-btn:disabled { opacity: 0.25; cursor: default; }
+
+.ah-actions-sep {
+  width: 20px; height: 1px; background: var(--border); margin: 3px 0;
+}
+
+.ah-action-btn {
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: var(--ink-3); border-radius: 6px;
+  transition: background 0.1s, color 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.ah-action-btn:hover { background: var(--bg); color: var(--ink); }
+.ah-action-del:hover { background: #FEF2F2 !important; color: #e53e3e !important; }
+
+/* Char counter in modal labels */
+.ah-char-count {
+  margin-left: auto; font-size: 0.7rem; font-weight: 600; color: var(--ink-3);
+  font-family: var(--font); text-transform: none; letter-spacing: 0;
+}
+.ah-char-warn { color: #D97706; }
+.ah-char-over { color: #e53e3e; }
+
+/* Textarea in modal */
+.ah-textarea {
+  resize: vertical; min-height: 70px; font-family: var(--font);
+  font-size: 0.85rem; line-height: 1.5;
+}
+
+/* Nova review button — outlined violet pill */
+.ws-btn-nova {
+  background: #F5F3FF;
+  color: #7C3AED;
+  border: 1.5px solid #C4B5FD;
+  border-radius: 12px;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ws-btn-nova:hover {
+  background: #EDE9FE;
+  border-color: #7C3AED;
+  color: #6D28D9;
+}
+
+/* Import PDF button */
+.ws-btn-import {
+  background: var(--bg);
+  color: var(--ink-2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ws-btn-import:hover {
+  background: var(--white);
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+/* ── Import PDF modal content ── */
+.ah-import-drop {
+  border: 2px dashed #C7D2FE;
+  border-radius: 16px;
+  background: #FAFBFF;
+  padding: 3rem 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  cursor: pointer; text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--ink-3);
+}
+.ah-import-drop:hover, .ah-import-drop-over {
+  border-color: #6366f1;
+  background: #EEF2FF;
+  color: #6366f1;
+}
+.ah-import-drop-title {
+  font-size: 1rem; font-weight: 800; color: var(--ink); margin: 0;
+}
+.ah-import-drop-sub {
+  font-size: 0.8rem; color: var(--ink-3); margin: 0;
+}
+
+.ah-import-parsing {
+  padding: 3rem 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  color: var(--ink-3); text-align: center;
+}
+.ah-import-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ah-import-parsing-text {
+  font-size: 1rem; font-weight: 800; color: var(--ink); margin: 0;
+}
+.ah-import-parsing-sub {
+  font-size: 0.82rem; color: var(--ink-3); margin: 0;
+}
+
+.ah-import-error {
+  padding: 2rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  text-align: center;
+}
+.ah-import-error-msg {
+  font-size: 0.88rem; color: #B91C1C; background: #FEF2F2;
+  border: 1px solid #FECACA; border-radius: 10px;
+  padding: 0.75rem 1rem; margin: 0; max-width: 380px;
+}
+
+.ah-import-preview { display: flex; flex-direction: column; gap: 1rem; }
+.ah-import-preview-note {
+  font-size: 0.82rem; color: var(--ink-3); margin: 0;
+}
+.ah-import-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.ah-import-section-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--ink-3);
+}
+.ah-import-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 220px; overflow-y: auto;
+}
+.ah-import-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 0.55rem 0.75rem; cursor: pointer;
+  transition: border-color 0.1s;
+}
+.ah-import-item:hover { border-color: #C7D2FE; }
+.ah-import-check {
+  width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
+  accent-color: #6366f1;
+}
+.ah-import-item-icon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.ah-import-item-body {
+  flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+}
+.ah-import-item-title {
+  font-size: 0.85rem; font-weight: 700; color: var(--ink);
+}
+.ah-import-item-meta {
+  font-size: 0.72rem; color: var(--ink-3); font-weight: 600;
+}
+
+/* wider modal for activities */
+.ws-modal-wide { max-width: 560px; }
+
 /* ── Deadlines Panel ── */
 .dl-panel {
   background: var(--white);
@@ -2005,6 +2267,14 @@ a.ws-nudge:hover { transform: translateX(2px); }
 /* Priority 3 — lavender */
 .dl-prio-3 { background: #F3E8FF; color: #7E22CE; }
 
+/* Priority pill as editable select */
+.dl-prio-select {
+  border: none; outline: none; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  font-family: var(--font); transition: opacity 0.15s;
+}
+.dl-prio-select:hover { opacity: 0.8; }
+
 /* Board section title that sits between Deadlines and Kanban */
 .dl-board-title {
   font-size: 0.82rem; font-weight: 700;
@@ -2105,4 +2375,206 @@ a.ws-nudge:hover { transform: translateX(2px); }
   display: flex; justify-content: flex-end; gap: 8px;
   padding: 0.85rem 1.25rem 1.1rem;
   border-top: 1.5px solid var(--border);
+}
+
+/* ─────────────────────────────────────────────
+   Essay Review — full-page layout with highlighted essay + floating cards
+   ───────────────────────────────────────────── */
+
+/* Full-page takeover — warm paper background, no dark overlay */
+.erv-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #F1EDE6;
+  opacity: 0; transition: opacity 0.22s ease;
+}
+.erv-backdrop.in { opacity: 1; }
+
+/* Modal fills the full backdrop */
+.erv-modal {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: #F1EDE6;
+}
+
+/* Sticky header — frosted white bar */
+.erv-head {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.8rem 3vw;
+  background: rgba(241, 237, 230, 0.92);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+.erv-head-l { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.erv-nova-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+  color: #7C3AED; background: #F3F0FF;
+  padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+.erv-head-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;
+}
+.erv-head-uni { font-size: 0.82rem; color: var(--ink-3); }
+.erv-head-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.erv-score-pill {
+  font-size: 0.8rem; font-weight: 800;
+  padding: 4px 12px; border-radius: 999px;
+  background: #F1F5F9; color: var(--ink);
+}
+.erv-score-pill[data-level="high"] { background: #DCFCE7; color: #15803D; }
+.erv-score-pill[data-level="mid"]  { background: #FEF9C3; color: #A16207; }
+.erv-score-pill[data-level="low"]  { background: #FEE2E2; color: #B91C1C; }
+.erv-reanalyze {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.75rem; font-weight: 600;
+  padding: 5px 12px; border-radius: 8px; border: none; cursor: pointer;
+  background: #F3F0FF; color: #7C3AED;
+  transition: background 0.15s, opacity 0.15s;
+}
+.erv-reanalyze:hover:not(:disabled) { background: #EDE9FE; }
+.erv-reanalyze:disabled { opacity: 0.5; cursor: not-allowed; }
+.erv-close {
+  display: grid; place-items: center; width: 32px; height: 32px;
+  border: none; background: rgba(0,0,0,0.05); color: var(--ink-3);
+  border-radius: 8px; cursor: pointer; transition: all 0.15s;
+}
+.erv-close:hover { background: rgba(0,0,0,0.10); color: var(--ink); }
+
+/* Body — single scrollable canvas; cards and SVG sit absolute inside */
+.erv-body {
+  position: relative;
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 3rem 3vw 8rem;
+}
+
+/* White essay card — fills the full body, right padding reserves space for floating cards */
+.erv-essay-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 24px rgba(24, 16, 8, 0.08);
+  padding: 2.5rem 2.8rem;
+  /* NO max-width — fills body width; paddingRight set inline in JSX creates card lane */
+}
+
+/* Overall impression */
+.erv-overall {
+  font-size: 0.87rem; line-height: 1.65; color: var(--ink-2);
+  background: #FAF8F5; border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px; padding: 0.85rem 1.1rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Strength bullets */
+.erv-strengths { margin-bottom: 1.1rem; display: flex; flex-direction: column; gap: 4px; }
+.erv-strength {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 0.83rem; line-height: 1.55; color: var(--ink-2);
+}
+.erv-strength-tick { color: #16A34A; font-weight: 800; flex-shrink: 0; }
+
+/* Essay prompt indicator */
+.erv-prompt-box {
+  font-size: 0.82rem; font-style: italic; color: var(--ink-3);
+  border-left: 3px solid #DDD9D2; padding-left: 0.85rem;
+  margin-bottom: 1.5rem; line-height: 1.55;
+}
+
+/* Essay text — right padding reserves space for floating cards.
+   pre-line collapses extra spaces but honours \n for paragraph breaks. */
+.erv-essay-text {
+  font-size: 1.04rem; line-height: 1.82; color: #2C2620;
+  white-space: pre-line; word-wrap: break-word;
+}
+
+/* Highlights — left-to-right sweep via @keyframes.
+   forwards fill keeps the highlight at 100% permanently after the sweep. */
+.erv-mark {
+  background: linear-gradient(var(--hl, rgba(99,102,241,0.20)), var(--hl, rgba(99,102,241,0.20))) no-repeat left center;
+  background-size: 0% 100%;
+  border-radius: 3px;
+  padding: 1px 2px 2px;
+  cursor: pointer;
+  color: inherit;
+  transition: outline 0.15s;
+}
+.erv-mark.lit {
+  animation: ervSweep 0.70s cubic-bezier(0.22, 1, 0.36, 1) var(--hl-delay, 0s) forwards;
+}
+@keyframes ervSweep {
+  from { background-size: 0%   100%; }
+  to   { background-size: 100% 100%; }
+}
+.erv-mark:hover, .erv-mark.active {
+  background-size: 100% 100% !important;
+  outline: 2px solid color-mix(in srgb, var(--hl) 600%, transparent);
+  outline-offset: 1px;
+}
+
+/* Floating annotation cards */
+.erv-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 16px rgba(18,12,6,0.10), 0 0 0 1px rgba(18,12,6,0.06);
+  padding: 0.85rem 0.95rem;
+  cursor: pointer;
+  opacity: 0; transform: translateX(20px);
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.18s;
+}
+.erv-card.in  { opacity: 1; transform: translateX(0); }
+.erv-card:hover, .erv-card.active {
+  box-shadow: 0 6px 24px rgba(18,12,6,0.15), 0 0 0 1.5px rgba(18,12,6,0.10);
+}
+
+.erv-card-meta {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 0.5rem;
+}
+.erv-avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #7C3AED; color: #fff;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.erv-card-byline { font-size: 0.7rem; color: var(--ink-4); }
+
+.erv-chip {
+  display: inline-block; font-size: 0.64rem; font-weight: 800;
+  letter-spacing: 0.055em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 999px;
+  margin-bottom: 0.5rem;
+}
+
+.erv-card-text {
+  font-size: 0.83rem; line-height: 1.55; color: var(--ink-2); margin: 0;
+}
+
+.erv-no-sug {
+  font-size: 0.84rem; color: var(--ink-4); margin-top: 1.5rem;
+}
+
+/* SVG bezier connector overlay */
+.erv-svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; overflow: visible;
+}
+
+/* Line draw-on animation — solid reveal (pathLength="1" + dasharray="1" trick).
+   onAnimationEnd removes those attrs so it becomes a plain solid path. */
+.erv-line-draw {
+  stroke-dashoffset: 1;
+  animation: ervLineDraw var(--line-dur, 0.90s) cubic-bezier(0.4, 0, 0.2, 1)
+             var(--line-delay, 0s) forwards;
+}
+@keyframes ervLineDraw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erv-line-draw { animation-duration: 0.01s; }
+  .erv-mark.lit  { animation-duration: 0.01s; }
 }
