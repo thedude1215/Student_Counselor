@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Loader2, ChevronDown, Plus, X } from 'lucide-react';
+import { Sparkles, ChevronDown, Plus, X } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 import TaskComposer from './TaskComposer.jsx';
 import LogoTile from '../../components/LogoTile.jsx';
@@ -10,12 +10,29 @@ const CAT_CLASS = {
   'College Search': 'cat-search', 'General': 'cat-general',
 };
 
-/* Group suggestions by university, return [{ uni, items }] in insertion order */
+/* Keywords that mark a suggestion as general (not university-specific) */
+const GENERAL_KEYWORDS = [
+  'sat', 'act', 'toefl', 'ielts', 'psat', 'ap exam', 'ap test',
+  'css profile', 'fafsa', 'common app', 'commonapp', 'coalition app',
+  'financial aid', 'scholarship search', 'college list',
+];
+function isGeneralSuggestion(s) {
+  const lower = s.title.toLowerCase();
+  return GENERAL_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+/* Group suggestions: general items first, then by university */
 function groupBySchool(suggestions) {
+  const general = suggestions.filter(isGeneralSuggestion);
+  const specific = suggestions.filter(s => !isGeneralSuggestion(s));
+
   const map = new Map();
-  for (const s of suggestions) {
+  if (general.length > 0) {
+    map.set('__general__', { uni: null, items: general, isGeneral: true });
+  }
+  for (const s of specific) {
     const key = s.university_id || '__none__';
-    if (!map.has(key)) map.set(key, { uni: s.universities || null, items: [] });
+    if (!map.has(key)) map.set(key, { uni: s.universities || null, items: [], isGeneral: false });
     map.get(key).items.push(s);
   }
   return [...map.values()];
@@ -54,14 +71,10 @@ function SuggestRow({ s, onAccept, onDismiss }) {
 export default function KanbanColumn({
   status, label, tasks, suggestions = [], nova = {},
   composerOpen = false, onAdd, onComposerClose,
-  onDelete, onAccept, onDismiss, dnd = {},
+  onDelete, onEdit, onAccept, onDismiss, dnd = {},
 }) {
   const [dropActive, setDropActive] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
-
-  const pendingColleges = nova.colleges
-    ? nova.colleges.filter(c => !nova.generatedIds?.has(c.university_id))
-    : [];
 
   const count = tasks.length + suggestions.length;
   const schoolGroups = groupBySchool(suggestions);
@@ -88,7 +101,7 @@ export default function KanbanColumn({
           <>
             <button className="ws-kcol-suggest-toggle" onClick={() => setSuggestOpen(o => !o)}>
               <Sparkles size={13} />
-              <span>{suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} from Nova</span>
+              <span>Suggestions from Nova</span>
               <ChevronDown
                 size={13}
                 style={{ transform: suggestOpen ? 'none' : 'rotate(-90deg)', transition: 'transform 180ms ease', flexShrink: 0 }}
@@ -98,8 +111,8 @@ export default function KanbanColumn({
             {suggestOpen && (
               <div className="ws-kcol-suggest-panel">
                 <div className="ws-kcol-suggest-groups">
-                  {schoolGroups.map(({ uni, items }) => (
-                    <div key={uni?.name || 'general'} className="ws-kcol-suggest-school">
+                  {schoolGroups.map(({ uni, items, isGeneral }) => (
+                    <div key={uni?.name || (isGeneral ? '__general__' : '__none__')} className="ws-kcol-suggest-school">
                       {/* School header */}
                       <div className="ws-kcol-suggest-school-head">
                         {uni && (
@@ -116,7 +129,9 @@ export default function KanbanColumn({
                             radius={6}
                           />
                         )}
-                        <span className="ws-kcol-suggest-school-name">{uni?.name || 'General'}</span>
+                        <span className={`ws-kcol-suggest-school-name${isGeneral ? ' ws-kcol-general-label' : ''}`}>
+                          {isGeneral ? 'General' : (uni?.name || 'Other')}
+                        </span>
                         <span className="ws-kcol-suggest-school-count">{items.length}</span>
                       </div>
 
@@ -139,6 +154,7 @@ export default function KanbanColumn({
             key={t.id}
             task={t}
             onDelete={onDelete}
+            onEdit={onEdit}
             draggable
             isDragging={dnd.dragId === t.id}
             onDragStart={() => dnd.onDragStart?.(t.id)}
@@ -151,21 +167,6 @@ export default function KanbanColumn({
         )}
       </div>
 
-      {/* Nova generate footer */}
-      {pendingColleges.length > 0 && (
-        <div className="ws-kcol-nova">
-          {pendingColleges.map(c => {
-            const busy = nova.generatingId === c.university_id;
-            return (
-              <button key={c.university_id} className="ws-nova-gen" disabled={busy} onClick={() => nova.onGenerate(c)}>
-                {busy
-                  ? <><Loader2 size={13} className="ws-spin" /> Finding…</>
-                  : <><Sparkles size={13} /> Suggest tasks for {c.universities?.name || 'school'}</>}
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
