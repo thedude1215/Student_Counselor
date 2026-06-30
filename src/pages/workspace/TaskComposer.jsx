@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { CalendarDays, Tag, AlertCircle, X, Plus } from 'lucide-react';
 
-const CATEGORIES = ['General', 'Essays', 'Testing', 'Documents', 'Recommendations', 'College Search', 'Financial Aid'];
+const CATEGORIES = [
+  'General', 'Essays', 'Extracurriculars', 'Testing', 'Documents',
+  'Recommendations', 'Interviews', 'College Search', 'Financial Aid',
+  'Scholarships', 'Campus Visits', 'Housing',
+];
 const PRIORITIES = ['low', 'medium', 'high'];
 
 const CAT_CLASS = {
-  'Essays': 'cat-essays', 'Testing': 'cat-testing', 'Documents': 'cat-documents',
-  'Recommendations': 'cat-recs', 'Financial Aid': 'cat-finaid',
-  'College Search': 'cat-search', 'General': 'cat-general',
+  'Essays':           'cat-essays',
+  'Extracurriculars': 'cat-ec',
+  'Testing':          'cat-testing',
+  'Documents':        'cat-documents',
+  'Recommendations':  'cat-recs',
+  'Interviews':       'cat-interviews',
+  'Financial Aid':    'cat-finaid',
+  'College Search':   'cat-search',
+  'Scholarships':     'cat-scholarships',
+  'Campus Visits':    'cat-visits',
+  'Housing':          'cat-housing',
+  'General':          'cat-general',
 };
 
 /*
