@@ -8,15 +8,26 @@ import NewEssayModal from './NewEssayModal.jsx';
 import EssayReview from './EssayReview.jsx';
 import './workspace.css';
 
-/* ai_feedback may be a structured JSON review (new) or a legacy markdown blob (old). */
+/* ai_feedback may be new structured JSON, legacy {feedback:"markdown"}, or a plain string. */
 function parseReview(raw) {
   if (!raw) return null;
-  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string') return null;
+  const str = raw.trim();
+  if (!str) return null;
   try {
-    const obj = JSON.parse(raw);
-    if (obj && typeof obj === 'object' && ('suggestions' in obj || 'overall' in obj)) return obj;
-  } catch { /* legacy string */ }
-  return { overall: String(raw), score: 0, strengths: [], suggestions: [] };
+    const obj = JSON.parse(str);
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      // New format: has overall or suggestions
+      if ('suggestions' in obj || 'overall' in obj) return obj;
+      // Legacy format: {feedback: "markdown text"}
+      if ('feedback' in obj) {
+        const text = (obj.feedback || '').trim();
+        return text ? { overall: text, score: 0, strengths: [], suggestions: [] } : null;
+      }
+    }
+  } catch { /* not JSON — treat as plain text */ }
+  return { overall: str, score: 0, strengths: [], suggestions: [] };
 }
 
 const WORD_LIMIT = 650;
@@ -310,9 +321,12 @@ export default function Essays() {
         essayTitle: draft.title,
         universityName: uni?.name || null,
       });
-      // result.review = new structured format; result.feedback = legacy string
-      const parsed = result.review ? result.review : parseReview(result.feedback || JSON.stringify(result));
-      setFeedback(parsed); setShowFeedback(true);
+      // result.review = new structured format; result.feedback = legacy string fallback
+      const parsed = result.review
+        ? result.review
+        : parseReview(typeof result.feedback === 'string' ? result.feedback : null);
+      setFeedback(parsed || { overall: 'Feedback received but could not be parsed.', score: 0, strengths: [], suggestions: [] });
+      setShowFeedback(true);
     } catch (err) {
       setFeedback({ overall: `Failed to get feedback: ${err.message}`, score: 0, strengths: [], suggestions: [] });
       setShowFeedback(true);
