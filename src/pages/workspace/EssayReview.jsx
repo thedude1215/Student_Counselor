@@ -13,12 +13,12 @@ const CHIP = {
 const dfChip = CHIP.clarity;
 
 const HL = {
-  specificity:  'rgba(245,158,11,0.20)',
-  clarity:      'rgba(59,130,246,0.20)',
-  impact:       'rgba(245,158,11,0.20)',
-  structure:    'rgba(99,102,241,0.20)',
-  authenticity: 'rgba(236,72,153,0.20)',
-  grammar:      'rgba(239,68,68,0.20)',
+  specificity:  'rgba(245,158,11,0.22)',
+  clarity:      'rgba(59,130,246,0.22)',
+  impact:       'rgba(245,158,11,0.22)',
+  structure:    'rgba(99,102,241,0.22)',
+  authenticity: 'rgba(236,72,153,0.22)',
+  grammar:      'rgba(239,68,68,0.22)',
 };
 
 const LC = {
@@ -33,6 +33,13 @@ const LC = {
 const CARD_W   = 264;
 const CARD_R   = 22;
 const CARD_GAP = 12;
+
+/* Stagger timings (seconds) — each suggestion gets its own beat */
+const HIGHLIGHT_BASE  = 0.35;  // first highlight fades in after modal opens
+const HIGHLIGHT_STEP  = 0.18;  // gap between consecutive highlights
+const LINE_DELAY_EXTRA = 0.22; // line starts drawing after the highlight appears
+const LINE_DURATION   = 0.7;   // how long each line takes to draw
+const CARD_DELAY_EXTRA = 0.55; // card slides in after the line finishes drawing
 
 function buildSegments(text, suggestions) {
   const lower = text.toLowerCase();
@@ -66,10 +73,12 @@ function buildSegments(text, suggestions) {
 }
 
 export default function EssayReview({ review, content, title, university, onClose }) {
-  const [active, setActive]       = useState(null);
-  const [mounted, setMounted]     = useState(false);
-  const [cardTops, setCardTops]   = useState({});
-  const [paths, setPaths]         = useState([]);
+  const [active,    setActive]    = useState(null);
+  const [mounted,   setMounted]   = useState(false);
+  const [cardTops,  setCardTops]  = useState({});
+  const [paths,     setPaths]     = useState([]);
+  // Track which lines have finished drawing so we can flip them to solid
+  const [drawnLines, setDrawnLines] = useState({});
 
   const bodyRef  = useRef(null);
   const markRefs = useRef({});
@@ -85,7 +94,7 @@ export default function EssayReview({ review, content, title, university, onClos
     [content, suggestions],
   );
 
-  /* Fade the backdrop in on next frame */
+  /* Fade backdrop in on next frame */
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMounted(true));
     const esc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -93,18 +102,17 @@ export default function EssayReview({ review, content, title, university, onClos
     return () => { cancelAnimationFrame(raf); window.removeEventListener('keydown', esc); };
   }, [onClose]);
 
-  /* Compute card vertical positions + SVG bezier paths */
+  /* Compute card positions + SVG paths */
   useEffect(() => {
     if (!mounted) return;
 
     function compute() {
       const body = bodyRef.current;
       if (!body) return;
-      const bb  = body.getBoundingClientRect();
-      const st  = body.scrollTop;
-      const bw  = body.offsetWidth;
+      const bb = body.getBoundingClientRect();
+      const st = body.scrollTop;
+      const bw = body.offsetWidth;
 
-      /* Step 1 — vertical center of each highlight in content coords */
       const centers = {};
       suggestions.forEach((_, i) => {
         const el = markRefs.current[i];
@@ -113,7 +121,6 @@ export default function EssayReview({ review, content, title, university, onClos
         centers[i] = (r.top + r.bottom) / 2 - bb.top + st;
       });
 
-      /* Step 2 — sort by Y, push cards down to avoid overlap */
       const sorted = Object.entries(centers)
         .map(([k, y]) => [+k, y])
         .sort((a, b) => a[1] - b[1]);
@@ -128,8 +135,7 @@ export default function EssayReview({ review, content, title, university, onClos
       }
       setCardTops(resolved);
 
-      /* Step 3 — SVG bezier from mark right-edge → card left-edge */
-      const cardX   = bw - CARD_R - CARD_W;
+      const cardX    = bw - CARD_R - CARD_W;
       const newPaths = [];
       suggestions.forEach((s, i) => {
         const mark = markRefs.current[i];
@@ -148,9 +154,10 @@ export default function EssayReview({ review, content, title, university, onClos
         });
       });
       setPaths(newPaths);
+      // Reset drawn state so lines re-animate if paths recompute
+      setDrawnLines({});
     }
 
-    /* Two passes: one immediate, one after fonts/images settle */
     const t1 = setTimeout(compute, 60);
     const t2 = setTimeout(compute, 380);
     const body = bodyRef.current;
@@ -168,7 +175,10 @@ export default function EssayReview({ review, content, title, university, onClos
     markRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  /* Essay text leaves room for cards on the right */
+  function markLineDrawn(i) {
+    setDrawnLines(prev => ({ ...prev, [i]: true }));
+  }
+
   const essayPadRight = CARD_W + CARD_R + 44;
 
   return createPortal(
@@ -195,15 +205,13 @@ export default function EssayReview({ review, content, title, university, onClos
           </div>
         </div>
 
-        {/* ── Single-scroll body — cards positioned absolute ── */}
+        {/* ── Single-scroll body ── */}
         <div className="erv-body" ref={bodyRef}>
 
-          {/* Overall impression */}
           {review.overall && (
             <p className="erv-overall">{review.overall}</p>
           )}
 
-          {/* Strengths */}
           {strengths.length > 0 && (
             <div className="erv-strengths">
               {strengths.map((s, i) => (
@@ -215,31 +223,39 @@ export default function EssayReview({ review, content, title, university, onClos
             </div>
           )}
 
-          {/* Essay with highlighted quotes */}
+          {/* Essay with staggered highlight sweep-in */}
           <div className="erv-essay-text" style={{ paddingRight: essayPadRight + 'px' }}>
             {segments.map((seg, si) =>
               seg.idx === null ? (
                 <span key={si}>{seg.text}</span>
-              ) : (
-                <mark
-                  key={si}
-                  ref={el => { markRefs.current[seg.idx] = el; }}
-                  className={`erv-mark ${mounted ? 'lit' : ''} ${active === seg.idx ? 'active' : ''}`}
-                  style={{ '--hl': HL[suggestions[seg.idx]?.category] || 'rgba(99,102,241,0.18)' }}
-                  onMouseEnter={() => setActive(seg.idx)}
-                  onMouseLeave={() => setActive(null)}
-                  onClick={() => activate(seg.idx)}
-                >
-                  {seg.text}
-                </mark>
-              )
+              ) : (() => {
+                const i = seg.idx;
+                const delay = HIGHLIGHT_BASE + i * HIGHLIGHT_STEP;
+                return (
+                  <mark
+                    key={si}
+                    ref={el => { markRefs.current[i] = el; }}
+                    className={`erv-mark ${mounted ? 'lit' : ''} ${active === i ? 'active' : ''}`}
+                    style={{
+                      '--hl': HL[suggestions[i]?.category] || 'rgba(99,102,241,0.20)',
+                      '--hl-delay': `${delay}s`,
+                    }}
+                    onMouseEnter={() => setActive(i)}
+                    onMouseLeave={() => setActive(null)}
+                    onClick={() => activate(i)}
+                  >
+                    {seg.text}
+                  </mark>
+                );
+              })()
             )}
           </div>
 
-          {/* Floating suggestion cards */}
+          {/* Floating suggestion cards — slide in after their line draws */}
           {suggestions.map((s, i) => {
             const chip = CHIP[s.category] || dfChip;
             const top  = cardTops[i];
+            const cardDelay = HIGHLIGHT_BASE + i * HIGHLIGHT_STEP + CARD_DELAY_EXTRA;
             return (
               <div
                 key={i}
@@ -250,7 +266,7 @@ export default function EssayReview({ review, content, title, university, onClos
                   right: CARD_R + 'px',
                   top: (top ?? -9999) + 'px',
                   width: CARD_W + 'px',
-                  transitionDelay: top != null ? `${i * 0.07}s` : '0s',
+                  transitionDelay: top != null ? `${cardDelay}s` : '0s',
                 }}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
@@ -272,20 +288,37 @@ export default function EssayReview({ review, content, title, university, onClos
             <p className="erv-no-sug">No line-level changes flagged — clean draft.</p>
           )}
 
-          {/* SVG bezier connector lines */}
+          {/* SVG bezier connector lines — draw-on animation, then snap to solid */}
           <svg className="erv-svg" aria-hidden="true">
-            {paths.map(({ i, d, color }) => (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                stroke={color}
-                strokeWidth={active === i ? 2 : 1.5}
-                strokeDasharray={active === i ? '' : '5 4'}
-                opacity={active === i ? 0.9 : 0.5}
-                style={{ transition: 'stroke-width 0.15s, opacity 0.15s' }}
-              />
-            ))}
+            {paths.map(({ i, d, color }) => {
+              const lineDelay = HIGHLIGHT_BASE + i * HIGHLIGHT_STEP + LINE_DELAY_EXTRA;
+              const isDrawn   = drawnLines[i];
+              const isActive  = active === i;
+              return (
+                <path
+                  key={`${i}-${d}`}
+                  d={d}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={isActive ? 2 : 1.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={isActive ? 0.9 : 0.55}
+                  /* While drawing: pathLength normalised draw-on (dotted during travel).
+                     After drawn: solid line (no dasharray). */
+                  pathLength={isDrawn ? undefined : 1}
+                  strokeDasharray={isDrawn ? undefined : '0.04 0.06'}
+                  strokeDashoffset={isDrawn ? undefined : undefined}
+                  className={isDrawn ? undefined : 'erv-line-draw'}
+                  style={{
+                    '--line-delay': `${lineDelay}s`,
+                    '--line-dur':   `${LINE_DURATION}s`,
+                    transition: isDrawn ? 'stroke-width 0.15s, opacity 0.15s' : undefined,
+                  }}
+                  onAnimationEnd={() => markLineDrawn(i)}
+                />
+              );
+            })}
           </svg>
         </div>
       </div>
