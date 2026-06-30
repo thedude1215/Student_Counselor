@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#57068C"/>
+  <!-- Torch flame -->
+  <path d="M50 12 C44 20 38 26 40 35 C42 40 46 42 50 42 C54 42 58 40 60 35 C62 26 56 20 50 12 Z" fill="white"/>
+  <!-- Inner flame highlight -->
+  <path d="M50 20 C47 25 44 29 46 34 C47 37 48.5 38 50 38 C51.5 38 53 37 54 34 C56 29 53 25 50 20 Z" fill="#57068C" opacity="0.4"/>
+  <!-- Torch neck -->
+  <rect x="46" y="41" width="8" height="6" rx="1" fill="white"/>
+  <!-- Torch cup / collar -->
+  <path d="M42 47 L58 47 L56 52 L44 52 Z" fill="white"/>
+  <!-- Torch handle -->
+  <rect x="47" y="52" width="6" height="28" rx="2" fill="white"/>
+  <!-- Torch base foot -->
+  <path d="M44 78 L56 78 L58 82 L42 82 Z" fill="white"/>
+</svg>

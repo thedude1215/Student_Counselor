@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="0" fill="white"/>
+  <!-- College Board blue acorn icon -->
+  <!-- Acorn cap/hat -->
+  <path d="M50 8 C50 8 30 14 28 26 C28 26 38 22 50 22 C62 22 72 26 72 26 C70 14 50 8 50 8 Z" fill="#003F8A"/>
+  <!-- Stem on top -->
+  <rect x="47" y="4" width="6" height="10" rx="3" fill="#003F8A"/>
+  <!-- Acorn body - rounded teardrop/shield shape -->
+  <path d="M50 24 C36 24 24 36 24 50 C24 66 36 82 50 88 C64 82 76 66 76 50 C76 36 64 24 50 24 Z" fill="#003F8A"/>
+  <!-- Acorn body highlight cutout -->
+  <path d="M50 30 C38 30 30 40 30 50 C30 62 38 74 50 80 C62 74 70 62 70 50 C70 40 62 30 50 30 Z" fill="white"/>
+  <!-- Inner acorn fill -->
+  <path d="M50 35 C41 35 34 43 34 51 C34 61 41 71 50 76 C59 71 66 61 66 51 C66 43 59 35 50 35 Z" fill="#003F8A"/>
+</svg>

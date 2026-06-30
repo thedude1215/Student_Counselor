@@ -1,4 +1,4 @@
-import { CalendarDays, X } from 'lucide-react';
+import { CalendarDays, X, Pencil } from 'lucide-react';
 import LogoTile from '../../components/LogoTile.jsx';
 
 const CAT_CLASS = {
@@ -27,7 +27,7 @@ function friendlyDue(dateStr) {
   return { label: `Due ${due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, cls: '' };
 }
 
-export default function TaskCard({ task, onDelete, draggable, onDragStart, onDragEnd, isDragging }) {
+export default function TaskCard({ task, onDelete, onEdit, draggable, onDragStart, onDragEnd, isDragging }) {
   const uni = task.universities;
   const { label: dueLabel, cls: dueCls } = friendlyDue(task.due_date);
   const isDone = task.status === 'done';
@@ -39,11 +39,6 @@ export default function TaskCard({ task, onDelete, draggable, onDragStart, onDra
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      {/* Hover delete — absolute top-right */}
-      <button className="ws-card2-del ws-icon-sm danger" title="Delete" onClick={() => onDelete(task.id)}>
-        <X size={14} />
-      </button>
-
       {/* Top: title + category chip */}
       <div className="ws-card2-top">
         <span className="ws-card2-title">{task.title}</span>
@@ -54,19 +49,29 @@ export default function TaskCard({ task, onDelete, draggable, onDragStart, onDra
         )}
       </div>
 
-      {/* Bottom: due date + logo */}
+      {/* Bottom: due date left, actions + logo right */}
       <div className="ws-card2-bottom">
         <span className={`ws-card2-due ${dueCls}`}>
           <CalendarDays size={13} />
           {dueLabel}
         </span>
-        {uni && (
-          <LogoTile
-            item={{ name: uni.name, short_name: uni.short_name, logoUrl: uni.logo_url, logoStyle: uni.logo_style, fallback: uni.fallback }}
-            size={24}
-            radius={6}
-          />
-        )}
+        <div className="ws-card2-bottom-right">
+          <div className="ws-card2-actions">
+            <button className="ws-card2-act ws-icon-sm" title="Edit" onClick={() => onEdit?.(task)}>
+              <Pencil size={13} />
+            </button>
+            <button className="ws-card2-act ws-icon-sm danger" title="Delete" onClick={() => onDelete(task.id)}>
+              <X size={14} />
+            </button>
+          </div>
+          {uni && (
+            <LogoTile
+              item={{ name: uni.name, short_name: uni.short_name, logoUrl: uni.logo_url, logoStyle: uni.logo_style, fallback: uni.fallback }}
+              size={24}
+              radius={6}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -21,6 +21,9 @@
 .ws-side-brand {
   padding: 0 0 1rem;
   margin-bottom: 0.5rem;
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
 }
 .ws-side-brand-logo {
   width: 80%;
@@ -445,17 +448,9 @@
   border-radius: 12px; padding: 0.75rem 0.85rem;
   cursor: pointer; display: flex; align-items: flex-start;
   gap: 0.7rem; font-family: var(--font);
-  transition: border-color var(--t), box-shadow var(--t), background var(--t);
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
 }
-.ws-essay-item:hover {
-  border-color: var(--blue);
-  box-shadow: 0 2px 8px rgba(21,94,239,0.08);
-}
-.ws-essay-item.active {
-  border-color: var(--blue);
-  background: #F0F4FF;
-  box-shadow: 0 2px 12px rgba(21,94,239,0.1);
-}
+/* hover/active colors come from inline brand-color styles */
 .ws-essay-item-logo { flex-shrink: 0; margin-top: 1px; }
 .ws-essay-item-delete {
   flex-shrink: 0; opacity: 0; pointer-events: none;
@@ -1284,6 +1279,10 @@ a.ws-nudge:hover { transform: translateX(2px); }
   font-size: 0.82rem; font-weight: 800; color: var(--ink-2);
   flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.ws-kcol-general-label {
+  color: var(--ink-4);
+  font-style: italic;
+}
 .ws-kcol-suggest-school-count {
   font-size: 0.68rem; font-weight: 800; color: var(--ink-4);
   background: rgba(194,181,255,0.35); border-radius: 999px; padding: 1px 7px;
@@ -1359,11 +1358,12 @@ a.ws-nudge:hover { transform: translateX(2px); }
 .ws-card2-due.today   { color: var(--prio-med); }
 .ws-card2-due.muted   { color: var(--ink-4); }
 
-.ws-card2-del {
-  position: absolute; top: 10px; right: 10px;
+.ws-card2-actions {
+  display: flex; align-items: center; gap: 2px;
   opacity: 0; transition: opacity var(--t);
 }
-.ws-card2:hover .ws-card2-del { opacity: 1; }
+.ws-card2:hover .ws-card2-actions { opacity: 1; }
+.ws-card2-act { flex-shrink: 0; }
 
 /* Suggestion card variant */
 .ws-card2.suggested {
@@ -1894,4 +1894,215 @@ a.ws-nudge:hover { transform: translateX(2px); }
   padding: 2px 8px; border-radius: 999px;
   border: 1px solid;
   white-space: nowrap;
+}
+
+/* ── Deadlines Panel ── */
+.dl-panel {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 2.2rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
+
+.dl-month {
+  border-bottom: 1.5px solid var(--border);
+}
+.dl-month:last-child { border-bottom: none; }
+
+.dl-month-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.4rem 1.75rem 0.5rem;
+}
+
+.dl-month-label {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 2rem; font-weight: 800;
+  color: #0F0F0F;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.dl-nova-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; font-weight: 600;
+  color: #16A34A;
+  background: #fff;
+  border: 1.5px solid #BBF7D0;
+  padding: 5px 14px; border-radius: 999px;
+}
+.dl-nova-badge svg { color: #16A34A; }
+
+.dl-table {
+  padding: 0 1.75rem 1rem;
+}
+
+.dl-table-head {
+  display: grid;
+  grid-template-columns: 90px 1fr 120px;
+  gap: 0 1.25rem;
+  padding: 0.55rem 0 0.55rem;
+  font-size: 0.63rem; font-weight: 800;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-4);
+  border-bottom: 1.5px solid var(--border);
+}
+
+.dl-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 120px;
+  gap: 0 1.25rem;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  border-radius: 0;
+}
+.dl-row:last-child { border-bottom: none; }
+.dl-row:hover { background: #FAFAF9; margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: 10px; }
+
+.dl-date {
+  font-size: 0.85rem; font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.dl-item {
+  display: flex; align-items: center; gap: 12px;
+  min-width: 0;
+}
+
+.dl-item-text {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+
+.dl-item-name {
+  font-size: 0.88rem; font-weight: 600;
+  color: #0F0F0F;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.dl-item-school {
+  font-size: 0.71rem; color: var(--ink-4); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.dl-prio {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700;
+  padding: 5px 14px; border-radius: 999px;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+/* Priority 1 — coral/salmon */
+.dl-prio-1 { background: #FEE2E2; color: #B91C1C; }
+
+/* Priority 2 — peach/apricot */
+.dl-prio-2 { background: #FFEDD5; color: #C2410C; }
+
+/* Priority 3 — lavender */
+.dl-prio-3 { background: #F3E8FF; color: #7E22CE; }
+
+/* Board section title that sits between Deadlines and Kanban */
+.dl-board-title {
+  font-size: 0.82rem; font-weight: 700;
+  color: var(--ink-4);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin: 0 0 1rem;
+}
+
+/* ── Task Edit Modal ── */
+.tedit-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+
+.tedit-modal {
+  background: var(--white);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  width: 100%; max-width: 440px;
+  display: flex; flex-direction: column;
+  animation: ws-fade-up 0.22s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.tedit-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 1.25rem 0.75rem;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.tedit-title {
+  font-size: 0.95rem; font-weight: 700; color: var(--ink-1);
+}
+
+.tedit-body {
+  padding: 1.1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+
+.tedit-label {
+  font-size: 0.71rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--ink-4); display: block; margin-bottom: 4px;
+}
+
+.tedit-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid var(--border-2);
+  border-radius: 9px;
+  font-size: 0.9rem; font-weight: 500; color: var(--ink-1);
+  background: var(--white);
+  font-family: var(--font);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.tedit-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(64,85,245,0.12);
+}
+
+.tedit-date-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.tedit-date-icon {
+  position: absolute; left: 10px; color: var(--ink-4); pointer-events: none;
+}
+.tedit-date { padding-left: 2.1rem; }
+.tedit-date-clear {
+  position: absolute; right: 8px;
+}
+
+.tedit-row-2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+}
+.tedit-field { display: flex; flex-direction: column; }
+
+.tedit-select {
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid var(--border-2);
+  border-radius: 9px;
+  font-size: 0.88rem; font-weight: 500; color: var(--ink-1);
+  background: var(--white);
+  font-family: var(--font);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.tedit-select:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(64,85,245,0.12);
+}
+
+.tedit-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 0.85rem 1.25rem 1.1rem;
+  border-top: 1.5px solid var(--border);
 }

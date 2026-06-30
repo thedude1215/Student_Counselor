@@ -69,9 +69,9 @@ export default function WorkspaceLayout() {
   return (
     <div className="ws-page">
       <aside className="ws-sidebar">
-        <div className="ws-side-brand">
+        <Link to="/" className="ws-side-brand">
           <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-side-brand-logo" />
-        </div>
+        </Link>
 
         <nav className="ws-nav" ref={navRef}>
           <div className="ws-nav-pill" style={{ top: pill.top, height: pill.height, opacity: pill.opacity }} />
