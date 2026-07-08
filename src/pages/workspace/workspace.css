@@ -170,6 +170,7 @@
   overflow-y: auto;
   padding: 2.25rem 2.5rem 3rem;
   background: var(--white);
+  scrollbar-gutter: stable;
 }
 
 /* ── Talk to Nova (sidebar button) ── */
@@ -443,38 +444,96 @@
 
 /* ── Essays ── */
 /* ── Essays ── */
-.ws-essay-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 1.25rem;
-  align-items: start;
+/* ── Essay switcher (inside editor card) ── */
+.ws-essay-switcher-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.ws-essay-switcher-wrap { position: relative; }
+.ws-essay-switcher {
+  display: flex; align-items: center; gap: 0.65rem;
+  border: 1.5px solid var(--border); border-radius: 999px;
+  padding: 0.55rem 1rem 0.55rem 0.65rem;
+  background: var(--bg); cursor: pointer;
+  font-family: var(--font); transition: filter 0.15s;
+}
+.ws-essay-switcher:hover { filter: brightness(0.97); }
+.ws-essay-switcher-uni {
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;
 }
 
-/* Left: essay list */
-.ws-essay-list { display: flex; flex-direction: column; gap: 0.4rem; }
-.ws-essay-item {
-  text-align: left; background: var(--white);
-  border: 1.5px solid var(--border);
-  border-radius: 12px; padding: 0.75rem 0.85rem;
-  cursor: pointer; display: flex; align-items: flex-start;
-  gap: 0.7rem; font-family: var(--font);
-  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+.ws-essay-switcher-nav-group { display: flex; gap: 3px; margin-left: auto; }
+.ws-essay-switcher-nav {
+  background: none; border: 1.5px solid var(--border); border-radius: 7px;
+  padding: 4px 5px; cursor: pointer; color: var(--ink-3); line-height: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-/* hover/active colors come from inline brand-color styles */
-.ws-essay-item-logo { flex-shrink: 0; margin-top: 1px; }
-.ws-essay-item-delete {
+.ws-essay-switcher-nav:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-3); }
+.ws-essay-switcher-nav:disabled { opacity: 0.25; cursor: default; }
+.ws-essay-switcher-count {
+  font-size: 0.72rem; font-weight: 700; color: var(--ink-4); white-space: nowrap;
+}
+
+/* Dropdown — shown via JS showSwitcher state */
+.ws-essay-switcher-drop {
+  position: absolute; top: calc(100% + 6px); left: 0;
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 14px; box-shadow: 0 8px 28px rgba(17,17,24,0.12);
+  min-width: 280px; z-index: 200; overflow: hidden;
+  animation: dropIn 0.12s ease;
+}
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ws-essay-drop-group { border-top: 1px solid var(--border); }
+.ws-essay-drop-group:first-child { border-top: none; }
+
+/* University row — click to expand */
+.ws-essay-drop-group-head {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer; transition: background 0.12s;
+}
+.ws-essay-drop-group-head:hover { background: var(--bg); }
+.ws-essay-drop-group-name {
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; flex: 1;
+}
+.ws-essay-drop-group-chevron { color: var(--ink-4); transition: transform 0.18s; flex-shrink: 0; }
+.ws-essay-drop-group-chevron.open { transform: rotate(180deg); }
+
+/* Essays hidden by default, expand when .open is on the group */
+.ws-essay-drop-essays {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.22s ease;
+}
+.ws-essay-drop-group.open .ws-essay-drop-essays { max-height: 300px; padding: 0.25rem 0 0.4rem; }
+
+.ws-essay-drop-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.42rem 0.65rem 0.42rem calc(28px + 0.6rem + 0.1rem);
+  margin: 0 0.5rem 0.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s; position: relative;
+}
+.ws-essay-drop-item:first-child { margin-top: 0; }
+.ws-essay-drop-item:hover { background: var(--bg); }
+.ws-essay-drop-item.active { background: var(--bg); }
+.ws-essay-drop-title { font-size: 0.84rem; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; max-width: 180px; }
+.ws-essay-drop-wc { font-size: 0.7rem; font-weight: 600; color: var(--ink-4); flex-shrink: 0; }
+.ws-essay-drop-check { color: var(--blue); flex-shrink: 0; }
+.ws-essay-drop-trash {
   flex-shrink: 0; opacity: 0; pointer-events: none;
-  background: none; border: none; padding: 4px; cursor: pointer;
-  color: var(--ink-3); border-radius: 6px; line-height: 0;
+  background: none; border: none; padding: 3px; cursor: pointer;
+  color: var(--ink-3); border-radius: 5px; line-height: 0;
   transition: opacity 0.15s, color 0.15s, background 0.15s;
-  margin-top: 1px; align-self: flex-start;
 }
-.ws-essay-item:hover .ws-essay-item-delete {
-  opacity: 1; pointer-events: auto;
-}
-.ws-essay-item-delete:hover {
-  color: #e53e3e; background: #FFF0F0;
-}
+.ws-essay-drop-item:hover .ws-essay-drop-trash { opacity: 1; pointer-events: auto; }
+.ws-essay-drop-trash:hover { color: #e53e3e; background: #FFF0F0; }
+
 .ws-essay-item-confirm {
   display: flex; gap: 4px; align-items: center; flex-shrink: 0;
 }
@@ -487,29 +546,14 @@
 .ws-confirm-yes:hover { background: #FCA5A5; }
 .ws-confirm-no  { background: var(--bg); color: var(--ink-3); }
 .ws-confirm-no:hover { background: var(--border); }
-.ws-essay-item-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.ws-essay-item-title {
-  font-weight: 800; font-size: 0.88rem; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ws-essay-item-meta { font-size: 0.72rem; color: var(--ink-3); font-weight: 600; }
-.ws-essay-item-bar {
-  height: 3px; background: var(--border); border-radius: 999px;
-  margin-top: 5px; overflow: hidden;
-}
-.ws-essay-item-bar-fill {
-  height: 100%; background: var(--blue); border-radius: 999px;
-  transition: width 0.3s ease;
-}
 
-/* Right: editor card */
+/* Editor card — full width */
 .ws-essay-editor {
   background: var(--white);
-  border: 1.5px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
   display: flex; flex-direction: column;
-  box-shadow: 0 4px 24px rgba(17,17,24,0.06);
+  width: 100%;
 }
 .ws-essay-editor-top {
   padding: 1.25rem 1.5rem 0;
@@ -915,6 +959,8 @@ a.ws-nudge:hover { transform: translateX(2px); }
   background: var(--accent, var(--blue));
   opacity: 0.85;
 }
+
+.ws-section { padding-right: 1rem; }
 
 /* Section headers: small, tracked-out, muted — with a tinted icon badge */
 .ws-section-head {
@@ -1685,7 +1731,7 @@ a.ws-nudge:hover { transform: translateX(2px); }
 /* ════════════════ Dashboard home (borderless layout) ════════════════ */
 .ws-home { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
 .ws-home-main { min-width: 0; }
-.ws-home-rail { min-width: 0; }
+.ws-home-rail { min-width: 0; padding-right: 1rem; }
 
 /* Your colleges row */
 .ws-colleges-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin: 1.5rem 0; }
@@ -1832,51 +1878,53 @@ a.ws-nudge:hover { transform: translateX(2px); }
 
 /* Activity cards list */
 .ah-cards {
-  display: flex; flex-direction: column; gap: 0.6rem;
+  display: flex; flex-direction: column;
+}
+
+.ah-card-v2 + .ah-card-v2 {
+  border-top: 1px solid #EBEBF2;
+  margin-top: 2px;
 }
 
 .ah-card {
   position: relative;
-  background: var(--white);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
   display: flex; align-items: stretch;
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: background 0.12s;
 }
-.ah-card:hover {
-  border-color: var(--ah-accent, var(--blue));
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-}
-
-.ah-card-stripe {
-  width: 4px; flex-shrink: 0;
-  background: var(--ah-accent, var(--blue));
-}
+.ah-card:hover { background: var(--bg); }
 
 .ah-card-body {
-  flex: 1; padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 4px; min-width: 0;
+  flex: 1; padding: 0.55rem 0.6rem; display: flex; flex-direction: column; gap: 3px; min-width: 0;
 }
 
 .ah-card-top {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 
+.ah-rank-num {
+  font-family: var(--font-serif); font-weight: 800;
+  font-size: 2rem; color: var(--ink); opacity: 0.12;
+  width: 52px; flex-shrink: 0; text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1; user-select: none;
+}
+
 .ah-card-name {
-  font-size: 0.9rem; font-weight: 800; color: var(--ink); letter-spacing: -0.01em;
+  font-size: 1rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em;
 }
 
-.ah-role-pill {
-  font-size: 0.68rem; font-weight: 700; color: var(--blue);
-  background: #EFF4FF; border: 1px solid #BFDBFE;
-  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+.ah-card-meta {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  font-size: 0.83rem; color: var(--ink-3); font-weight: 500;
 }
-
-.ah-card-org {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 0.75rem; color: var(--ink-3); font-weight: 600;
+.ah-meta-role {
+  font-weight: 600; color: var(--ink-2);
 }
-.ah-card-org svg { opacity: 0.5; }
+.ah-meta-sep { opacity: 0.35; }
 
 .ah-card-desc {
   font-size: 0.78rem; color: var(--ink-2); line-height: 1.5;
@@ -1929,86 +1977,93 @@ a.ws-nudge:hover { transform: translateX(2px); }
 }
 
 .ah-level-badge {
-  font-size: 0.68rem; font-weight: 700;
-  padding: 2px 8px; border-radius: 999px;
-  border: 1px solid;
+  font-size: 0.63rem; font-weight: 600;
+  padding: 1px 7px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg); color: var(--ink-3);
   white-space: nowrap;
 }
 
 /* ── v2 card layout (shared by activity + honor) ── */
 .ah-card-v2 {
   position: relative;
-  background: var(--white);
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
   display: flex; align-items: stretch;
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: background 0.15s;
   gap: 0;
 }
-.ah-card-v2:hover {
-  border-color: #C7D2FE;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-}
+.ah-card-v2:hover { background: var(--bg); }
+.ah-card-v2:hover .ah-card-actions { opacity: 1; }
 
-/* Type icon tile — holds icon + rank overlay */
-.ah-type-icon {
-  flex-shrink: 0; width: 52px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 3px;
-  align-self: stretch;
-  border-right: 1.5px solid var(--border);
-  position: relative;
+/* Inline expand — hidden by default, revealed on hover */
+.ah-card-extra {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  display: flex; flex-direction: column; gap: 4px;
 }
-
-/* Medal tile (honors) — same layout */
-.ah-medal {
-  flex-shrink: 0; width: 52px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 3px;
-  align-self: stretch; border-right: 1.5px solid;
+.ah-card-v2:hover .ah-card-extra {
+  max-height: 120px;
+  opacity: 1;
 }
-/* Rank number sits below the icon */
-.ah-tile-rank {
-  font-size: 0.62rem; font-weight: 800; opacity: 0.45; line-height: 1;
+.ah-preview-time {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.72rem; font-weight: 600; color: var(--ink-3);
+}
+.ah-preview-desc {
+  font-size: 0.78rem; color: var(--ink-2); line-height: 1.55; margin: 0;
 }
 
 /* Card body — click to edit */
 .ah-card-v2 .ah-card-body {
-  flex: 1; padding: 0.75rem 0.9rem;
-  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+  flex: 1; padding: 1.1rem 0.75rem;
+  display: flex; flex-direction: column; gap: 5px; min-width: 0;
 }
-
-/* Time info row */
-.ah-card-time {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 0.72rem; color: var(--ink-3); font-weight: 600;
-}
-.ah-time-sep { opacity: 0.4; }
 
 /* Type pill (small tag on card) */
 .ah-type-pill {
-  font-size: 0.64rem; font-weight: 700; color: var(--ink-3);
-  background: var(--bg); border: 1px solid var(--border);
-  padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  font-size: 0.63rem; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  letter-spacing: 0.01em; flex-shrink: 0;
 }
 
-/* Card action buttons (arrows + edit + delete) — right side, show on hover */
+/* Drag-over target highlight */
+.ah-drag-over {
+  background: #EEF2FF !important;
+  border-radius: 10px;
+}
+.ah-drag-over .ah-card-v2 + .ah-card-v2 {
+  border-top-color: transparent;
+}
+
+/* Grip handle — always faintly visible, signals reorderability */
+.ah-grip {
+  flex-shrink: 0; align-self: center;
+  color: var(--ink-3); opacity: 0.2;
+  transition: opacity 0.15s; cursor: grab; margin-left: 4px;
+}
+.ah-card-v2:hover .ah-grip { opacity: 0.5; }
+
+/* Expand chevron — faint by default, rotates when row is expanded */
+.ah-expand-hint {
+  margin-left: auto; flex-shrink: 0;
+  color: var(--ink-3); opacity: 0.3;
+  transition: opacity 0.15s, transform 0.25s;
+}
+.ah-card-v2:hover .ah-expand-hint {
+  opacity: 0.6;
+  transform: rotate(180deg);
+}
+
+/* Card action buttons — faint always, full on hover */
 .ah-card-actions {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2px; padding: 0 8px; flex-shrink: 0;
-  opacity: 0; transition: opacity 0.15s;
-}
-.ah-card-v2:hover .ah-card-actions { opacity: 1; }
-
-.ah-arrow-btn {
-  background: none; border: none; padding: 3px; cursor: pointer;
-  color: var(--ink-3); display: flex; align-items: center; justify-content: center;
-  border-radius: 4px; transition: background 0.1s, color 0.1s; line-height: 1;
-}
-.ah-arrow-btn:hover:not(:disabled) { background: var(--border); color: var(--ink); }
-.ah-arrow-btn:disabled { opacity: 0.25; cursor: default; }
-
-.ah-actions-sep {
-  width: 20px; height: 1px; background: var(--border); margin: 3px 0;
+  opacity: 0.25; transition: opacity 0.15s;
 }
 
 .ah-action-btn {

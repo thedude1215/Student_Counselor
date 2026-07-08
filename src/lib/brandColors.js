@@ -232,8 +232,8 @@ export function essayCardStyle(uni, isActive) {
     background:  `rgba(${r},${g},${b},${isActive ? 0.08 : 0.05})`,
     borderColor: `rgba(${r},${g},${b},${isActive ? 0.45 : 0.22})`,
     boxShadow:   isActive
-      ? `0 4px 14px rgba(${r},${g},${b},0.22)`
-      : `0 2px 8px rgba(${r},${g},${b},0.10)`,
+      ? `0 8px 20px -4px rgba(0,0,0,0.16)`
+      : `0 4px 14px -2px rgba(0,0,0,0.10)`,
     _color: color,
   };
 }
@@ -244,7 +244,7 @@ export function overviewCardStyle(uni) {
   return {
     background:  `rgba(${r},${g},${b},0.10)`,
     borderColor: `rgba(${r},${g},${b},0.28)`,
-    boxShadow:   `0 3px 0 rgba(${r},${g},${b},0.35)`,
+    boxShadow:   `4px 4px 0 rgba(${r},${g},${b},0.35)`,
     uniColor:    color,
   };
 }

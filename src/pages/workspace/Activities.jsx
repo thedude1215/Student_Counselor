@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Trash2, Award, Users, Star, Building,
+  Plus, Trash2, Award, Users, Star, GripVertical,
   ChevronUp, ChevronDown, Pencil, X, Upload, Loader2,
   BookOpen, Palette, Trophy, Heart, Code2, FlaskConical,
   Music, MessageSquare, Newspaper, Flag, Briefcase,
@@ -462,6 +462,10 @@ export default function Activities() {
   const [loading, setLoading] = useState(true);
   const [actModal, setActModal] = useState(null);  // null | 'new' | activity object
   const [honModal, setHonModal] = useState(null);  // null | 'new' | honor object
+  const [actDrag, setActDrag] = useState(null);    // index being dragged
+  const [actDragOver, setActDragOver] = useState(null);
+  const [honDrag, setHonDrag] = useState(null);
+  const [honDragOver, setHonDragOver] = useState(null);
   const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
@@ -502,6 +506,15 @@ export default function Activities() {
     ]);
   }
 
+  async function reorderAct(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
+    const arr = [...activities];
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
+    setActivities(arr);
+    await Promise.all(arr.map((a, i) => updateActivity(a.id, { sort_order: i })));
+  }
+
   /* ── Honors CRUD ── */
   async function saveHonor(form) {
     if (honModal?.id) {
@@ -530,6 +543,15 @@ export default function Activities() {
       updateHonor(arr[idx].id, { sort_order: idx }),
       updateHonor(arr[next].id, { sort_order: next }),
     ]);
+  }
+
+  async function reorderHon(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
+    const arr = [...honors];
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
+    setHonors(arr);
+    await Promise.all(arr.map((h, i) => updateHonor(h.id, { sort_order: i })));
   }
 
   async function handleImport(newActs, newHons) {
@@ -587,40 +609,52 @@ export default function Activities() {
         ) : (
           <div className="ah-cards">
             {activities.map((a, i) => {
-              const { Icon, color, bg } = getTypeIcon(a.activity_type);
+              const { color, bg } = getTypeIcon(a.activity_type);
               return (
-                <div className="ah-card ah-card-v2" key={a.id}>
-                  {/* Type icon with rank overlay */}
-                  <div className="ah-type-icon" style={{ background: bg, color }}>
-                    <Icon size={17} />
-                    <span className="ah-tile-rank">{i + 1}</span>
-                  </div>
+                <div
+                  className={`ah-card ah-card-v2${actDragOver === i && actDrag !== i ? ' ah-drag-over' : ''}`}
+                  key={a.id}
+                  draggable
+                  onDragStart={() => setActDrag(i)}
+                  onDragOver={e => { e.preventDefault(); setActDragOver(i); }}
+                  onDragLeave={() => setActDragOver(null)}
+                  onDrop={() => { reorderAct(actDrag, i); setActDrag(null); setActDragOver(null); }}
+                  onDragEnd={() => { setActDrag(null); setActDragOver(null); }}
+                  style={{ opacity: actDrag === i ? 0.4 : 1 }}
+                >
+                  <GripVertical size={13} className="ah-grip" />
+                  <span className="ah-rank-num">{i + 1}</span>
 
                   {/* Body */}
                   <div className="ah-card-body" onClick={() => setActModal(a)} style={{ cursor: 'pointer' }}>
                     <div className="ah-card-top">
                       <span className="ah-card-name">{a.title}</span>
-                      {a.role && <span className="ah-role-pill" style={{ color, background: bg, borderColor: color + '44' }}>{a.role}</span>}
-                      {a.activity_type && <span className="ah-type-pill">{a.activity_type}</span>}
+                      {a.activity_type && (
+                        <span className="ah-type-pill" style={{ background: bg, color, border: `1px solid ${color}28` }}>
+                          {a.activity_type}
+                        </span>
+                      )}
+                      <ChevronDown size={13} className="ah-expand-hint" />
                     </div>
-                    {a.organization && (
-                      <div className="ah-card-org"><Building size={11} /> {a.organization}</div>
-                    )}
-                    {(a.hours_per_week || a.weeks_per_year) && (
-                      <div className="ah-card-time">
-                        {a.hours_per_week && <span>{a.hours_per_week} hrs/wk</span>}
-                        {a.hours_per_week && a.weeks_per_year && <span className="ah-time-sep">·</span>}
-                        {a.weeks_per_year && <span>{a.weeks_per_year} wks/yr</span>}
+                    {a.role && <div className="ah-card-meta"><span className="ah-meta-role">{a.role}</span></div>}
+
+                    {/* Inline expand on hover */}
+                    {(a.description || a.hours_per_week || a.weeks_per_year) && (
+                      <div className="ah-card-extra">
+                        {(a.hours_per_week || a.weeks_per_year) && (
+                          <div className="ah-preview-time">
+                            {a.hours_per_week && <span>{a.hours_per_week} hrs/wk</span>}
+                            {a.hours_per_week && a.weeks_per_year && <span className="ah-meta-sep">·</span>}
+                            {a.weeks_per_year && <span>{a.weeks_per_year} wks/yr</span>}
+                          </div>
+                        )}
+                        {a.description && <p className="ah-preview-desc">{a.description}</p>}
                       </div>
                     )}
-                    {a.description && <div className="ah-card-desc">{a.description}</div>}
                   </div>
 
-                  {/* Actions: reorder + edit + delete */}
+                  {/* Actions */}
                   <div className="ah-card-actions">
-                    <button className="ah-arrow-btn" disabled={i === 0} onClick={() => moveAct(i, -1)} title="Move up"><ChevronUp size={13} /></button>
-                    <button className="ah-arrow-btn" disabled={i === activities.length - 1} onClick={() => moveAct(i, 1)} title="Move down"><ChevronDown size={13} /></button>
-                    <div className="ah-actions-sep" />
                     <button className="ah-action-btn" onClick={() => setActModal(a)} title="Edit"><Pencil size={13} /></button>
                     <button className="ah-action-btn ah-action-del" onClick={() => delAct(a.id)} title="Delete"><Trash2 size={13} /></button>
                   </div>
@@ -656,34 +690,42 @@ export default function Activities() {
             {honors.map((h, i) => {
               const lvl = getLevelStyle(h.level);
               return (
-                <div className="ah-honor-card ah-card-v2" key={h.id}>
-                  {/* Medal tile with rank overlay */}
-                  <div className="ah-medal" style={{ background: lvl.bg, color: lvl.color, borderColor: lvl.border }}>
-                    <Award size={17} />
-                    <span className="ah-tile-rank">{i + 1}</span>
-                  </div>
-
+                <div
+                  className={`ah-honor-card ah-card-v2${honDragOver === i && honDrag !== i ? ' ah-drag-over' : ''}`}
+                  key={h.id}
+                  draggable
+                  onDragStart={() => setHonDrag(i)}
+                  onDragOver={e => { e.preventDefault(); setHonDragOver(i); }}
+                  onDragLeave={() => setHonDragOver(null)}
+                  onDrop={() => { reorderHon(honDrag, i); setHonDrag(null); setHonDragOver(null); }}
+                  onDragEnd={() => { setHonDrag(null); setHonDragOver(null); }}
+                  style={{ opacity: honDrag === i ? 0.4 : 1 }}
+                >
+                  <GripVertical size={13} className="ah-grip" />
+                  <span className="ah-rank-num">{i + 1}</span>
                   {/* Body */}
                   <div className="ah-card-body" onClick={() => setHonModal(h)} style={{ cursor: 'pointer' }}>
                     <div className="ah-card-top">
                       <span className="ah-card-name">{h.title}</span>
                       {h.year && <span className="ah-year-badge">{h.year}</span>}
-                    </div>
-                    <div className="ah-honor-meta">
                       {h.level && (
-                        <span className="ah-level-badge" style={{ background: lvl.bg, color: lvl.color, borderColor: lvl.border }}>
+                        <span className="ah-type-pill" style={{ background: getLevelStyle(h.level).bg, color: getLevelStyle(h.level).color, border: `1px solid ${getLevelStyle(h.level).color}28` }}>
                           {h.level}
                         </span>
                       )}
-                      {h.description && <span className="ah-card-desc">{h.description}</span>}
+                      <ChevronDown size={13} className="ah-expand-hint" />
                     </div>
+
+                    {/* Inline expand on hover */}
+                    {h.description && (
+                      <div className="ah-card-extra">
+                        <p className="ah-preview-desc">{h.description}</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Actions: reorder + edit + delete */}
+                  {/* Actions */}
                   <div className="ah-card-actions">
-                    <button className="ah-arrow-btn" disabled={i === 0} onClick={() => moveHon(i, -1)} title="Move up"><ChevronUp size={13} /></button>
-                    <button className="ah-arrow-btn" disabled={i === honors.length - 1} onClick={() => moveHon(i, 1)} title="Move down"><ChevronDown size={13} /></button>
-                    <div className="ah-actions-sep" />
                     <button className="ah-action-btn" onClick={() => setHonModal(h)} title="Edit"><Pencil size={13} /></button>
                     <button className="ah-action-btn ah-action-del" onClick={() => delHon(h.id)} title="Delete"><Trash2 size={13} /></button>
                   </div>
