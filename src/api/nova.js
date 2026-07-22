@@ -107,6 +107,24 @@ export function getRecommendations() {
   return novaFetch('/recommendations', { method: 'POST' });
 }
 
+export function getUniversitySuggestions() {
+  return novaFetch('/university-suggestions', { method: 'POST' });
+}
+
+export function reviewActivity({ title, type, role, description, hoursPerWeek, weeksPerYear }) {
+  return novaFetch('/activity-review', {
+    method: 'POST',
+    body: JSON.stringify({
+      activityTitle: title,
+      activityType: type,
+      role,
+      description,
+      hoursPerWeek,
+      weeksPerYear,
+    }),
+  });
+}
+
 export function suggestTasks(universityId, universityName) {
   return novaFetch('/suggest-tasks', {
     method: 'POST',

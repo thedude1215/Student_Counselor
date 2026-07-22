@@ -6,18 +6,27 @@ import './layout.css';
 
 export default function Navbar() {
   const [scrolled, setScrolled]     = useState(false);
+  const [pastHero, setPastHero]     = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isDashboard = location.pathname.startsWith('/dashboard');
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', fn);
+    const fn = () => {
+      setScrolled(window.scrollY > 20);
+      setPastHero(window.scrollY > window.innerHeight * 0.8);
+    };
+    fn();
+    window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
   }, []);
+
+  // Light glass: any non-home page, or scrolled past the hero on home
+  const isLight = !isHome || pastHero;
 
   async function handleSignOut() {
     await signOut();
@@ -33,14 +42,14 @@ export default function Navbar() {
     { to: '/acceptances',  label: 'Acceptances'  },
   ];
 
-  if (isDashboard || location.pathname === '/nova') return null;
+  if (isDashboard || location.pathname === '/nova' || location.pathname === '/auth' || location.pathname === '/onboarding') return null;
 
   return (
     <nav className="navbar">
-      <div className={`nav-inner ${scrolled ? 'scrolled' : ''}`}>
+      <div className={`nav-inner ${scrolled ? 'scrolled' : ''} ${isLight ? 'nav-light' : ''}`}>
 
         <Link to="/" className="nav-logo">
-          <img src="/scholarpath-logo.svg" alt="ScholarPath" className="nav-logo-img" />
+          <img src={isLight ? '/scholarpath-logo-dark.svg' : '/scholarpath-logo.svg'} alt="ScholarPath" className="nav-logo-img" />
           {/* Invisible anchor tightly bounding the paper-plane icon (left of the
               wordmark) — the connection line starts here. */}
           <span id="nav-logo-icon" className="nav-logo-icon" aria-hidden="true" />

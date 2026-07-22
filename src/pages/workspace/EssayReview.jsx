@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, CheckCircle2 } from 'lucide-react';
 
 const CHIP = {
   specificity:  { label: 'BE SPECIFIC', bg: '#FEF3C7', color: '#92400E' },
@@ -9,6 +9,7 @@ const CHIP = {
   structure:    { label: 'STRUCTURE',   bg: '#E0E7FF', color: '#3730A3' },
   authenticity: { label: 'AUTHENTIC',   bg: '#FCE7F3', color: '#9D174D' },
   grammar:      { label: 'GRAMMAR',     bg: '#FEE2E2', color: '#991B1B' },
+  strength:     { label: 'STRENGTH',    bg: '#DCFCE7', color: '#15803D' },
 };
 const dfChip = CHIP.clarity;
 
@@ -19,6 +20,7 @@ const HL = {
   structure:    'rgba(99,102,241,0.22)',
   authenticity: 'rgba(236,72,153,0.20)',
   grammar:      'rgba(239,68,68,0.20)',
+  strength:     'rgba(34,197,94,0.22)',
 };
 
 const LC = {
@@ -28,6 +30,7 @@ const LC = {
   structure:    '#6366F1',
   authenticity: '#DB2777',
   grammar:      '#DC2626',
+  strength:     '#16A34A',
 };
 
 const CARD_W   = 300;
@@ -54,33 +57,92 @@ function bezier(x1, y1, x2, y2) {
   return `M ${x1} ${y1} C ${cpx} ${y1}, ${cpx} ${y2}, ${x2} ${y2}`;
 }
 
-function buildSegments(text, suggestions) {
+// Apply corrections to a chunk of text → returns sub-segments [{kind:'text'|'correction', text, c?}]
+function applyCorrections(chunk, corrList) {
+  const lower = chunk.toLowerCase();
+  const cRanges = [];
+  for (const c of corrList) {
+    let from = 0;
+    while (true) {
+      const found = lower.indexOf(c.origLower, from);
+      if (found === -1) break;
+      cRanges.push({ start: found, end: found + c.origLower.length, c });
+      from = found + 1;
+    }
+  }
+  cRanges.sort((a, b) => a.start - b.start);
+  const placed = []; let cCur = -1;
+  for (const r of cRanges) {
+    if (r.start < cCur) continue;
+    placed.push(r); cCur = r.end;
+  }
+  if (!placed.length) return [{ kind: 'text', text: chunk }];
+  const result = []; let p = 0;
+  for (const r of placed) {
+    if (r.start > p) result.push({ kind: 'text', text: chunk.slice(p, r.start) });
+    result.push({ kind: 'correction', text: chunk.slice(r.start, r.end), c: r.c });
+    p = r.end;
+  }
+  if (p < chunk.length) result.push({ kind: 'text', text: chunk.slice(p) });
+  return result;
+}
+
+function buildSegments(text, annotations, corrections) {
   const lower = text.toLowerCase();
-  const ranges = [];
-  suggestions.forEach((s, i) => {
+
+  // Pre-process corrections into a lookup list
+  const corrList = (corrections || [])
+    .map(c => ({ ...c, origLower: (c.original || '').trim().toLowerCase() }))
+    .filter(c => c.origLower && lower.includes(c.origLower));
+
+  // Find annotation ranges (non-overlapping, greedy)
+  const annotRanges = [];
+  annotations.forEach((s, i) => {
     const q = (s.quote || '').trim();
     if (!q) return;
     const start = lower.indexOf(q.toLowerCase());
     if (start === -1) return;
-    ranges.push({ start, end: start + q.length, idx: i });
+    annotRanges.push({ start, end: start + q.length, idx: i });
   });
-  ranges.sort((a, b) => a.start - b.start);
-  const placed = [];
-  let cur = -1;
-  for (const r of ranges) {
+  annotRanges.sort((a, b) => a.start - b.start);
+  const placedAnnot = []; let cur = -1;
+  for (const r of annotRanges) {
     if (r.start < cur) continue;
-    placed.push(r);
-    cur = r.end;
+    placedAnnot.push(r); cur = r.end;
   }
-  const segs = [];
-  let pos = 0;
-  for (const r of placed) {
-    if (r.start > pos) segs.push({ text: text.slice(pos, r.start), idx: null });
-    segs.push({ text: text.slice(r.start, r.end), idx: r.idx });
+
+  // Build top-level segments: annotation blocks + plain text gaps
+  const topSegs = []; let pos = 0;
+  for (const r of placedAnnot) {
+    if (r.start > pos) topSegs.push({ kind: 'text', text: text.slice(pos, r.start) });
+    topSegs.push({ kind: 'annotation', text: text.slice(r.start, r.end), idx: r.idx });
     pos = r.end;
   }
-  if (pos < text.length) segs.push({ text: text.slice(pos), idx: null });
-  return segs;
+  if (pos < text.length) topSegs.push({ kind: 'text', text: text.slice(pos) });
+
+  // For each segment, split by corrections → produce final flat list
+  // Annotations get a `subs` array so corrections render INSIDE the <mark>.
+  const finalSegs = [];
+  for (const seg of topSegs) {
+    if (seg.kind === 'annotation') {
+      finalSegs.push({ ...seg, subs: applyCorrections(seg.text, corrList) });
+    } else {
+      finalSegs.push(...applyCorrections(seg.text, corrList));
+    }
+  }
+
+  // Stamp each correction with a sequential index so the component can
+  // observe it and trigger its strikethrough animation when scrolled into view.
+  let ci = 0;
+  for (const seg of finalSegs) {
+    if (seg.kind === 'correction') seg.ci = ci++;
+    else if (seg.subs) {
+      for (const sub of seg.subs) {
+        if (sub.kind === 'correction') sub.ci = ci++;
+      }
+    }
+  }
+  return finalSegs;
 }
 
 export default function EssayReview({ review, content, title, university, prompt, onClose, onReanalyze, reviewing }) {
@@ -91,20 +153,45 @@ export default function EssayReview({ review, content, title, university, prompt
   // seenMarks[i] = true once suggestion i's mark has scrolled into view
   const [seenMarks,  setSeenMarks]  = useState({});
   const [drawnLines, setDrawnLines] = useState({});
+  // seenCorr[ci] = true once correction ci has scrolled into view → strike animation fires
+  const [seenCorr,   setSeenCorr]   = useState({});
 
   const bodyRef  = useRef(null);
   const markRefs = useRef({});
   const cardRefs = useRef({});
+  const corrRefs = useRef({});
 
-  const suggestions = review.suggestions || [];
-  const suggestionsKey = suggestions.map(s => s.quote).join('|');
+  // Unified annotation list: suggestions + strength annotations share the same
+  // index space so highlights, cards, connectors, and animations all work identically.
+  const annotations = useMemo(() => {
+    const sugg = (review.suggestions || []).map(s => ({
+      kind: 'suggestion',
+      quote: s.quote,
+      category: s.category,
+      text: s.suggestion,
+    }));
+    const strong = (review.strength_annotations || []).map(s => ({
+      kind: 'strength',
+      quote: s.quote,
+      category: 'strength',
+      text: s.comment,
+    }));
+    return [...sugg, ...strong];
+  }, [review]);
+
+  const suggestionsKey = annotations.map(s => s.quote).join('|');
   const strengths = (review.strengths || [])
     .map(s => (typeof s === 'string' ? s : s.comment || s.quote || ''))
     .filter(Boolean);
+  // Legacy bullet list only when there are no inline strength annotations.
+  const showStrengthBullets = strengths.length > 0 && !(review.strength_annotations || []).length;
+
+  const corrections = review.corrections || [];
 
   const segments = useMemo(
-    () => buildSegments(content || '', suggestions),
-    [content, suggestions],
+    () => buildSegments(content || '', annotations, corrections),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [content, annotations, corrections.map(c => c.original).join('|')],
   );
 
   /* Open / close */
@@ -119,6 +206,7 @@ export default function EssayReview({ review, content, title, university, prompt
   useEffect(() => {
     setSeenMarks({});
     setDrawnLines({});
+    setSeenCorr({});
   }, [suggestionsKey]);
 
   /* Compute card positions + bezier paths; update on scroll */
@@ -133,7 +221,7 @@ export default function EssayReview({ review, content, title, university, prompt
       const bw = body.offsetWidth;
 
       const centers = {};
-      suggestions.forEach((_, i) => {
+      annotations.forEach((_, i) => {
         const el = markRefs.current[i];
         if (!el) return;
         const r = el.getBoundingClientRect();
@@ -156,7 +244,7 @@ export default function EssayReview({ review, content, title, university, prompt
 
       const cardX = bw - CARD_R - CARD_W;
       const newPaths = [];
-      suggestions.forEach((s, i) => {
+      annotations.forEach((s, i) => {
         const mark = markRefs.current[i];
         if (!mark || resolved[i] == null) return;
         const mr = mark.getBoundingClientRect();
@@ -179,7 +267,7 @@ export default function EssayReview({ review, content, title, university, prompt
       clearTimeout(t1); clearTimeout(t2);
       body?.removeEventListener('scroll', compute);
     };
-  }, [mounted, suggestions]);
+  }, [mounted, annotations]);
 
   /* IntersectionObserver — trigger each suggestion's animation when its mark enters view */
   useEffect(() => {
@@ -188,7 +276,7 @@ export default function EssayReview({ review, content, title, university, prompt
     if (!body) return;
 
     const observers = [];
-    suggestions.forEach((_, i) => {
+    annotations.forEach((_, i) => {
       const el = markRefs.current[i];
       if (!el) return;
 
@@ -206,7 +294,32 @@ export default function EssayReview({ review, content, title, university, prompt
     });
 
     return () => observers.forEach(o => o.disconnect());
-  }, [mounted, suggestions]);
+  }, [mounted, annotations]);
+
+  /* IntersectionObserver — trigger each correction's strikethrough when it enters view */
+  useEffect(() => {
+    if (!mounted) return;
+    const body = bodyRef.current;
+    if (!body) return;
+
+    const observers = [];
+    Object.entries(corrRefs.current).forEach(([ci, el]) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setSeenCorr(prev => ({ ...prev, [ci]: true }));
+            obs.disconnect(); // fire once per correction
+          }
+        },
+        { root: body, threshold: 0.6 },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+
+    return () => observers.forEach(o => o.disconnect());
+  }, [mounted, segments]);
 
   function activate(i) {
     setActive(i);
@@ -260,7 +373,7 @@ export default function EssayReview({ review, content, title, university, prompt
               <p className="erv-overall">{review.overall}</p>
             )}
 
-            {strengths.length > 0 && (
+            {showStrengthBullets && (
               <div className="erv-strengths">
                 {strengths.map((s, i) => (
                   <div key={i} className="erv-strength">
@@ -276,10 +389,29 @@ export default function EssayReview({ review, content, title, university, prompt
 
             {/* Essay body — each mark animates when it scrolls into view */}
             <div className="erv-essay-text">
-              {segments.map((seg, si) =>
-                seg.idx === null ? (
-                  <span key={si}>{seg.text}</span>
-                ) : (() => {
+              {(() => {
+                // Shared renderer — strikethrough draws when the correction enters view
+                const renderCorrection = (seg, key) => {
+                  const isDelete = seg.c?.type === 'delete' || !seg.c?.corrected;
+                  return (
+                    <span
+                      key={key}
+                      ref={el => { corrRefs.current[seg.ci] = el; }}
+                      className={
+                        `erv-correction${isDelete ? ' erv-corr-delete' : ''}${seenCorr[seg.ci] ? ' lit' : ''}`
+                      }
+                    >
+                      <del className="erv-del">{seg.text}</del>
+                      {!isDelete && <ins className="erv-ins">{seg.c.corrected}</ins>}
+                    </span>
+                  );
+                };
+
+                return segments.map((seg, si) => {
+                  if (seg.kind === 'correction') return renderCorrection(seg, si);
+                  if (seg.kind === 'text') return <span key={si}>{seg.text}</span>;
+
+                  // kind === 'annotation' — may contain correction sub-segments
                   const i = seg.idx;
                   return (
                     <mark
@@ -287,23 +419,28 @@ export default function EssayReview({ review, content, title, university, prompt
                       ref={el => { markRefs.current[i] = el; }}
                       className={`erv-mark ${seenMarks[i] ? 'lit' : ''} ${active === i ? 'active' : ''}`}
                       style={{
-                        '--hl':       HL[suggestions[i]?.category] || 'rgba(99,102,241,0.20)',
-                        '--hl-delay': '0s', // delay is 0 — fires exactly when mark enters view
+                        '--hl':       HL[annotations[i]?.category] || 'rgba(99,102,241,0.20)',
+                        '--hl-delay': '0s',
                       }}
                       onMouseEnter={() => setActive(i)}
                       onMouseLeave={() => setActive(null)}
                       onClick={() => activate(i)}
                     >
-                      {seg.text}
+                      {(seg.subs || [{ kind: 'text', text: seg.text }]).map((sub, sj) =>
+                        sub.kind === 'correction'
+                          ? renderCorrection(sub, sj)
+                          : <span key={sj}>{sub.text}</span>
+                      )}
                     </mark>
                   );
-                })()
-              )}
+                });
+              })()}
             </div>
           </div>
 
           {/* Floating annotation cards — slide in after their mark is seen */}
-          {suggestions.map((s, i) => {
+          {annotations.map((s, i) => {
+            const isStrength = s.kind === 'strength';
             const chip = CHIP[s.category] || dfChip;
             const top  = cardTops[i];
             const seen = seenMarks[i];
@@ -311,7 +448,7 @@ export default function EssayReview({ review, content, title, university, prompt
               <div
                 key={i}
                 ref={el => { cardRefs.current[i] = el; }}
-                className={`erv-card ${active === i ? 'active' : ''} ${seen && top != null ? 'in' : ''}`}
+                className={`erv-card ${isStrength ? 'erv-card-strength' : ''} ${active === i ? 'active' : ''} ${seen && top != null ? 'in' : ''}`}
                 style={{
                   position: 'absolute',
                   right: CARD_R + 'px',
@@ -325,18 +462,20 @@ export default function EssayReview({ review, content, title, university, prompt
                 onClick={() => activate(i)}
               >
                 <div className="erv-card-meta">
-                  <div className="erv-avatar"><Sparkles size={10} /></div>
+                  <div className={`erv-avatar ${isStrength ? 'erv-avatar-strength' : ''}`}>
+                    {isStrength ? <CheckCircle2 size={10} /> : <Sparkles size={10} />}
+                  </div>
                   <span className="erv-card-byline">Nova · Essay review</span>
                 </div>
                 <div className="erv-chip" style={{ background: chip.bg, color: chip.color }}>
                   {chip.label}
                 </div>
-                <p className="erv-card-text">{s.suggestion}</p>
+                <p className="erv-card-text">{s.text}</p>
               </div>
             );
           })}
 
-          {suggestions.length === 0 && mounted && (
+          {annotations.length === 0 && mounted && (
             <p className="erv-no-sug">No line-level changes flagged — clean draft.</p>
           )}
 

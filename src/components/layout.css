@@ -16,15 +16,36 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Exact Borderless nav: white, slightly transparent, pill shape */
-  background: rgba(255,255,255,0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid rgba(216,218,240,0.9);
+  background: rgba(10,31,19,0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(244,242,236,0.10);
   border-radius: var(--r-pill);
   padding: 0.55rem 1.5rem;
-  box-shadow: 0 2px 16px rgba(64,85,245,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  box-shadow: none;
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
+
+/* ── Light glass (past hero / non-home pages) ── */
+.nav-inner.nav-light {
+  background: rgba(244,242,236,0.82);
+  border-color: rgba(0,0,0,0.07);
+  box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+}
+.nav-inner.nav-light .nav-logo-img  { transition: opacity 0.2s ease; }
+.nav-inner.nav-light .nav-logo-name { color: var(--ink); }
+.nav-inner.nav-light .nav-link      { color: rgba(58,58,76,0.7); }
+.nav-inner.nav-light .nav-link:hover  { color: var(--ink); background: rgba(0,0,0,0.05); }
+.nav-inner.nav-light .nav-link.active { color: var(--ink); font-weight: 700; background: none; }
+.nav-inner.nav-light .nav-nova {
+  background: #0a1f13;
+  color: #F4F2EC;
+  border-color: transparent;
+}
+.nav-inner.nav-light .nav-nova:hover { background: #162e1e; }
+.nav-inner.nav-light .nav-login    { color: var(--ink-2); }
+.nav-inner.nav-light .nav-login:hover { color: var(--blue); }
+.nav-inner.nav-light .nav-dashboard { color: var(--blue); }
 
 /* ── Logo: 🌐 SCHOLARPATH (exact Borderless style) ── */
 .nav-logo {
@@ -62,8 +83,8 @@
 .nav-logo-name {
   font-size: 0.95rem;
   font-weight: 900;
-  color: var(--blue);       /* same blue as Borderless */
-  letter-spacing: 0.04em;   /* slight letter-spacing like BORDERLESS */
+  color: #F4F2EC;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   font-family: var(--font);
 }
@@ -80,13 +101,13 @@
   border-radius: var(--r-pill);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--ink-2);
+  color: rgba(244,242,236,0.75);
   text-decoration: none;
   transition: all var(--t);
   font-family: var(--font);
 }
-.nav-link:hover  { color: var(--ink); background: rgba(64,85,245,0.06); }
-.nav-link.active { color: var(--blue); font-weight: 700; }
+.nav-link:hover  { color: #F4F2EC; background: rgba(244,242,236,0.08); }
+.nav-link.active { color: #F4F2EC; font-weight: 700; }
 
 /* ── CTA ── */
 .nav-cta { display: flex; align-items: center; gap: 10px; }
@@ -97,9 +118,9 @@
   align-items: center;
   gap: 7px;
   padding: 0.5rem 1.2rem;
-  background: var(--white);
-  color: var(--ink);
-  border: 1.5px solid var(--border-2);
+  background: #F4F2EC;
+  color: #0a1f13;
+  border: 1.5px solid transparent;
   border-radius: var(--r-pill);
   font-size: 0.875rem;
   font-weight: 700;
@@ -128,7 +149,7 @@
   align-items: center;
   gap: 6px;
   padding: 0.5rem 1rem;
-  color: var(--ink-2);
+  color: var(--blue);
   font-size: 0.875rem;
   font-weight: 700;
   text-decoration: none;
@@ -136,7 +157,7 @@
   transition: color var(--t);
   font-family: var(--font);
 }
-.nav-dashboard:hover { color: var(--blue); }
+.nav-dashboard:hover { color: var(--blue-dark); }
 
 .nav-signout {
   display: flex;
@@ -200,7 +221,7 @@
    FOOTER
    ============================================================ */
 .footer {
-  background: #0B0B18;
+  background: var(--forest-3);
   color: white;
   padding: 5rem 0 2.5rem;
 }

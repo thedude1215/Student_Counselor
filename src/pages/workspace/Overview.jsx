@@ -1,12 +1,34 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckSquare, Square, Plus } from 'lucide-react';
+import { ArrowRight, CheckSquare, Square, Plus, UserRound, GraduationCap, PenLine, Award, Sparkles, Flag } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchCollegeList, fetchTasks, fetchEssays, fetchProfile, updateTask } from '../../api/workspace.js';
 import { computeReadiness } from '../../lib/readiness.js';
+import { computeJourney } from '../../lib/journey.js';
 import { overviewCardStyle } from '../../lib/brandColors.js';
 import './workspace.css';
+
+/* Circular progress ring, Kollegio-style */
+function ProgressRing({ percent, size = 62, stroke = 6 }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} className="ws-ring" role="img" aria-label={`${percent}% complete`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="#047857" strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - percent / 100)}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 700ms cubic-bezier(0.22,1,0.36,1)' }}
+      />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="ws-ring-text">
+        {percent}%
+      </text>
+    </svg>
+  );
+}
 
 export default function Overview() {
   const { user, profile } = useAuth();
@@ -24,6 +46,42 @@ export default function Overview() {
 
   const { colleges, tasks, essays, profileRow } = data;
   const readiness = computeReadiness({ profile: profileRow, collegeList: colleges, essays, tasks });
+  const journey = computeJourney({ profile: profileRow, collegeList: colleges, essays, tasks });
+
+  // Quick actions — suggest what's missing, Kollegio "New in" style
+  const quickActions = [
+    (!profileRow.gpa && !profileRow.sat_score) && {
+      icon: <UserRound size={18} />, tone: 'green',
+      title: 'Complete your profile',
+      sub: 'Add academics so Nova can gauge your fit',
+      to: '/dashboard/profile',
+    },
+    colleges.length < 4 && {
+      icon: <GraduationCap size={18} />, tone: 'blue',
+      title: 'Build your college list',
+      sub: colleges.length === 0 ? 'Add your first schools to start tracking' : 'Aim for a balanced list of 4+ schools',
+      to: '/dashboard/colleges',
+    },
+    {
+      icon: <Sparkles size={18} />, tone: 'lime',
+      title: 'Find out if you can get in',
+      sub: 'Your odds at any college, based on your profile',
+      to: '/nova',
+      state: { prompt: 'Based on my profile, what are my chances at the schools on my college list?' },
+    },
+    {
+      icon: <Award size={18} />, tone: 'pink',
+      title: 'Find scholarships that fit you',
+      sub: 'Curated for international students',
+      to: '/dashboard/scholarships',
+    },
+    essays.length === 0 && {
+      icon: <PenLine size={18} />, tone: 'gold',
+      title: 'Start your first essay',
+      sub: 'Nova reviews drafts line by line',
+      to: '/dashboard/essays',
+    },
+  ].filter(Boolean).slice(0, 4);
 
   const open = tasks.filter(t => t.status !== 'done');
   const today = new Date(new Date().toDateString());
@@ -62,6 +120,28 @@ export default function Overview() {
           {daysToDeadline != null && ` · your first deadline is in ${daysToDeadline} day${daysToDeadline === 1 ? '' : 's'}`}.
         </p>
 
+        {/* Journey hero — gamified progress, Kollegio-style */}
+        {!journey.complete && (
+          <div className="ws-journey">
+            <div className="ws-journey-body">
+              <span className="ws-journey-act">Act {journey.num}: {journey.name}</span>
+              <h2 className="ws-journey-headline">{journey.headline}</h2>
+              <div className="ws-journey-progress">
+                <div className="ws-journey-bar">
+                  <span style={{ width: `${journey.percent}%` }} />
+                </div>
+                <span className="ws-journey-count"><Flag size={13} /> {journey.done}/{journey.total}</span>
+              </div>
+              <Link to={journey.to} className="ws-journey-btn">
+                {journey.cta} <ArrowRight size={15} />
+              </Link>
+            </div>
+            <div className="ws-journey-art" aria-hidden="true">
+              <Sparkles size={54} strokeWidth={1.2} />
+            </div>
+          </div>
+        )}
+
         {/* Status card */}
         <div className={`ws-status tone-${readiness.tone}`}>
           <div className="ws-status-top">
@@ -69,7 +149,7 @@ export default function Overview() {
               <span className="ws-status-label">Overall</span>
               <h2 className="ws-status-value">{readiness.label}</h2>
             </div>
-            <div className="ws-status-pct">{readiness.percent}%</div>
+            <ProgressRing percent={readiness.percent} />
           </div>
           <div className="ws-status-bar"><span style={{ width: `${readiness.percent}%` }} /></div>
           <div className="ws-status-scale"><span>Early</span><span>Ready</span></div>
@@ -98,6 +178,25 @@ export default function Overview() {
             </>
           )}
         </div>
+
+        {/* Quick actions */}
+        {quickActions.length > 0 && (
+          <div className="ws-home-section">
+            <div className="ws-home-section-head"><h3>Suggested for you</h3></div>
+            <div className="ws-qa-list">
+              {quickActions.map((qa, i) => (
+                <Link key={qa.title} to={qa.to} state={qa.state} className="ws-qa-row">
+                  <span className={`ws-qa-icon tone-${qa.tone}`}>{qa.icon}</span>
+                  <span className="ws-qa-text">
+                    <span className="ws-qa-title">{qa.title}</span>
+                    <span className="ws-qa-sub">{qa.sub}</span>
+                  </span>
+                  <span className={`ws-qa-arrow ${i % 2 === 0 ? 'dark' : 'light'}`}><ArrowRight size={15} /></span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Today */}
         <div className="ws-home-section">

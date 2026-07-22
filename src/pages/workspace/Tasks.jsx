@@ -316,13 +316,36 @@ export default function Tasks() {
   const done = tasks.filter(t => t.status === 'done').length;
   const isEmpty = tasks.length === 0 && suggestions.length === 0;
 
+  function reorderInColumn(statusKey, draggedId, insertBeforeId) {
+    setTasks(prev => {
+      const col = prev.filter(t => t.status === statusKey);
+      const others = prev.filter(t => t.status !== statusKey);
+      const dragged = col.find(t => t.id === draggedId);
+      if (!dragged) return prev;
+      const rest = col.filter(t => t.id !== draggedId);
+      let newCol;
+      if (insertBeforeId === null) {
+        newCol = [...rest, dragged];
+      } else {
+        const idx = rest.findIndex(t => t.id === insertBeforeId);
+        newCol = idx === -1 ? [...rest, dragged] : [...rest.slice(0, idx), dragged, ...rest.slice(idx)];
+      }
+      return [...others, ...newCol];
+    });
+  }
+
   const dnd = {
     dragId,
     onDragStart: setDragId,
     onDragEnd: () => setDragId(null),
-    onDrop: (statusKey) => {
-      const t = tasks.find(x => x.id === dragId);
+    onDrop: (statusKey, draggedId, insertBeforeId) => {
+      const id = draggedId ?? dragId;
+      const t = tasks.find(x => x.id === id);
       if (t) moveTo(t, statusKey);
+      setDragId(null);
+    },
+    onReorder: (statusKey, draggedId, insertBeforeId) => {
+      reorderInColumn(statusKey, draggedId, insertBeforeId);
       setDragId(null);
     },
   };

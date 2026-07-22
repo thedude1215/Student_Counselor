@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, ListChecks, PenLine, CalendarDays, Trophy, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, ListChecks, PenLine, CalendarDays, Trophy, Award, User, LogOut, Map } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import './workspace.css';
 
@@ -14,9 +14,11 @@ const GROUPS = [
   {
     label: 'Build',
     items: [
+      { to: '/dashboard/journey',    label: 'Journey',      icon: Map },
       { to: '/dashboard/colleges',   label: 'College List', icon: GraduationCap },
       { to: '/dashboard/essays',     label: 'Essays',       icon: PenLine },
       { to: '/dashboard/activities', label: 'Activities',   icon: Trophy },
+      { to: '/dashboard/scholarships', label: 'Scholarships', icon: Award },
     ],
   },
   {
@@ -70,7 +72,7 @@ export default function WorkspaceLayout() {
     <div className="ws-page">
       <aside className="ws-sidebar">
         <Link to="/" className="ws-side-brand">
-          <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-side-brand-logo" />
+          <img src="/scholarpath-logo-dark.svg" alt="ScholarPath" className="ws-side-brand-logo" />
         </Link>
 
         <Link to="/nova" className="ws-nova-sidebar-btn">

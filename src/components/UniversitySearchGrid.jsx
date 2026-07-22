@@ -4,6 +4,7 @@ import LogoTile from './LogoTile';
 import { fetchUniversities } from '../api/catalog';
 import { fetchCollegeList, addToCollegeList } from '../api/workspace';
 import { useAuth } from '../context/AuthContext';
+import { computeFit } from '../lib/collegeFit';
 
 const REGIONS = {
   'All Regions': [],
@@ -53,7 +54,7 @@ function parseRankNum(r) {
 }
 
 export default function UniversitySearchGrid() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState('All Regions');
   const [country, setCountry] = useState('All');
@@ -314,7 +315,9 @@ export default function UniversitySearchGrid() {
         ) : (
           <>
             <div className="uni-grid">
-              {visible.map(u => (
+              {visible.map(u => {
+                const fit = user ? computeFit(u, profile) : null;
+                return (
                 <div key={u.id} className="uni-card">
                   <div className="uni-card-top">
                     <LogoTile item={{
@@ -324,8 +327,19 @@ export default function UniversitySearchGrid() {
                       name: u.name,
                       shortName: u.short_name,
                     }} size={48} radius={12} />
-                    <div className="uni-card-rank">
-                      <Star size={10} fill="currentColor" /> #{u.ranking}
+                    <div className="uni-card-top-right">
+                      {fit && (
+                        <span
+                          className="uni-fit-tag"
+                          style={{ color: fit.color, background: fit.bg, borderColor: fit.border }}
+                          title="Fit computed from your profile vs. admission rate"
+                        >
+                          {fit.label}
+                        </span>
+                      )}
+                      <div className="uni-card-rank">
+                        <Star size={10} fill="currentColor" /> #{u.ranking}
+                      </div>
                     </div>
                   </div>
                   <div className="uni-card-name">{u.name}</div>
@@ -366,7 +380,8 @@ export default function UniversitySearchGrid() {
                     )
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
             {visibleCount < filtered.length && (
               <div className="uni-load-more">

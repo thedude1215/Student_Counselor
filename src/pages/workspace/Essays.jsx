@@ -295,16 +295,6 @@ export default function Essays() {
           </div>
 
           <div className="ws-essay-editor-top">
-            <div className="ws-essay-meta-row">
-              <select
-                className="ws-essay-uni-select"
-                value={draft.university_id}
-                onChange={e => setDraft({ ...draft, university_id: e.target.value })}
-              >
-                <option value={GENERAL.id}>{GENERAL.name}</option>
-                {colleges.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
             <input
               className="ws-essay-title-input"
               placeholder="Essay title"

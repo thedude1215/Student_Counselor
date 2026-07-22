@@ -221,8 +221,10 @@ export default function Home() {
               Talk to Nova <ArrowRight size={18} />
             </Link>
           </div>
+        </div>
 
-          <div className="logo-strip fade-up d3" aria-label="Universities represented in the ScholarPath community">
+        <div className="logo-strip-wrap fade-up d3">
+          <div className="logo-strip" aria-label="Universities represented in the ScholarPath community">
             <div className="logo-strip-track">
               {logoRail.map((university, index) => (
                 <LogoTile
@@ -241,6 +243,7 @@ export default function Home() {
       {/* ── Stats with count-up animation ── */}
       <section className="stats-section">
         <div className="wrap">
+          <span className="eyebrow on-dark">Trusted by students worldwide</span>
           <h2 className="stats-headline">
             10,000+ students are getting into schools nobody thought they could.{' '}
             <Link to="/stories" className="stats-cta-link">Are you next?</Link>
@@ -257,6 +260,7 @@ export default function Home() {
       {/* ── Infinite marquee story carousel ── */}
       <section className="cards-section" id="student-proof">
         <div className="wrap">
+          <span className="eyebrow">From others around the world</span>
           <div className="section-header">
             <h2 className="section-h2">Real stories</h2>
             <Link to="/stories" className="see-all">
@@ -289,6 +293,7 @@ export default function Home() {
       {/* ── Counselor bento ── */}
       <section className="counselor-section">
         <div className="wrap">
+          <span className="eyebrow">Meet Nova</span>
           <h2 className="counselor-title">
             Not a chatbot. A <span className="counselor-word">counselor</span> that
             plans, guides, reviews, and follows up until you hit submit
@@ -371,6 +376,7 @@ export default function Home() {
       {/* ── Workspace + 24/7 counselor dashboard ── */}
       <section className="workspace-section">
         <div className="wrap">
+          <span className="eyebrow">Everything in one place</span>
           <h2 className="workspace-title">
             Workspace + <span>24/7</span> counselor
           </h2>
@@ -420,6 +426,7 @@ export default function Home() {
       {/* ── Process steps ── */}
       <section className="process-section">
         <div className="wrap">
+          <span className="eyebrow">Three simple steps</span>
           <h2 className="process-title">How ScholarPath works</h2>
           <div className="process-grid">
             {processSteps.map((step) => (
@@ -436,6 +443,7 @@ export default function Home() {
       {/* ── Comparison table ── */}
       <section className="comparison-section">
         <div className="wrap comparison-wrap">
+          <span className="eyebrow on-dark">Why Nova</span>
           <h2 className="comparison-title">
             A counselor is different from a generic chatbot
           </h2>

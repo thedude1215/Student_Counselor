@@ -7,19 +7,29 @@
    ============================================================ */
 
 :root {
-  /* ── Backgrounds (EXACT from screenshots) ── */
-  --bg:            #E9ECF5;   /* main blue-lavender page bg */
-  --bg-white:      #F4F4F8;   /* slightly lighter sections */
+  /* ── Backgrounds ── */
+  --bg:            #F4F2EC;   /* warm off-white — neutral, breathable */
+  --bg-white:      #FAF9F5;   /* slightly lighter sections */
   --white:         #FFFFFF;
 
-  /* ── Brand blue (Rich and vibrant for premium UI feel) ── */
-  --blue:          #155EEF;   /* rich, vibrant modern blue */
-  --blue-dark:     #004EEB;   /* darker variant for hover states */
-  --blue-light:    #EAE8FF;   /* lavender tint for active tabs */
-  --blue-mid:      #C5C3F0;   /* border for blue elements */
+  /* ── Brand green (forest / emerald) ── */
+  --blue:          #059669;   /* emerald primary */
+  --blue-dark:     #047857;   /* forest dark for hover */
+  --blue-light:    #D1FAE5;   /* mint tint for active tabs */
+  --blue-mid:      #6EE7B7;   /* emerald mid for borders */
 
-  /* ── Purple accent (for italic accents, "counselor" word) ── */
-  --purple:        #6B5CE7;
+  /* ── Deep forest accent (Nova / AI elements) ── */
+  --purple:        #065f46;
+
+  /* ── Dark forest section backgrounds (Kollegio-style) ── */
+  --forest:        #0a1f13;   /* hero + dark sections */
+  --forest-2:      #10281a;   /* raised panels on dark */
+  --forest-3:      #06140c;   /* deepest (waitlist/footer) */
+
+  /* ── Kollegio-style accents on dark ── */
+  --cream:         #F4F2EC;
+  --accent-yellow: #F5E27C;   /* eyebrow labels on dark */
+  --accent-lime:   #8FD873;   /* subheads / highlights on dark */
 
   /* ── Priority dots (calm, low-chroma) ── */
   --prio-high:     #C0392B;
@@ -27,10 +37,10 @@
   --prio-low:      #AEAEC8;
 
   /* ── Text ── */
-  --ink:           #111118;   /* near-black for big headings */
-  --ink-2:         #3A3A4C;   /* body text */
-  --ink-3:         #7878A0;   /* muted labels */
-  --ink-4:         #AEAEC8;   /* very muted */
+  --ink:           #10140F;   /* near-black for big headings */
+  --ink-2:         #3B443C;   /* body text */
+  --ink-3:         #6E7C72;   /* muted labels */
+  --ink-4:         #A6B0A8;   /* very muted */
 
   /* ── Story card pastels (EXACT from Borderless cards) ── */
   --card-pink:     #FFE8E6;   /* border: #F5C4BE */
@@ -49,8 +59,8 @@
   --cb-cream:      #F0E5C8;
 
   /* ── Border ── */
-  --border:        #D8DAF0;
-  --border-2:      #C8CAE0;
+  --border:        #C8DDD1;
+  --border-2:      #B8CFC0;
 
   /* ── Feature section backgrounds ── */
   --feat-purple:   #EBE8FF;
@@ -74,8 +84,8 @@
   --r-pill: 9999px;
 
   /* ── Shadows ── */
-  --shadow: 0 2px 12px rgba(64,85,245,0.07), 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-hover: 0 8px 28px rgba(64,85,245,0.13), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow: 0 2px 12px rgba(5,150,105,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-hover: 0 8px 28px rgba(5,150,105,0.14), 0 2px 8px rgba(0,0,0,0.06);
 
   --t: 180ms ease;
 }
@@ -267,6 +277,18 @@ ul   { list-style: none; }
   font-family: var(--font);
 }
 .aid-toggle input { accent-color: var(--blue); width: 15px; height: 15px; }
+
+/* ── Eyebrow labels (Kollegio-style caps above headlines) ── */
+.eyebrow {
+  display: block;
+  color: var(--blue-dark);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 1.1rem;
+}
+.eyebrow.on-dark { color: var(--accent-yellow); }
 
 /* ── Page heading ── */
 .page-h1 {

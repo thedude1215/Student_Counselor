@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, Award, Users, Star, GripVertical,
   ChevronUp, ChevronDown, Pencil, X, Upload, Loader2,
@@ -14,6 +13,8 @@ import {
   fetchHonors, addHonor, updateHonor, deleteHonor,
   parsePdf,
 } from '../../api/workspace.js';
+import { reviewActivity } from '../../api/nova.js';
+import { gradeTitle, gradeDescription, gradesFromReview, gradeColor } from '../../lib/activityGrades.js';
 import './workspace.css';
 
 const ACTIVITY_TYPES = [
@@ -166,7 +167,7 @@ function ActivityModal({ initial, onSave, onClose }) {
           <div className="ws-modal-field">
             <label className="ws-modal-label">
               Description / impact
-              <span className={`ah-char-count ${descLen > DESC_LIMIT ? 'ah-char-over' : descLen > DESC_LIMIT * 0.85 ? 'ah-char-warn' : ''}`}>
+              <span className={`ah-char-count ${descLen > DESC_LIMIT ? 'ah-char-over' : descLen > DESC_LIMIT * 0.85 ? 'ah-char-warn' : descLen >= DESC_LIMIT * 0.6 ? 'ah-char-good' : ''}`}>
                 {descLen}/{DESC_LIMIT}
               </span>
             </label>
@@ -456,7 +457,6 @@ function ImportModal({ existingActCount, existingHonCount, onImport, onClose }) 
 
 export default function Activities() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [honors, setHonors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -467,6 +467,9 @@ export default function Activities() {
   const [honDrag, setHonDrag] = useState(null);
   const [honDragOver, setHonDragOver] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [novaOpenId, setNovaOpenId] = useState(null);      // activity id with panel open
+  const [novaLoadingId, setNovaLoadingId] = useState(null);
+  const [novaReviews, setNovaReviews] = useState({});      // activity id → review | { error }
 
   useEffect(() => {
     if (!user) return;
@@ -554,6 +557,37 @@ export default function Activities() {
     await Promise.all(arr.map((h, i) => updateHonor(h.id, { sort_order: i })));
   }
 
+  /* ── Nova activity review ── */
+  async function runNovaReview(a, { force = false } = {}) {
+    if (!a.description?.trim()) {
+      setNovaReviews(prev => ({ ...prev, [a.id]: { error: 'Add a description first — Nova reviews the 150-character description.' } }));
+      setNovaOpenId(a.id);
+      return;
+    }
+    if (!force && novaReviews[a.id] && !novaReviews[a.id].error) {
+      setNovaOpenId(novaOpenId === a.id ? null : a.id);
+      return;
+    }
+    setNovaLoadingId(a.id);
+    try {
+      const review = await reviewActivity({
+        title: a.title,
+        type: a.activity_type,
+        role: a.role,
+        description: a.description,
+        hoursPerWeek: a.hours_per_week,
+        weeksPerYear: a.weeks_per_year,
+      });
+      setNovaReviews(prev => ({ ...prev, [a.id]: review }));
+      setNovaOpenId(a.id);
+    } catch (err) {
+      setNovaReviews(prev => ({ ...prev, [a.id]: { error: err.message } }));
+      setNovaOpenId(a.id);
+    } finally {
+      setNovaLoadingId(null);
+    }
+  }
+
   async function handleImport(newActs, newHons) {
     const actOffset = activities.length;
     const honOffset = honors.length;
@@ -579,9 +613,6 @@ export default function Activities() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="ws-btn ws-btn-import" onClick={() => setShowImport(true)}>
             <Upload size={14} /> Import PDF
-          </button>
-          <button className="ws-btn ws-btn-nova" onClick={() => navigate('/nova')}>
-            <Sparkles size={14} /> Review with Nova
           </button>
         </div>
       </header>
@@ -610,10 +641,17 @@ export default function Activities() {
           <div className="ah-cards">
             {activities.map((a, i) => {
               const { color, bg } = getTypeIcon(a.activity_type);
+              const review = novaReviews[a.id];
+              const panelOpen = novaOpenId === a.id && !!review;
+              const reviewGrades = gradesFromReview(review);
+              const tGrade = reviewGrades?.title ?? gradeTitle(a);
+              const dGrade = reviewGrades?.description ?? gradeDescription(a);
+              // Chip shows the weaker of the two grades (A sorts first, F last)
+              const chipGrade = [tGrade, dGrade].filter(Boolean).sort().pop() || null;
               return (
+                <Fragment key={a.id}>
                 <div
                   className={`ah-card ah-card-v2${actDragOver === i && actDrag !== i ? ' ah-drag-over' : ''}`}
-                  key={a.id}
                   draggable
                   onDragStart={() => setActDrag(i)}
                   onDragOver={e => { e.preventDefault(); setActDragOver(i); }}
@@ -634,24 +672,55 @@ export default function Activities() {
                           {a.activity_type}
                         </span>
                       )}
+                      {chipGrade && (
+                        <span
+                          className="ah-grade-chip"
+                          style={{ color: gradeColor(chipGrade), borderColor: `${gradeColor(chipGrade)}40` }}
+                          title={`Title: ${tGrade || '—'} · Description: ${dGrade || '—'}${reviewGrades ? ' (Nova-reviewed)' : ''}`}
+                        >
+                          {chipGrade}
+                        </span>
+                      )}
                       <ChevronDown size={13} className="ah-expand-hint" />
                     </div>
                     {a.role && <div className="ah-card-meta"><span className="ah-meta-role">{a.role}</span></div>}
 
-                    {/* Inline expand on hover */}
-                    {(a.description || a.hours_per_week || a.weeks_per_year) && (
-                      <div className="ah-card-extra">
-                        {(a.hours_per_week || a.weeks_per_year) && (
-                          <div className="ah-preview-time">
-                            {a.hours_per_week && <span>{a.hours_per_week} hrs/wk</span>}
-                            {a.hours_per_week && a.weeks_per_year && <span className="ah-meta-sep">·</span>}
-                            {a.weeks_per_year && <span>{a.weeks_per_year} wks/yr</span>}
-                          </div>
-                        )}
-                        {a.description && <p className="ah-preview-desc">{a.description}</p>}
+                    {/* Inline expand on hover — Kollegio-style stat grid */}
+                    <div className="ah-card-extra">
+                      <div className="ah-stat-grid">
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Hours per Week</span>
+                          <span className="ah-stat-value">{a.hours_per_week ?? '—'}</span>
+                        </div>
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Weeks per Year</span>
+                          <span className="ah-stat-value">{a.weeks_per_year ?? '—'}</span>
+                        </div>
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Title</span>
+                          <span className="ah-stat-value" style={{ color: tGrade ? gradeColor(tGrade) : undefined }}>{tGrade || '—'}</span>
+                        </div>
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Description</span>
+                          <span className="ah-stat-value" style={{ color: dGrade ? gradeColor(dGrade) : undefined }}>{dGrade || '—'}</span>
+                        </div>
                       </div>
-                    )}
+                      {a.description && <p className="ah-preview-desc">{a.description}</p>}
+                    </div>
                   </div>
+
+                  {/* Review with Nova — always visible */}
+                  <button
+                    className={`ah-nova-btn${panelOpen ? ' open' : ''}`}
+                    onClick={() => runNovaReview(a)}
+                    disabled={novaLoadingId === a.id}
+                    title="Review this activity with Nova"
+                  >
+                    {novaLoadingId === a.id
+                      ? <Loader2 size={12} className="ah-nova-spin" />
+                      : <Sparkles size={12} />}
+                    <span>Nova</span>
+                  </button>
 
                   {/* Actions */}
                   <div className="ah-card-actions">
@@ -659,6 +728,60 @@ export default function Activities() {
                     <button className="ah-action-btn ah-action-del" onClick={() => delAct(a.id)} title="Delete"><Trash2 size={13} /></button>
                   </div>
                 </div>
+
+                {/* Nova feedback panel — inline expansion below the card */}
+                <div className={`ah-nova-panel${panelOpen ? ' open' : ''}`}>
+                  {review && (
+                    <div className="ah-nova-panel-inner">
+                      <div className="ah-nova-panel-head">
+                        <span className="ah-nova-byline"><Sparkles size={12} /> Nova · Activity review</span>
+                        <div className="ah-nova-head-actions">
+                          {!review.error && (
+                            <button
+                              className="ah-nova-rerun"
+                              onClick={() => runNovaReview(a, { force: true })}
+                              disabled={novaLoadingId === a.id}
+                            >
+                              {novaLoadingId === a.id ? 'Reviewing…' : 'Re-review'}
+                            </button>
+                          )}
+                          <button className="ah-nova-close" onClick={() => setNovaOpenId(null)} title="Close"><X size={13} /></button>
+                        </div>
+                      </div>
+
+                      {review.error ? (
+                        <p className="ah-nova-panel-feedback">{review.error}</p>
+                      ) : (
+                        <>
+                          <div className={`ah-nova-panel-rating rating-${review.rating}`}>
+                            <span className="ah-nova-dot" />
+                            {review.rating === 'strong' ? 'Strong' : review.rating === 'good' ? 'Good' : 'Needs work'}
+                          </div>
+                          <p className="ah-nova-panel-feedback">{review.feedback}</p>
+                          {review.rewrite_example && (
+                            <div className="ah-nova-panel-rewrite">
+                              <div className="ah-nova-rewrite-label">
+                                Suggested rewrite
+                                <span className="ah-nova-charcount">{review.rewrite_example.length}/150</span>
+                              </div>
+                              <p className="ah-nova-rewrite-text">{review.rewrite_example}</p>
+                              <button
+                                className="ah-nova-use-btn"
+                                onClick={async () => {
+                                  await updateActivity(a.id, { description: review.rewrite_example });
+                                  setNovaOpenId(null);
+                                }}
+                              >
+                                Use this
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                </Fragment>
               );
             })}
           </div>

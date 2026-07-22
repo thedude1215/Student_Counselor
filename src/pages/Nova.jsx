@@ -1,37 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, MessageSquare, Trash2, Plus, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, Sparkles, ArrowLeft, ArrowRight, Pencil, GraduationCap, ThumbsUp, ThumbsDown, Square } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { sendMessage, sendMessageStream, listConversations, createConversation, loadMessages, deleteConversation } from '../api/nova.js';
-import { Link } from 'react-router-dom';
+import { sendMessageStream, listConversations, createConversation, loadMessages, deleteConversation } from '../api/nova.js';
+import { Link, useLocation } from 'react-router-dom';
 import './Nova.css';
 
-/* ─── Quick starter prompts ─── */
-const STARTERS = [
-  { label: "Where to start?", prompt: "I'm in high school and want to apply abroad. Where do I start?" },
-  { label: "College list help", prompt: "Help me build a balanced college list." },
-  { label: "Summer programs", prompt: "What summer programs should I apply to?" },
-  { label: "Essay help", prompt: "How do I write a great college essay?" },
-  { label: "Full scholarships", prompt: "How can I get a full scholarship as an international student?" },
-  { label: "US vs UK", prompt: "What's the difference between applying to US and UK universities?" },
+const PROMPTS = [
+  { icon: <Sparkles size={18} />, label: 'Help me build my college list', prompt: 'Help me build a balanced college list based on my profile.' },
+  { icon: <Pencil size={18} />,   label: 'Review my essay',               prompt: 'Can you help me review and improve my college essay?' },
+  { icon: <GraduationCap size={18} />, label: 'Find scholarships I can get', prompt: 'What scholarships can I apply to as an international student?' },
 ];
 
-const GREETING = `Hi! I'm Nova — ScholarPath's AI admissions counselor.\n\nI'm not a generic chatbot. I'll take time to understand your situation before giving advice.\n\nTo get started:\n- **What grade are you in?**\n- **Which country are you from?**\n- **What countries are you considering for university?**`;
+const FOLLOW_UPS = [
+  { icon: <Sparkles size={16} />, label: 'Help me choose a major', prompt: 'Help me choose a major that suits my interests and goals.' },
+  { icon: <Pencil size={16} />,   label: 'Find the right colleges for me', prompt: 'Based on my profile, which colleges should I apply to?' },
+];
 
-/* ─── Render markdown-lite ─── */
+function formatTime(date) {
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+}
+
 function renderContent(text) {
   const lines = text.split('\n');
   const elements = [];
   let i = 0;
-
   while (i < lines.length) {
     const line = lines[i];
-
     if (line.startsWith('### ')) {
       elements.push(<h4 key={i} className="msg-h4">{line.slice(4)}</h4>);
     } else if (line.startsWith('## ')) {
       elements.push(<h3 key={i} className="msg-h3">{line.slice(3)}</h3>);
-    } else if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
-      elements.push(<p key={i} className="msg-bold">{line.slice(2,-2)}</p>);
     } else if (line.startsWith('- ') || line.startsWith('• ')) {
       elements.push(
         <div key={i} className="msg-bullet">
@@ -42,9 +40,7 @@ function renderContent(text) {
     } else if (line.trim() === '') {
       elements.push(<div key={i} className="msg-spacer" />);
     } else {
-      elements.push(
-        <p key={i} className="msg-p" dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />
-      );
+      elements.push(<p key={i} className="msg-p" dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />);
     }
     i++;
   }
@@ -59,11 +55,8 @@ function inlineFormat(text) {
 
 function escapeHtml(text) {
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 export default function Nova() {
@@ -73,26 +66,36 @@ export default function Nova() {
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [conversationId, setConversationId] = useState(null);
-  const [loadingConvos, setLoadingConvos] = useState(true);
+  const [thumbs, setThumbs] = useState({});
+  const abortRef = useRef(null);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+  const location = useLocation();
+  const pendingPromptRef = useRef(location.state?.prompt || null);
 
-  /* Load conversations on mount */
+  const hasMessages = messages.length > 0;
+
   useEffect(() => {
     if (!user) return;
-    setLoadingConvos(true);
+    // Deep-linked prompt (e.g. "See my chances") always starts a fresh chat
+    if (pendingPromptRef.current) { startNewConversation(); return; }
     listConversations()
       .then(({ conversations: convos }) => {
         setConversations(convos || []);
-        if (convos?.length) {
-          selectConversation(convos[0].id);
-        } else {
-          startNewConversation();
-        }
+        if (convos?.length) selectConversation(convos[0].id);
+        else startNewConversation();
       })
-      .catch(() => startNewConversation())
-      .finally(() => setLoadingConvos(false));
+      .catch(() => startNewConversation());
   }, [user]);
+
+  // Fire the deep-linked prompt once a conversation exists
+  useEffect(() => {
+    if (!conversationId || !pendingPromptRef.current) return;
+    const prompt = pendingPromptRef.current;
+    pendingPromptRef.current = null;
+    window.history.replaceState({}, ''); // don't re-send on refresh
+    send(prompt);
+  }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -111,7 +114,7 @@ export default function Nova() {
       const { messages: msgs } = await loadMessages(id);
       setMessages(msgs.map(m => ({ role: m.role, text: m.content, time: new Date(m.created_at) })));
     } catch {
-      setMessages([{ role: 'nova', text: GREETING, time: new Date() }]);
+      setMessages([]);
     }
   }
 
@@ -119,12 +122,13 @@ export default function Nova() {
     try {
       const { id } = await createConversation();
       setConversationId(id);
-      setMessages([{ role: 'nova', text: GREETING, time: new Date() }]);
+      setMessages([]);
       setConversations(prev => [{ id, title: 'New conversation', created_at: new Date().toISOString() }, ...prev]);
     } catch {
       setConversationId(crypto.randomUUID());
-      setMessages([{ role: 'nova', text: GREETING, time: new Date() }]);
+      setMessages([]);
     }
+    setThumbs({});
   }
 
   async function removeConversation(id) {
@@ -136,26 +140,25 @@ export default function Nova() {
         if (rest.length) selectConversation(rest[0].id);
         else startNewConversation();
       }
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
+    } catch (err) { console.error('Delete failed:', err); }
   }
 
   const send = async (text) => {
     const msg = text.trim();
-    if (!msg || loading || !conversationId) return;
-
+    if (!msg || !conversationId) return;
+    if (loading) { abortRef.current?.(); return; }
     const userMsg = { role: 'user', text: msg, time: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
-
     try {
       const novaMsg = { role: 'nova', text: '', time: new Date() };
       setMessages(prev => [...prev, novaMsg]);
-
+      let cancelled = false;
+      abortRef.current = () => { cancelled = true; setLoading(false); };
       await sendMessageStream(conversationId, msg, {
         onText(content) {
+          if (cancelled) return;
           setMessages(prev => {
             const updated = [...prev];
             updated[updated.length - 1] = { ...updated[updated.length - 1], text: content };
@@ -163,29 +166,21 @@ export default function Nova() {
           });
           setLoading(false);
         },
-        onToolCall(name) {
-          console.log(`[Nova] Using tool: ${name}`);
-        },
+        onToolCall() {},
         onDone() {},
         onError(err) {
+          if (cancelled) return;
           setMessages(prev => {
             const updated = [...prev];
-            updated[updated.length - 1] = {
-              ...updated[updated.length - 1],
-              text: `Something went wrong: ${err.message}. Please try again.`,
-            };
+            updated[updated.length - 1] = { ...updated[updated.length - 1], text: `Something went wrong: ${err.message}. Please try again.` };
             return updated;
           });
         },
       });
-
       setConversations(prev => {
         const exists = prev.find(c => c.id === conversationId);
         if (exists && exists.title === 'New conversation') {
-          return prev.map(c => c.id === conversationId
-            ? { ...c, title: msg.slice(0, 60) + (msg.length > 60 ? '...' : '') }
-            : c
-          );
+          return prev.map(c => c.id === conversationId ? { ...c, title: msg.slice(0, 60) + (msg.length > 60 ? '…' : '') } : c);
         }
         return prev;
       });
@@ -194,51 +189,35 @@ export default function Nova() {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last?.role === 'nova' && !last.text) {
-          updated[updated.length - 1] = {
-            ...last,
-            text: `Something went wrong: ${err.message}. Please try again.`,
-          };
+          updated[updated.length - 1] = { ...last, text: `Something went wrong: ${err.message}. Please try again.` };
         } else {
-          updated.push({
-            role: 'nova',
-            text: `Something went wrong: ${err.message}. Please try again.`,
-            time: new Date(),
-          });
+          updated.push({ role: 'nova', text: `Something went wrong: ${err.message}. Please try again.`, time: new Date() });
         }
         return updated;
       });
     } finally {
       setLoading(false);
+      abortRef.current = null;
       textareaRef.current?.focus();
     }
   };
+
+  const stopGeneration = () => { abortRef.current?.(); };
 
   const onKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); }
   };
 
-  const profileRows = [
-    ['Grade', profile?.grade_level],
-    ['Country', profile?.country],
-    ['Major', profile?.intended_major],
-    ['Target', profile?.target_countries?.length ? profile.target_countries.join(', ') : null],
-  ].filter(([, v]) => v);
-  const hasProfile = profileRows.length > 0;
-
   if (authLoading) return null;
 
   if (!user) {
     return (
-      <div className="nova-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <div className="nova-brand-icon" style={{ width: 56, height: 56, margin: '0 auto 1rem' }}><Sparkles size={24} /></div>
-          <h2 style={{ marginBottom: '0.5rem' }}>Sign in to use Nova</h2>
-          <p style={{ color: 'var(--ink-3)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Nova needs your profile to give personalized advice.
-          </p>
-          <Link to="/auth" className="ws-btn ws-btn-primary" style={{ display: 'inline-flex', padding: '0.6rem 1.5rem' }}>
-            Sign in
-          </Link>
+      <div className="nova-page nova-page-unauth">
+        <div className="nova-unauth-card">
+          <div className="nova-brand-icon" style={{ width: 56, height: 56, borderRadius: 18, margin: '0 auto 1rem' }}><Sparkles size={26} /></div>
+          <h2>Sign in to use Nova</h2>
+          <p>Nova needs your profile to give personalized advice.</p>
+          <Link to="/auth" className="nova-new-btn" style={{ justifyContent: 'center', marginTop: '1rem' }}>Sign in</Link>
         </div>
       </div>
     );
@@ -246,36 +225,29 @@ export default function Nova() {
 
   return (
     <div className="nova-page">
-      {/* ─── Left sidebar ─── */}
+      {/* ─── Sidebar ─── */}
       <aside className="nova-sidebar">
-        <Link to="/dashboard" className="nova-back">
-          <ArrowLeft size={14} />
-          Back to Dashboard
-        </Link>
+        <Link to="/dashboard" className="nova-back"><ArrowLeft size={14} /> Back</Link>
+
         <div className="nova-sidebar-brand">
           <div className="nova-brand-icon"><Sparkles size={17} /></div>
           <div className="nova-brand-info">
             <div className="nova-brand-name">Nova</div>
-            <div className="nova-brand-role">ScholarPath Counselor</div>
+            <div className="nova-brand-role">AI Counselor</div>
           </div>
           <div className="nova-online">Online</div>
         </div>
 
-        {/* New conversation button */}
-        <button className="nova-starter" style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 6 }} onClick={startNewConversation}>
-          <Plus size={14} /> New conversation
+        <button className="nova-new-btn" onClick={startNewConversation}>
+          <Plus size={14} /> New chat
         </button>
 
-        {/* Conversation history */}
         {conversations.length > 0 && (
           <>
             <div className="sidebar-label">History</div>
             <div className="nova-convos">
               {conversations.map(c => (
-                <div
-                  key={c.id}
-                  className={`nova-convo-item ${conversationId === c.id ? 'active' : ''}`}
-                >
+                <div key={c.id} className={`nova-convo-item ${conversationId === c.id ? 'active' : ''}`}>
                   <button className="nova-convo-btn" onClick={() => selectConversation(c.id)}>
                     <MessageSquare size={13} />
                     <span>{c.title}</span>
@@ -289,94 +261,112 @@ export default function Nova() {
           </>
         )}
 
-        {/* Quick starters */}
-        <div className="sidebar-label" style={{ marginTop: '1rem' }}>Quick starts</div>
-        <div className="nova-starters">
-          {STARTERS.map((s, i) => (
-            <button key={i} className="nova-starter" onClick={() => send(s.prompt)}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Profile summary — Nova reads this automatically */}
-        <div className="nova-profile-card">
-          <div className="nova-profile-head">
-            <User size={14} />
-            <span>Your profile</span>
-          </div>
-          {hasProfile ? (
-            <>
-              <div className="nova-profile-rows">
-                {profileRows.map(([label, value]) => (
-                  <div key={label} className="nova-profile-row">
-                    <span className="nova-pf-label">{label}</span>
-                    <span className="nova-pf-value">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <Link to="/dashboard/profile" className="nova-profile-link">
-                Edit profile <ArrowRight size={12} />
-              </Link>
-            </>
-          ) : (
-            <>
-              <p className="nova-profile-empty">
-                Add your grade, country, and major so Nova can tailor its advice.
-              </p>
-              <Link to="/dashboard/profile" className="nova-profile-link">
-                Complete your profile <ArrowRight size={12} />
-              </Link>
-            </>
-          )}
-        </div>
       </aside>
 
-      {/* ─── Main chat ─── */}
+      {/* ─── Main ─── */}
       <div className="nova-chat">
-        <div className="nova-messages">
-          {messages.map((m, i) => {
-            const isTyping = m.role === 'nova' && !m.text;
-            return (
-              <div key={i} className={`nova-msg-row ${m.role}`}>
-                {m.role === 'nova' && (
-                  <div className="nova-msg-avatar av-nova"><Sparkles size={14} /></div>
-                )}
-                <div className={`nova-bubble ${m.role} ${isTyping ? 'nova-typing' : ''}`}>
-                  {isTyping ? <><span /><span /><span /></> : renderContent(m.text)}
-                </div>
-                {m.role === 'user' && (
-                  <div className="nova-msg-avatar av-user">U</div>
-                )}
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
-        </div>
 
-        {/* Input */}
+        {!hasMessages ? (
+          /* ── Welcome ── */
+          <div className="nova-welcome">
+            <div className="nova-welcome-inner">
+              <div className="nova-welcome-avatar"><Sparkles size={28} /></div>
+              <div className="nova-welcome-text">
+                <p className="nova-welcome-sub">Hi{profile?.first_name ? `, ${profile.first_name}` : ''}. I'm Nova.</p>
+                <h1 className="nova-welcome-title">Here to help you<br />get into your dream school.</h1>
+              </div>
+              <div className="nova-prompts">
+                {PROMPTS.map((p, i) => (
+                  <button key={i} className="nova-prompt-card" onClick={() => send(p.prompt)}>
+                    <span className="nova-prompt-icon">{p.icon}</span>
+                    <span className="nova-prompt-label">{p.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ── Messages ── */
+          <div className="nova-messages">
+            {messages.map((m, i) => {
+              const isTyping = m.role === 'nova' && !m.text;
+              const isLastNova = m.role === 'nova' && i === messages.length - 1 && m.text && !loading;
+
+              if (m.role === 'user') {
+                return (
+                  <div key={i} className="nova-msg-row user">
+                    <div className="nova-user-bubble">{m.text}</div>
+                    <div className="nova-msg-time">{formatTime(m.time)}</div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={i} className="nova-msg-row nova">
+                  <div className="nova-msg-avatar av-nova"><Sparkles size={14} /></div>
+                  <div className="nova-nova-content">
+                    {isTyping ? (
+                      <div className="nova-typing"><span /><span /><span /></div>
+                    ) : (
+                      <>
+                        <div className="nova-nova-text">{renderContent(m.text)}</div>
+                        <div className="nova-msg-meta">
+                          <span className="nova-msg-time-inline">{formatTime(m.time)}</span>
+                          <button
+                            className={`nova-thumb ${thumbs[i] === 'up' ? 'active-up' : ''}`}
+                            onClick={() => setThumbs(prev => ({ ...prev, [i]: prev[i] === 'up' ? null : 'up' }))}
+                          ><ThumbsUp size={13} /></button>
+                          <button
+                            className={`nova-thumb ${thumbs[i] === 'down' ? 'active-down' : ''}`}
+                            onClick={() => setThumbs(prev => ({ ...prev, [i]: prev[i] === 'down' ? null : 'down' }))}
+                          ><ThumbsDown size={13} /></button>
+                        </div>
+                        {isLastNova && (
+                          <div className="nova-follow-ups">
+                            {FOLLOW_UPS.map((f, fi) => (
+                              <button key={fi} className="nova-follow-card" onClick={() => send(f.prompt)}>
+                                <span className="nova-follow-icon">{f.icon}</span>
+                                <span>{f.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={bottomRef} />
+          </div>
+        )}
+
+        {/* ── Input ── */}
         <div className="nova-input-wrap">
           <div className="nova-input-box">
             <textarea
               ref={textareaRef}
-              id="nova-input"
               className="nova-textarea"
-              placeholder="Ask Nova about admissions, programs, essays, scholarships..."
+              placeholder="Ask Nova…"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={onKey}
               rows={1}
             />
-            <button
-              id="nova-send"
-              className={`nova-send ${!input.trim() || loading ? 'disabled' : ''}`}
-              onClick={() => send(input)}
-              disabled={!input.trim() || loading}
-            >
-              <Send size={15} />
-            </button>
+            {loading ? (
+              <button className="nova-send nova-stop" onClick={stopGeneration} title="Stop">
+                <Square size={13} fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                className={`nova-send ${!input.trim() ? 'disabled' : ''}`}
+                onClick={() => send(input)}
+                disabled={!input.trim()}
+              >
+                <ArrowRight size={15} />
+              </button>
+            )}
           </div>
-          <p className="nova-hint">Enter to send · Shift+Enter for new line</p>
         </div>
       </div>
     </div>

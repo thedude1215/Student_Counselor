@@ -10,6 +10,7 @@ import Programs from './pages/Programs';
 import Acceptances from './pages/Acceptances';
 import Nova from './pages/Nova';
 import Auth from './pages/Auth';
+import Onboarding from './pages/Onboarding';
 import WorkspaceLayout from './pages/workspace/WorkspaceLayout';
 import Overview from './pages/workspace/Overview';
 import CollegeList from './pages/workspace/CollegeList';
@@ -18,12 +19,14 @@ import Essays from './pages/workspace/Essays';
 import Profile from './pages/workspace/Profile';
 import Calendar from './pages/workspace/Calendar';
 import Activities from './pages/workspace/Activities';
+import Scholarships from './pages/workspace/Scholarships';
+import Journey from './pages/workspace/Journey';
 import DashboardAddSchools from './pages/workspace/DashboardAddSchools';
 import './index.css';
 
 function AppLayout() {
   const location = useLocation();
-  const hideFooter = location.pathname === '/nova' || location.pathname === '/auth' || location.pathname.startsWith('/dashboard');
+  const hideFooter = location.pathname === '/nova' || location.pathname === '/auth' || location.pathname === '/onboarding' || location.pathname.startsWith('/dashboard');
 
   return (
     <>
@@ -37,6 +40,9 @@ function AppLayout() {
         <Route path="/nova"         element={<Nova />} />
         <Route path="/auth"         element={<Auth />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="/onboarding" element={<Onboarding />} />
+        </Route>
+        <Route element={<ProtectedRoute />}>
           <Route path="/dashboard/add-schools" element={<DashboardAddSchools />} />
           <Route path="/dashboard" element={<WorkspaceLayout />}>
             <Route index element={<Overview />} />
@@ -44,6 +50,8 @@ function AppLayout() {
             <Route path="colleges" element={<CollegeList />} />
             <Route path="essays" element={<Essays />} />
             <Route path="activities" element={<Activities />} />
+            <Route path="scholarships" element={<Scholarships />} />
+            <Route path="journey" element={<Journey />} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="calendar" element={<Calendar />} />
           </Route>

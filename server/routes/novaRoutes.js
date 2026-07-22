@@ -251,11 +251,13 @@ router.post('/essay-review', async (req, res) => {
       university_name: universityName || null,
     });
 
-    // Structured review: { overall, score, strengths[], suggestions[] }.
+    // Structured review: { overall, score, strengths[], strength_annotations[], corrections[], suggestions[] }.
     const review = {
       overall: data.overall || '',
       score: data.score || 0,
       strengths: data.strengths || [],
+      strength_annotations: data.strength_annotations || [],
+      corrections: data.corrections || [],
       suggestions: data.suggestions || [],
       feedback: data.feedback || '',
     };
@@ -300,6 +302,64 @@ router.post('/recommendations', async (req, res) => {
     console.error('Recommendations error:', err);
     const status = err.status || 503;
     res.status(status).json({ error: err.message || 'Failed to generate recommendations' });
+  }
+});
+
+/* ─── University Suggestions (structured, tiered) ─── */
+
+router.post('/university-suggestions', async (req, res) => {
+  if (!checkRate(req.userId, 'uni-suggest', 3)) {
+    return res.status(429).json({ error: 'Rate limit reached (3 suggestion runs/day). Please wait.' });
+  }
+
+  try {
+    const data = await proxyToAgent('/api/university-suggestions', {
+      user_id: req.userId,
+    }, 90_000);
+
+    res.json({
+      suggestions: data.suggestions || [],
+      missing_info: data.missing_info || [],
+      list_analysis: data.list_analysis || null,
+    });
+  } catch (err) {
+    console.error('[Nova] /university-suggestions error:', err.message, '| status:', err.status);
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to generate suggestions' });
+  }
+});
+
+/* ─── Activity Review ─── */
+
+router.post('/activity-review', async (req, res) => {
+  const { activityTitle, activityType, role, description, hoursPerWeek, weeksPerYear } = req.body;
+  if (!description?.trim()) return res.status(400).json({ error: 'Activity description is required' });
+  if (!activityTitle?.trim()) return res.status(400).json({ error: 'Activity title is required' });
+
+  if (!checkRate(req.userId, 'activity-review', 10)) {
+    return res.status(429).json({ error: 'Rate limit reached (10 activity reviews/hour). Please wait.' });
+  }
+
+  try {
+    const data = await proxyToAgent('/api/activity-review', {
+      user_id: req.userId,
+      activity_title: activityTitle.trim(),
+      activity_type: activityType || null,
+      role: role || null,
+      description: description.trim(),
+      hours_per_week: hoursPerWeek || null,
+      weeks_per_year: weeksPerYear || null,
+    });
+
+    res.json({
+      rating: data.rating || 'good',
+      feedback: data.feedback || '',
+      rewrite_example: data.rewrite_example || '',
+    });
+  } catch (err) {
+    console.error('[Nova] /activity-review error:', err.message, '| status:', err.status);
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to review activity' });
   }
 });
 

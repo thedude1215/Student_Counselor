@@ -1,0 +1,453 @@
+.ob-page {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1.5rem 7rem;
+}
+
+/* Logo */
+.ob-logo-link {
+  display: block;
+  margin-bottom: 1.75rem;
+}
+.ob-logo {
+  height: 34px;
+  width: auto;
+}
+
+/* Step counter */
+.ob-stepper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.ob-back-btn {
+  background: none;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 0.3rem;
+  margin-right: 0.6rem;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+.ob-back-btn:hover {
+  background: rgba(0,0,0,0.06);
+  color: var(--ink);
+}
+
+.ob-step-item {
+  display: flex;
+  align-items: center;
+}
+
+.ob-step-line {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.ob-step-line.done {
+  background: var(--blue);
+}
+
+.ob-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  transition: all 0.25s;
+  flex-shrink: 0;
+}
+.ob-step-dot.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.ob-step-dot.done {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+/* Form body */
+.ob-body {
+  width: 100%;
+  max-width: 560px;
+}
+
+.ob-title {
+  font-size: clamp(1.75rem, 4.5vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0 0 0.35rem;
+  line-height: 1.15;
+}
+
+.ob-subtitle {
+  font-size: 0.88rem;
+  color: var(--ink-3);
+  margin: 0 0 2rem;
+  font-weight: 500;
+}
+
+/* Question label */
+.ob-q {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 1.5rem 0 0.7rem;
+}
+
+.ob-optional {
+  font-weight: 500;
+  color: var(--ink-4);
+  font-size: 0.82rem;
+}
+
+/* Pill buttons */
+.ob-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ob-pill {
+  background: var(--white);
+  border: 1.5px solid var(--border-2);
+  border-radius: 100px;
+  padding: 0.45rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+.ob-pill:hover:not(:disabled) {
+  border-color: var(--ink-2);
+}
+.ob-pill.selected {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.ob-pill.muted,
+.ob-pill:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Checkbox / radio */
+.ob-check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+.ob-check-label input[type="checkbox"] {
+  accent-color: var(--blue);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ob-radio-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.25rem;
+}
+.ob-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+.ob-radio-label input[type="radio"] {
+  accent-color: var(--blue);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Text inputs */
+.ob-input {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 0.82rem 1rem;
+  font-size: 0.95rem;
+  font-family: var(--font);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.ob-input::placeholder { color: var(--ink-4); }
+.ob-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+}
+.ob-input[type="date"] { color: var(--ink); }
+
+/* Select */
+.ob-select {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 0.82rem 2.5rem 0.82rem 1rem;
+  font-size: 0.95rem;
+  font-family: var(--font);
+  color: var(--ink);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ob-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+}
+
+/* 2-col input row */
+.ob-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* GPA row */
+.ob-q-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+.ob-gpa-link {
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--blue);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.ob-gpa-link:hover { color: var(--blue-dark); }
+
+.ob-hint {
+  font-size: 0.78rem;
+  color: var(--ink-4);
+  margin: 0.35rem 0 0;
+  font-weight: 500;
+}
+
+.ob-input-error {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(220,38,38,0.1) !important;
+}
+
+.ob-field-error {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #DC2626;
+  margin: 0.3rem 0 0;
+}
+
+/* Fixed footer */
+.ob-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--bg) 80%, transparent);
+}
+
+.ob-next-btn {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: block;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  border-radius: 12px;
+  padding: 0.95rem;
+  font-size: 0.96rem;
+  font-weight: 800;
+  font-family: var(--font);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s, opacity 0.15s;
+}
+.ob-next-btn:hover:not(:disabled) {
+  background: #0a1f13;
+  transform: translateY(-1px);
+}
+.ob-next-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* GPA modal */
+.ob-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .ob-modal-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+}
+
+.ob-modal {
+  background: var(--white);
+  border-radius: 24px 24px 0 0;
+  padding: 1.5rem 1.5rem 2.5rem;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+}
+
+@media (min-width: 640px) {
+  .ob-modal {
+    border-radius: 20px;
+    padding: 2rem;
+  }
+}
+
+.ob-modal::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-2);
+  margin: 0 auto 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .ob-modal::before { display: none; }
+}
+
+.ob-modal-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.ob-modal-close:hover { background: rgba(0,0,0,0.06); }
+
+.ob-modal-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--blue);
+  background: rgba(5,150,105,0.1);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.ob-modal-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 0 0 0.3rem;
+}
+
+.ob-modal-sub {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  margin: 0 0 1.25rem;
+}
+
+.ob-modal-systems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ob-modal-sys {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+.ob-modal-sys-name {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--blue);
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ob-modal-sys-formula {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.2rem;
+}
+
+.ob-modal-sys-example {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
