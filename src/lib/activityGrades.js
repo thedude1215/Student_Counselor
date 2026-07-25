@@ -64,3 +64,27 @@ export function gradeColor(grade) {
   if (grade === 'C') return '#B45309';
   return '#DC2626';
 }
+
+/* Sticker-badge background tint for a grade */
+export function gradeBg(grade) {
+  if (grade === 'A' || grade === 'B') return '#D1FAE5';
+  if (grade === 'C') return '#FEF3C7';
+  return '#FEE2E2';
+}
+
+/* Order grades so the strongest sorts first (A best → F worst) */
+const GRADE_RANK = { A: 0, B: 1, C: 2, D: 3, F: 4 };
+export function bestGrade(grades) {
+  const valid = grades.filter(Boolean);
+  if (!valid.length) return null;
+  return valid.sort((a, b) => (GRADE_RANK[a] ?? 9) - (GRADE_RANK[b] ?? 9))[0];
+}
+
+const LEADERSHIP_ROLE_WORDS = [
+  'president', 'captain', 'founder', 'leader', 'director', 'head', 'chair',
+  'editor', 'chief', 'lead', 'organizer', 'coordinator', 'co-founder', 'ceo',
+];
+export function isLeadershipRole(role) {
+  const r = (role || '').toLowerCase();
+  return LEADERSHIP_ROLE_WORDS.some(w => r.includes(w));
+}

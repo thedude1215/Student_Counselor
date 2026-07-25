@@ -127,7 +127,6 @@ export default function Onboarding() {
   const [budget, setBudget] = useState('');
 
   // Step 5
-  const [learningFormat, setLearningFormat] = useState('');
   const [heardAbout, setHeardAbout] = useState('');
 
   useEffect(() => {

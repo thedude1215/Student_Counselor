@@ -111,6 +111,13 @@ export function getUniversitySuggestions() {
   return novaFetch('/university-suggestions', { method: 'POST' });
 }
 
+export function getScholarshipMatches({ force = false } = {}) {
+  return novaFetch('/scholarship-matches', {
+    method: 'POST',
+    body: JSON.stringify({ force }),
+  });
+}
+
 export function reviewActivity({ title, type, role, description, hoursPerWeek, weeksPerYear }) {
   return novaFetch('/activity-review', {
     method: 'POST',

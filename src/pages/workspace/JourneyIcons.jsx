@@ -189,6 +189,97 @@ export function MountainIcon({ size = 46 }) {
   );
 }
 
+export function CalendarIcon({ size = 44 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      {/* back / shadow */}
+      <rect x="8" y="12" width="32" height="30" rx="4" fill="#A83B2C" />
+      {/* body */}
+      <rect x="7" y="10" width="32" height="30" rx="4" fill="#E2664F" />
+      {/* header band */}
+      <path d="M7 14 Q7 10 11 10 H35 Q39 10 39 14 V18 H7 Z" fill="#C94F3D" />
+      {/* rings */}
+      <rect x="13" y="5" width="3" height="9" rx="1.5" fill="#5A3A1E" />
+      <rect x="30" y="5" width="3" height="9" rx="1.5" fill="#5A3A1E" />
+      {/* grid dots */}
+      <g fill="#FDFBF3">
+        <circle cx="15" cy="25" r="1.8" /><circle cx="23" cy="25" r="1.8" /><circle cx="31" cy="25" r="1.8" />
+        <circle cx="15" cy="33" r="1.8" /><circle cx="23" cy="33" r="1.8" />
+      </g>
+      {/* highlighted deadline */}
+      <circle cx="31" cy="33" r="3" fill="#FFC93D" />
+    </svg>
+  );
+}
+
+export function ClipboardIcon({ size = 44 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      {/* board */}
+      <rect x="9" y="8" width="30" height="34" rx="4" fill="#2F6E4E" />
+      <rect x="9" y="8" width="30" height="34" rx="4" fill="url(#cb-shade)" />
+      {/* paper */}
+      <rect x="13" y="13" width="22" height="26" rx="2" fill="#FDFBF3" />
+      {/* clip */}
+      <rect x="18" y="5" width="12" height="7" rx="2.5" fill="#93602F" />
+      <rect x="20" y="3" width="8" height="5" rx="2.5" fill="#B5842F" />
+      {/* checked lines */}
+      <path d="M16 20 l2 2 3.5-3.5" stroke="#2E8B3D" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 20h8" stroke="#8C7B55" strokeWidth="2" strokeLinecap="round" />
+      <path d="M16 27 l2 2 3.5-3.5" stroke="#2E8B3D" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 27h8" stroke="#8C7B55" strokeWidth="2" strokeLinecap="round" />
+      <path d="M16 33.5h6" stroke="#C9B896" strokeWidth="2" strokeLinecap="round" />
+      <defs>
+        <linearGradient id="cb-shade" x1="9" y1="8" x2="39" y2="42">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.12" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.14" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+export function FlagFinishIcon({ size = 46 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      {/* pole */}
+      <rect x="11" y="5" width="3.2" height="38" rx="1.6" fill="#5A3A1E" />
+      <rect x="11" y="5" width="1.4" height="38" fill="#7A4B22" />
+      {/* checkered flag */}
+      <path d="M14 7 H40 V24 H14 Z" fill="#FDFBF3" />
+      <g fill="#132619">
+        <rect x="14" y="7"  width="6.5" height="4.25" /><rect x="27" y="7"  width="6.5" height="4.25" />
+        <rect x="20.5" y="11.25" width="6.5" height="4.25" /><rect x="33.5" y="11.25" width="6.5" height="4.25" />
+        <rect x="14" y="15.5" width="6.5" height="4.25" /><rect x="27" y="15.5" width="6.5" height="4.25" />
+        <rect x="20.5" y="19.75" width="6.5" height="4.25" /><rect x="33.5" y="19.75" width="6.5" height="4.25" />
+      </g>
+      {/* base */}
+      <ellipse cx="12.6" cy="43" rx="7" ry="2.4" fill="#4A3524" />
+    </svg>
+  );
+}
+
+export function TrophyIcon({ size = 54 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      {/* handles */}
+      <path d="M11 12 Q3 12 5 20 Q6.5 26 13 25" stroke="#C9862B" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+      <path d="M37 12 Q45 12 43 20 Q41.5 26 35 25" stroke="#C9862B" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+      {/* cup */}
+      <path d="M11 8 H37 V16 Q37 27 24 30 Q11 27 11 16 Z" fill="#E8A33D" />
+      <path d="M24 8 H37 V16 Q37 27 24 30 Z" fill="#C9862B" />
+      {/* rim */}
+      <rect x="9" y="6" width="30" height="4" rx="2" fill="#F0C34D" />
+      {/* star */}
+      <path d="M24 13 l1.6 3.5 3.8.4-2.8 2.6.8 3.7L24 21.8 20.4 23.7l.8-3.7-2.8-2.6 3.8-.4Z" fill="#FFF3C4" />
+      {/* stem + base */}
+      <rect x="21.5" y="30" width="5" height="6" fill="#B5842F" />
+      <rect x="15" y="36" width="18" height="4" rx="2" fill="#C9862B" />
+      <rect x="12" y="40" width="24" height="4.5" rx="2.2" fill="#A86D1F" />
+    </svg>
+  );
+}
+
 // id → icon component
 export const MILESTONE_ICONS = {
   1: BackpackIcon,
@@ -200,4 +291,7 @@ export const MILESTONE_ICONS = {
   7: CampfireIcon,
   8: BooksIcon,
   9: MountainIcon,
+  10: CalendarIcon,
+  11: ClipboardIcon,
+  12: FlagFinishIcon,
 };

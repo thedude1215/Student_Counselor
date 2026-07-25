@@ -1,7 +1,6 @@
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from app.supabase_client import supabase
-from app.services.embeddings import semantic_search
+from app.services.embeddings import embed_text, semantic_search_by_embedding
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
@@ -80,20 +79,40 @@ def build_student_context(user_id: str) -> str:
 def build_rag_context(query: str, user_id: str) -> str:
     parts = []
 
+    # Embed the query once and reuse it across all three tables, and run the
+    # searches (plus the independent student-context lookup) concurrently
+    # instead of paying for four sequential round trips.
     try:
-        uni_results = semantic_search("universities", query, 5)
+        embedding = embed_text(query)
+    except Exception:
+        embedding = None
+
+    if embedding is not None:
+        futures = {
+            "universities": _executor.submit(semantic_search_by_embedding, "universities", embedding, 5),
+            "programs": _executor.submit(semantic_search_by_embedding, "programs", embedding, 3),
+            "stories": _executor.submit(semantic_search_by_embedding, "stories", embedding, 3),
+            "student_ctx": _executor.submit(build_student_context, user_id),
+        }
+    else:
+        futures = {"student_ctx": _executor.submit(build_student_context, user_id)}
+
+    try:
+        uni_results = futures["universities"].result() if "universities" in futures else []
     except Exception:
         uni_results = []
     try:
-        program_results = semantic_search("programs", query, 3)
+        program_results = futures["programs"].result() if "programs" in futures else []
     except Exception:
         program_results = []
     try:
-        story_results = semantic_search("stories", query, 3)
+        story_results = futures["stories"].result() if "stories" in futures else []
     except Exception:
         story_results = []
-
-    student_ctx = build_student_context(user_id)
+    try:
+        student_ctx = futures["student_ctx"].result()
+    except Exception:
+        student_ctx = ""
 
     if uni_results:
         unis = "\n".join(

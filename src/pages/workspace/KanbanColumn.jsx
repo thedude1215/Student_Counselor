@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, ChevronDown, Plus, X } from 'lucide-react';
+import { Compass, ChevronDown, Plus, X } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 import TaskComposer from './TaskComposer.jsx';
 import LogoTile from '../../components/LogoTile.jsx';
@@ -69,7 +69,7 @@ function SuggestRow({ s, onAccept, onDismiss }) {
 }
 
 export default function KanbanColumn({
-  status, label, tasks, suggestions = [], nova = {},
+  status, label, tasks, suggestions = [],
   composerOpen = false, onAdd, onComposerClose,
   onDelete, onEdit, onAccept, onDismiss, dnd = {},
 }) {
@@ -125,7 +125,7 @@ export default function KanbanColumn({
         {suggestions.length > 0 && (
           <>
             <button className="ws-kcol-suggest-toggle" onClick={() => setSuggestOpen(o => !o)}>
-              <Sparkles size={13} />
+              <Compass size={13} />
               <span>Suggestions from Nova</span>
               <ChevronDown
                 size={13}

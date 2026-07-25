@@ -146,6 +146,33 @@ export async function deleteEssay(id) {
   if (error) throw error;
 }
 
+/* ─────────────── Scholarships (public catalog) ─────────────── */
+
+export async function fetchScholarships() {
+  const { data, error } = await supabase
+    .from('scholarships')
+    .select('*')
+    .order('sort_order');
+  if (error) throw error;
+  return (data || []).map(s => ({
+    id: s.id,
+    name: s.name,
+    org: s.org,
+    type: s.type,
+    amountText: s.amount_text,
+    amountMin: s.amount_min,
+    amountMax: s.amount_max,
+    deadline: s.deadline,
+    description: s.description,
+    link: s.link,
+    level: s.level,
+    essayRequired: s.essay_required,
+    international: s.international,
+    restrictionNote: s.restriction_note,
+    destinationCountries: s.destination_countries || [],
+  }));
+}
+
 /* ─────────────── Profile ─────────────── */
 
 export async function fetchProfile(profileId) {

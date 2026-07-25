@@ -10,6 +10,9 @@ import { suggestTasks } from '../../api/nova.js';
 import KanbanColumn from './KanbanColumn.jsx';
 import LogoTile from '../../components/LogoTile.jsx';
 import TaskEditModal from './TaskEditModal.jsx';
+import Confetti from './Confetti.jsx';
+import NovaMascot from '../../components/NovaMascot.jsx';
+import { ProgressArc } from './HeroRings.jsx';
 import './workspace.css';
 
 const COLUMNS = [
@@ -19,9 +22,9 @@ const COLUMNS = [
 ];
 
 const PRIO_MAP = {
-  high:   { label: 'Priority 1', cls: 'dl-prio-1' },
-  medium: { label: 'Priority 2', cls: 'dl-prio-2' },
-  low:    { label: 'Priority 3', cls: 'dl-prio-3' },
+  high:   { label: 'High', cls: 'dl-prio-1' },
+  medium: { label: 'Medium', cls: 'dl-prio-2' },
+  low:    { label: 'Low', cls: 'dl-prio-3' },
 };
 
 /* Known service/test keywords → tile config (logoUrl takes priority over bg/label) */
@@ -146,9 +149,10 @@ function groupByMonth(tasks) {
   return [...groups.values()];
 }
 
-function DeadlinesPanel({ tasks, colleges, onPriorityChange }) {
+function DeadlinesPanel({ tasks, colleges, onPriorityChange, onComplete, completingId }) {
   const groups = groupByMonth(tasks);
   if (groups.length === 0) return null;
+  const today0 = new Date(new Date().toDateString());
 
   return (
     <div className="dl-panel">
@@ -165,20 +169,23 @@ function DeadlinesPanel({ tasks, colleges, onPriorityChange }) {
           </div>
 
           <div className="dl-table">
-            <div className="dl-table-head">
-              <span>DATE</span>
-              <span>ITEM</span>
-              <span>PRIORITY</span>
-            </div>
-
             {monthTasks.map(t => {
               const d = new Date(t.due_date + 'T00:00:00');
               const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
               const logo = detectTaskLogo(t, colleges);
               const prio = PRIO_MAP[t.priority] || PRIO_MAP.medium;
+              const days = Math.round((d - today0) / 86_400_000);
+              const urgency =
+                days < 0 ? { label: 'Overdue', cls: 'over' }
+                : days === 0 ? { label: 'Today', cls: 'today' }
+                : days <= 3 ? { label: `In ${days}d`, cls: 'soon' }
+                : null;
 
               return (
-                <div key={t.id} className="dl-row">
+                <div key={t.id} className={`dl-row ${completingId === t.id ? 'dl-row-completing' : ''}`}>
+                  <button className="dl-check" onClick={() => onComplete(t)} title="Mark done" aria-label="Mark done">
+                    <Check size={14} strokeWidth={3} />
+                  </button>
                   <span className="dl-date">{dateLabel}</span>
                   <span className="dl-item">
                     {logo?.type === 'uni' && (
@@ -202,15 +209,16 @@ function DeadlinesPanel({ tasks, colleges, onPriorityChange }) {
                       {logo?.type === 'uni' && <span className="dl-item-school">{logo.uni.name}</span>}
                     </span>
                   </span>
+                  {urgency && <span className={`dl-urgency dl-urgency-${urgency.cls}`}>{urgency.label}</span>}
                   <select
                     className={`dl-prio dl-prio-select ${prio.cls}`}
                     value={t.priority || 'medium'}
                     onClick={e => e.stopPropagation()}
                     onChange={e => onPriorityChange(t.id, e.target.value)}
                   >
-                    <option value="high">Priority 1</option>
-                    <option value="medium">Priority 2</option>
-                    <option value="low">Priority 3</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
                   </select>
                 </div>
               );
@@ -233,6 +241,8 @@ export default function Tasks() {
   const [generatedIds, setGeneratedIds] = useState(new Set());
   const [generatingId, setGeneratingId] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
+  const [celebrate, setCelebrate] = useState(false);   // confetti when the last task is cleared
+  const [completingId, setCompletingId] = useState(null);   // row currently animating out
 
   useEffect(() => {
     if (!user) return;
@@ -295,8 +305,11 @@ export default function Tasks() {
 
   async function moveTo(task, status) {
     if (task.status === status) return;
-    setTasks(tasks.map(t => t.id === task.id ? { ...t, status } : t));
+    const next = tasks.map(t => t.id === task.id ? { ...t, status } : t);
+    setTasks(next);
     await updateTask(task.id, { status });
+    // Cleared the board — every task is done.
+    if (status === 'done' && next.length > 0 && next.every(t => t.status === 'done')) setCelebrate(true);
   }
 
   async function remove(id) {
@@ -310,11 +323,39 @@ export default function Tasks() {
     setEditingTask(null);
   }
 
+  // Inline check-off with a brief "completing" animation before the row leaves.
+  function completeTask(t) {
+    if (completingId) return;
+    setCompletingId(t.id);
+    setTimeout(() => {
+      moveTo(t, 'done');
+      setCompletingId(null);
+    }, 380);
+  }
+
   if (loading) return <div className="ws-loading">Loading your board…</div>;
 
   const open = tasks.filter(t => t.status !== 'done').length;
   const done = tasks.filter(t => t.status === 'done').length;
   const isEmpty = tasks.length === 0 && suggestions.length === 0;
+
+  // ── Board-at-a-glance stats ──
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const today0 = new Date(new Date().toDateString());
+  const overdue = tasks.filter(t => t.status !== 'done' && t.due_date && t.due_date < todayStr).length;
+  const dueThisWeek = tasks.filter(t => {
+    if (t.status === 'done' || !t.due_date) return false;
+    const days = (new Date(t.due_date + 'T00:00:00') - today0) / 86_400_000;
+    return days >= 0 && days <= 7;
+  }).length;
+  const totalTasks = tasks.length;
+  const donePct = totalTasks ? Math.round((done / totalTasks) * 100) : 0;
+  const boardRead =
+    totalTasks === 0 ? 'Add your deadlines and to-dos'
+    : open === 0 ? 'Board clear — every task done ✓'
+    : overdue > 0 ? `${overdue} overdue — tackle these first`
+    : dueThisWeek > 0 ? `${dueThisWeek} due this week`
+    : 'On top of your deadlines';
 
   function reorderInColumn(statusKey, draggedId, insertBeforeId) {
     setTasks(prev => {
@@ -338,7 +379,9 @@ export default function Tasks() {
     dragId,
     onDragStart: setDragId,
     onDragEnd: () => setDragId(null),
-    onDrop: (statusKey, draggedId, insertBeforeId) => {
+    // Moving between columns only — position within the target column is
+    // handled by onReorder below, which is where insertBeforeId is consumed.
+    onDrop: (statusKey, draggedId) => {
       const id = draggedId ?? dragId;
       const t = tasks.find(x => x.id === id);
       if (t) moveTo(t, statusKey);
@@ -351,20 +394,40 @@ export default function Tasks() {
   };
 
   return (
-    <div className="ws-section">
-      <header className="ws-header">
-        <div>
-          <h1 className="ws-title">Tasks &amp; Deadlines</h1>
-          <p className="ws-subtitle">{open} open · {done} done</p>
+    <div className="ws-section ah-page">
+      {celebrate && <Confetti count={70} onDone={() => setCelebrate(false)} />}
+
+      {/* ── Forest hero stat band ── */}
+      <div className="ah-hero">
+        <div className="ah-hero-main">
+          <span className="ah-hero-eyebrow"><span className="ah-hero-dot" /> Your board</span>
+          <h1 className="ah-hero-title">Tasks &amp; Deadlines</h1>
+          <p className="ah-hero-sub">{boardRead}</p>
+
+          <div className="ah-hero-actions">
+            <button className="ah-hero-btn solid" onClick={() => setShowNewModal(true)}>
+              <Plus size={15} /> Add task
+            </button>
+          </div>
         </div>
-        <button className="ws-btn ws-btn-primary" onClick={() => setShowNewModal(true)}>
-          <Plus size={16} /> Add task
-        </button>
-      </header>
+        <div className="ah-hero-right cl-hero-right">
+          <div className="ah-hero-mascot cl-hero-mascot"><NovaMascot size={38} idle /></div>
+          <div className="cl-donut-wrap">
+            <ProgressArc percent={donePct} centerBig={`${donePct}%`} centerCap="DONE" />
+            <div className="cl-donut-legend">
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: 'rgba(255,255,255,0.55)' }} />{open} open</span>
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#4ADE80' }} />{done} done</span>
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#F87171' }} />{overdue} overdue</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <DeadlinesPanel
         tasks={tasks}
         colleges={colleges}
+        onComplete={completeTask}
+        completingId={completingId}
         onPriorityChange={async (id, priority) => {
           setTasks(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
           await updateTask(id, { priority });

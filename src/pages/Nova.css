@@ -66,9 +66,6 @@
 .nova-brand-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.15);
-  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,12 +82,13 @@
 .nova-new-btn {
   display: flex; align-items: center; gap: 0.4rem;
   width: 100%; padding: 0.52rem 0.8rem;
-  border-radius: 9px; background: #065f46;
-  color: #fff; font-size: 0.82rem; font-weight: 600;
-  border: none; cursor: pointer; transition: background 120ms;
+  border-radius: 9px; background: transparent;
+  color: #065f46; font-size: 0.82rem; font-weight: 600;
+  border: 1.5px solid var(--border,#E4E4E8); cursor: pointer;
+  transition: background 120ms, border-color 120ms;
   margin-bottom: 0.15rem; text-decoration: none;
 }
-.nova-new-btn:hover { background: #054d38; }
+.nova-new-btn:hover { background: rgba(0,0,0,0.04); border-color: #065f46; }
 
 .sidebar-label {
   font-size: 0.67rem; font-weight: 700; letter-spacing: 0.07em;
@@ -134,49 +132,50 @@
 /* ─── Welcome ─────────────────────────────────── */
 
 .nova-welcome {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 2rem 1.5rem;
+  flex: 1; display: flex; align-items: flex-start; justify-content: center;
+  padding: 3rem 1.5rem;
+  overflow-y: auto;
 }
 .nova-welcome-inner {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 2rem; width: 100%; max-width: 500px;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 0.35rem; width: 100%; max-width: 480px;
 }
-.nova-welcome-avatar {
-  width: 68px; height: 68px; border-radius: 20px;
-  background: #065f46; color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 28px rgba(4,120,87,0.25);
+.nova-mascot { margin-bottom: 0.9rem; }
+.nova-badge {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase;
+  color: #065f46; margin-bottom: 0.6rem;
 }
-.nova-welcome-text { text-align: center; }
-.nova-welcome-sub { font-size: 1rem; color: var(--ink-3,#888); margin-bottom: 0.5rem; }
+.nova-badge-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+}
 .nova-welcome-title {
-  font-size: 1.85rem; font-weight: 800;
-  color: var(--ink-1,#111); line-height: 1.2; letter-spacing: -0.03em;
+  font-size: 2.1rem; font-weight: 800;
+  color: var(--ink-1,#111); line-height: 1.15; letter-spacing: -0.03em;
+  margin-bottom: 0.85rem;
 }
-.nova-prompts { display: flex; flex-direction: column; gap: 0.55rem; width: 100%; }
+.nova-tagline {
+  font-size: 1.15rem; font-weight: 700; line-height: 1.4;
+  color: var(--blue-dark); margin-bottom: 0.85rem;
+}
+.nova-context {
+  font-size: 0.92rem; line-height: 1.6; color: var(--ink-3,#888);
+  margin-bottom: 1.6rem;
+}
+.nova-prompts { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; }
 .nova-prompt-card {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  background: var(--bg-white,#fff);
-  border: 1.5px solid var(--border,#E4E4E8);
-  border-radius: 16px; cursor: pointer;
-  font-size: 0.88rem; font-weight: 500; color: var(--ink-1,#111);
-  text-align: left; width: 100%;
-  transition: border-color 150ms, box-shadow 150ms, transform 80ms;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding: 0.85rem 1.2rem;
+  background: #DCFCE7;
+  border: none;
+  border-radius: 999px; cursor: pointer;
+  font-size: 0.92rem; font-weight: 700; color: #065f46;
+  text-align: left; width: fit-content; max-width: 100%;
+  transition: background 150ms, transform 80ms;
 }
-.nova-prompt-card:hover {
-  border-color: var(--blue,#047857);
-  box-shadow: 0 4px 16px rgba(4,120,87,0.1);
-  transform: translateY(-1px);
-}
+.nova-prompt-card:hover { background: #BBF7D0; transform: translateY(-1px); }
 .nova-prompt-card:active { transform: translateY(0); }
-.nova-prompt-icon {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: #065f46; color: #fff;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.nova-prompt-label { font-weight: 600; }
 
 /* ─── Messages ────────────────────────────────── */
 
@@ -196,14 +195,14 @@
   align-items: flex-end;
 }
 .nova-user-bubble {
-  background: rgba(0,0,0,0.06);
-  color: var(--ink-1,#111);
-  padding: 0.65rem 1rem;
+  background: #0E2A1C;
+  color: #fff;
+  padding: 0.65rem 1.1rem;
   border-radius: 20px 20px 4px 20px;
   font-size: 0.88rem;
   line-height: 1.5;
   max-width: 75%;
-  font-weight: 500;
+  font-weight: 600;
 }
 .nova-msg-time {
   font-size: 0.7rem;
@@ -212,29 +211,39 @@
   padding-right: 2px;
 }
 
-/* Nova message — no bubble, inline text */
+/* Nova message — boxed, cream card */
 .nova-msg-row.nova { align-items: flex-start; }
-
-.nova-msg-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-}
-.av-nova { background: #065f46; color: #fff; margin-top: 2px; }
 
 .nova-nova-content { flex: 1; min-width: 0; }
 
-.nova-nova-text {
-  font-size: 0.9rem;
-  line-height: 1.65;
-  color: var(--ink-1,#111);
+.nova-nova-box {
+  background: var(--bg,#F4F2EC);
+  border: 1.5px solid var(--border,#E4E4E8);
+  border-radius: 18px;
+  padding: 1.1rem 1.3rem;
   max-width: 680px;
 }
+
+.nova-nova-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.65;
+  color: var(--ink-1,#111);
+}
+
+.nova-msg-link {
+  color: #065f46;
+  font-weight: 700;
+  text-decoration: none;
+}
+.nova-msg-link:hover { text-decoration: underline; }
 
 .nova-msg-meta {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   margin-top: 0.5rem;
+  padding-left: 0.2rem;
 }
 .nova-msg-time-inline {
   font-size: 0.7rem;
@@ -255,46 +264,74 @@
 .nova-follow-ups {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  margin-top: 0.85rem;
-  max-width: 460px;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  max-width: 680px;
 }
 .nova-follow-card {
-  display: flex; align-items: center; gap: 0.65rem;
-  padding: 0.7rem 0.9rem;
+  display: flex; align-items: center; gap: 0.9rem;
+  padding: 1rem 1.15rem;
   background: var(--bg-white,#fff);
   border: 1.5px solid var(--border,#E4E4E8);
-  border-radius: 14px; cursor: pointer;
-  font-size: 0.84rem; font-weight: 600; color: var(--ink-1,#111);
-  text-align: left; transition: border-color 130ms, box-shadow 130ms, transform 70ms;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  border-radius: 16px; cursor: pointer;
+  text-align: left; width: 100%;
+  transition: border-color 130ms, transform 70ms;
 }
 .nova-follow-card:hover {
   border-color: var(--blue,#047857);
-  box-shadow: 0 3px 12px rgba(4,120,87,0.1);
   transform: translateY(-1px);
 }
 .nova-follow-card:active { transform: none; }
 .nova-follow-icon {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: #065f46; color: #fff;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #DCFCE7; color: #15803D;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
+.nova-follow-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nova-follow-title { font-size: 0.95rem; font-weight: 700; color: var(--ink-1,#111); }
+.nova-follow-sub { font-size: 0.82rem; font-weight: 500; color: var(--ink-3,#888); }
 
-/* Typing dots */
-.nova-typing {
-  display: flex; align-items: center; gap: 5px; padding: 0.3rem 0;
+/* Loading row — animated mascot + status text, unboxed */
+.nova-loading-row {
+  display: flex; align-items: center; gap: 0.65rem;
+  padding: 0.3rem 0;
 }
-.nova-typing span {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--ink-3,#888);
-  animation: novaDot 1.2s infinite ease-in-out;
+.nova-loading-text {
+  font-size: 0.9rem; font-weight: 600; color: var(--ink-3,#888);
 }
-.nova-typing span:nth-child(2) { animation-delay: 0.2s; }
-.nova-typing span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes novaDot {
-  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
-  40%            { opacity: 1;    transform: scale(1);   }
+.nova-mascot-anim {
+  animation: novaMascotBob 1.6s ease-in-out infinite;
+}
+@keyframes novaMascotBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.nova-mascot-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: novaSparkPulse 1.6s ease-in-out infinite;
+}
+@keyframes novaSparkPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.2);  }
+}
+
+/* Idle — gentle but clearly-visible ambient loop for static hero moments (not "thinking") */
+.nova-mascot-idle {
+  animation: novaMascotIdleSway 2.1s ease-in-out infinite;
+}
+@keyframes novaMascotIdleSway {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-6px) rotate(-3.5deg); }
+}
+.nova-mascot-spark-idle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: novaSparkTwinkle 2.1s ease-in-out infinite;
+}
+@keyframes novaSparkTwinkle {
+  0%, 100% { opacity: 0.6; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.25); }
 }
 
 /* Message text formatting */
@@ -316,8 +353,8 @@
   display: flex; align-items: flex-end; gap: 0.55rem;
   background: var(--bg,#F9F9F7);
   border: 1.5px solid var(--border,#E4E4E8);
-  border-radius: 18px;
-  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  border-radius: 999px;
+  padding: 0.55rem 0.55rem 0.55rem 1.15rem;
   transition: border-color 150ms, box-shadow 150ms;
   max-width: 760px; margin: 0 auto;
 }
@@ -333,7 +370,7 @@
 .nova-textarea::placeholder { color: var(--ink-4,#aaa); }
 
 .nova-send {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 36px; height: 36px; border-radius: 50%;
   background: var(--blue,#047857); color: #fff;
   border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;

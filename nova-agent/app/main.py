@@ -14,6 +14,7 @@ from app.models import (
     TaskSuggestRequest, TaskSuggestResponse, SuggestedTask,
     UniversitySuggestionsRequest, UniversitySuggestion, UniversitySuggestionsResponse,
     ListAnalysis, ListedSchoolNote,
+    ScholarshipMatchRequest, ScholarshipMatch, ScholarshipMatchesResponse,
     ActivityReviewRequest, ActivityReviewResponse,
 )
 from app.graphs.chat_graph import run_chat, stream_chat
@@ -22,6 +23,7 @@ from app.tools.student_tools import set_current_user
 from app.prompts.system_prompts import (
     ESSAY_REVIEW_PROMPT, SUGGEST_TASKS_PROMPT,
     UNIVERSITY_SUGGESTIONS_PROMPT, LIST_ANALYSIS_PROMPT, ACTIVITY_REVIEW_PROMPT,
+    SCHOLARSHIP_MATCH_PROMPT,
 )
 from app.supabase_client import supabase
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -611,6 +613,168 @@ def university_suggestions(req: UniversitySuggestionsRequest):
 
     # Single non-blocking nudge when only one key field is missing.
     return UniversitySuggestionsResponse(suggestions=suggestions, missing_info=missing, list_analysis=list_analysis)
+
+
+# ── Scholarship matches ──
+
+_SCHOLARSHIP_TIERS = {"strong", "possible", "stretch"}
+
+
+@app.post("/api/scholarship-matches", response_model=ScholarshipMatchesResponse)
+def scholarship_matches(req: ScholarshipMatchRequest):
+    if not _check_rate(req.user_id, "sch_match", 10):
+        raise HTTPException(status_code=429, detail="Rate limit reached (10 match runs/hour).")
+
+    # 1. Profile
+    try:
+        profile = (
+            supabase.table("profiles")
+            .select(
+                "full_name, grade_level, class_year, country, gpa, sat_score, act_score, "
+                "intended_major, interests, target_countries, budget, goals"
+            )
+            .eq("id", req.user_id)
+            .single()
+            .execute()
+        ).data or {}
+    except Exception:
+        profile = {}
+
+    # 2. Missing-info — need a home country and at least some academic/interest signal.
+    missing = []
+    if not profile.get("country"):
+        missing.append("Your home country — it decides which scholarships you're eligible for")
+    if not (profile.get("gpa") or profile.get("sat_score") or profile.get("act_score")):
+        missing.append("At least one academic marker (GPA or a test score)")
+    if not (profile.get("intended_major") or profile.get("interests")):
+        missing.append("Intended major or academic interests")
+    if len(missing) >= 2:
+        return ScholarshipMatchesResponse(matches=[], missing_info=missing)
+
+    # 3. Activities + honors — the leadership/impact signal that powers a real rationale.
+    try:
+        activities = (
+            supabase.table("activities")
+            .select("title, role, organization, description, activity_type")
+            .eq("profile_id", req.user_id)
+            .order("sort_order")
+            .limit(12)
+            .execute()
+        ).data or []
+    except Exception:
+        activities = []
+    try:
+        honors = (
+            supabase.table("honors")
+            .select("title, level, description")
+            .eq("profile_id", req.user_id)
+            .order("sort_order")
+            .limit(10)
+            .execute()
+        ).data or []
+    except Exception:
+        honors = []
+
+    # 4. Catalog
+    try:
+        scholarships = (
+            supabase.table("scholarships").select("*").order("sort_order").execute()
+        ).data or []
+    except Exception:
+        scholarships = []
+    if not scholarships:
+        return ScholarshipMatchesResponse(matches=[], missing_info=["No scholarships in the catalog yet."])
+
+    # 5. Deterministic eligibility gate — zero hallucination risk lives here.
+    #    Product targets undergraduate applicants, so graduate-only awards are dropped.
+    home = (profile.get("country") or "").strip().lower()
+    eligible, ineligible_ids = [], []
+    for s in scholarships:
+        if s.get("level") == "graduate":
+            ineligible_ids.append(s["id"])
+            continue
+        if home:
+            allow = [c.strip().lower() for c in (s.get("eligible_countries") or [])]
+            deny = [c.strip().lower() for c in (s.get("excluded_countries") or [])]
+            if allow and home not in allow:
+                ineligible_ids.append(s["id"])
+                continue
+            if home in deny:
+                ineligible_ids.append(s["id"])
+                continue
+        eligible.append(s)
+
+    if not eligible:
+        return ScholarshipMatchesResponse(matches=[], missing_info=[], ineligible_ids=ineligible_ids)
+
+    # 6. LLM scoring of the survivors
+    profile_lines = [f"{k}: {v}" for k, v in profile.items() if v not in (None, "", [])]
+    act_lines = [
+        f"- {a.get('title', '?')}"
+        + (f" ({a.get('role')})" if a.get("role") else "")
+        + (f" — {a.get('description')}" if a.get("description") else "")
+        for a in activities
+    ]
+    hon_lines = [
+        f"- {h.get('title', '?')}" + (f" [{h.get('level')}]" if h.get("level") else "")
+        for h in honors
+    ]
+    candidates = [
+        {
+            "scholarship_id": s["id"], "name": s["name"], "org": s["org"], "type": s["type"],
+            "level": s["level"], "need_based": s["need_based"], "merit_based": s["merit_based"],
+            "fields": s.get("fields") or [],
+            "destination_countries": s.get("destination_countries") or [],
+            "restriction_note": s.get("restriction_note") or "",
+            "description": s.get("description") or "",
+        }
+        for s in eligible
+    ]
+    human = (
+        "STUDENT PROFILE:\n" + "\n".join(profile_lines)
+        + "\n\nACTIVITIES:\n" + ("\n".join(act_lines) if act_lines else "(none listed)")
+        + "\n\nHONORS:\n" + ("\n".join(hon_lines) if hon_lines else "(none listed)")
+        + "\n\nELIGIBLE CANDIDATE SCHOLARSHIPS:\n" + json.dumps(candidates, default=str)
+    )
+    try:
+        result = llm.invoke([
+            SystemMessage(content=SCHOLARSHIP_MATCH_PROMPT),
+            HumanMessage(content=human),
+        ])
+        raw = result.content if isinstance(result.content, str) else str(result.content)
+    except Exception as exc:
+        print(f"[Nova] scholarship_matches LLM error: {type(exc).__name__}: {exc}")
+        raise HTTPException(status_code=502, detail="Nova could not rank scholarships. Try again.")
+
+    parsed = _parse_json_object(raw) or {}
+    valid_ids = {s["id"] for s in eligible}
+    matches: list[ScholarshipMatch] = []
+    seen = set()
+    for item in (parsed.get("matches") or []):
+        if not isinstance(item, dict):
+            continue
+        sid = str(item.get("scholarship_id", "")).strip()
+        if sid not in valid_ids or sid in seen:
+            continue
+        try:
+            score = int(item.get("match_score", 0))
+        except (TypeError, ValueError):
+            score = 0
+        score = max(0, min(100, score))
+        tier = str(item.get("tier", "")).strip().lower()
+        if tier not in _SCHOLARSHIP_TIERS:
+            tier = "strong" if score >= 80 else "possible" if score >= 55 else "stretch"
+        matches.append(ScholarshipMatch(
+            scholarship_id=sid,
+            match_score=score,
+            tier=tier,
+            rationale=str(item.get("rationale", "")).strip(),
+            why_fits=str(item.get("why_fits", "")).strip(),
+        ))
+        seen.add(sid)
+
+    matches.sort(key=lambda m: m.match_score, reverse=True)
+    return ScholarshipMatchesResponse(matches=matches, missing_info=[], ineligible_ids=ineligible_ids)
 
 
 # ── Activity review ──

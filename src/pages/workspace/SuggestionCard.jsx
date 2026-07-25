@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Plus, X, CalendarDays } from 'lucide-react';
+import { Compass, Plus, X } from 'lucide-react';
 import LogoTile from '../../components/LogoTile.jsx';
 
 const CAT_CLASS = {
@@ -46,7 +46,7 @@ export default function SuggestionCard({ suggestion: s, onAccept, onDismiss }) {
 
         <div className="ws-card2-bottom-right">
           <span className="ws-card2-nova">
-            <Sparkles size={12} /> Nova Suggested
+            <Compass size={12} /> Nova Suggested
           </span>
           {uni && (
             <LogoTile

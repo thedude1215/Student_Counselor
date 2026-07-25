@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, Plus, GraduationCap, Sparkles, X, ArrowUpDown, UserRound, Check, Loader2, ArrowRight } from 'lucide-react';
+import { Trash2, Plus, GraduationCap, Compass, X, ArrowUpDown, UserRound, Check, Loader2, ArrowRight } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
 import UniversitySearchGrid from '../../components/UniversitySearchGrid';
+import NovaMascot from '../../components/NovaMascot.jsx';
+import Confetti from './Confetti.jsx';
+import { SegmentDonut } from './HeroRings.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchCollegeList, updateCollegeListItem, removeFromCollegeList, addToCollegeList } from '../../api/workspace.js';
 import { getUniversitySuggestions } from '../../api/nova.js';
@@ -15,6 +18,14 @@ const TIERS = [
   { key: 'match',  label: 'Match' },
   { key: 'likely', label: 'Likely' },
 ];
+
+// A list is "balanced" once it has at least one of each tier and 4+ schools.
+function isListBalanced(list) {
+  const r = list.filter(i => i.tier === 'reach').length;
+  const m = list.filter(i => i.tier === 'match').length;
+  const l = list.filter(i => i.tier === 'likely').length;
+  return r >= 1 && m >= 1 && l >= 1 && list.length >= 4;
+}
 
 const TABS = [
   { key: 'list',     label: 'Your List' },
@@ -32,6 +43,7 @@ export default function CollegeList() {
   const [addedIds, setAddedIds] = useState(new Set());
   const [sortKey, setSortKey] = useState('tier');
   const [tab, setTab] = useState('list');
+  const [celebrate, setCelebrate] = useState(false);   // confetti when list becomes balanced
 
   useEffect(() => {
     if (!user) return;
@@ -39,8 +51,11 @@ export default function CollegeList() {
   }, [user]);
 
   async function changeTier(id, tier) {
+    const wasBalanced = isListBalanced(items);
     const updated = await updateCollegeListItem(id, { tier });
-    setItems(items.map(i => (i.id === id ? updated : i)));
+    const next = items.map(i => (i.id === id ? updated : i));
+    setItems(next);
+    if (!wasBalanced && isListBalanced(next)) setCelebrate(true);
   }
 
   async function remove(id) {
@@ -92,23 +107,62 @@ export default function CollegeList() {
   const missingInfo = recs?.missing_info || [];
   const listAnalysis = recs?.list_analysis || null;
 
+  // ── List-at-a-glance stats ──
+  const reachCount  = items.filter(i => i.tier === 'reach').length;
+  const matchCount  = items.filter(i => i.tier === 'match').length;
+  const likelyCount = items.filter(i => i.tier === 'likely').length;
+  const total = items.length;
+  const balanced = isListBalanced(items);
+  const balanceRead =
+    total === 0                                   ? 'Add schools to start building a balanced list'
+    : balanced                                    ? 'Well-balanced across reach, match & likely'
+    : likelyCount === 0                           ? 'No likely schools yet — add a safe bet'
+    : matchCount === 0                            ? 'Add a few match schools to anchor your list'
+    : reachCount > matchCount + likelyCount       ? 'Reach-heavy — balance with matches & likelies'
+    : 'Keep balancing across reach, match & likely';
+
   return (
-    <div className="ws-section">
-      <header className="ws-header">
-        <div>
-          <h1 className="ws-title">College List</h1>
-          <p className="ws-subtitle">{items.length} school{items.length !== 1 ? 's' : ''} on your list</p>
+    <div className="ws-section ah-page">
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
+
+      {/* ── Forest hero stat band ── */}
+      <div className="ah-hero">
+        <div className="ah-hero-main">
+          <span className="ah-hero-eyebrow"><span className="ah-hero-dot" /> Your college list</span>
+          <h1 className="ah-hero-title">College List</h1>
+          <p className="ah-hero-sub">{total} school{total !== 1 ? 's' : ''} · {balanceRead}{balanced ? ' ✓' : ''}</p>
+
+          <div className="ah-hero-actions">
+            <button className="ah-hero-btn ghost" onClick={() => setTab('discover')} disabled={loadingRecs}>
+              {loadingRecs ? <Loader2 size={15} className="ws-spin" /> : <NovaMascot size={16} />}
+              {loadingRecs ? 'Thinking…' : 'AI Suggestions'}
+            </button>
+            <button className="ah-hero-btn solid" onClick={() => setTab('browse')}>
+              <Plus size={15} /> Add schools
+            </button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="ws-btn ws-btn-ai" onClick={() => setTab('discover')} disabled={loadingRecs}>
-            {loadingRecs ? <Loader2 size={15} className="ws-spin" /> : <Sparkles size={15} />}
-            {loadingRecs ? 'Thinking…' : 'AI Suggestions'}
-          </button>
-          <button className="ws-btn ws-btn-primary" onClick={() => setTab('browse')}>
-            <Plus size={16} /> Add schools
-          </button>
+        <div className="ah-hero-right cl-hero-right">
+          <div className="ah-hero-mascot cl-hero-mascot"><NovaMascot size={38} idle /></div>
+          <div className="cl-donut-wrap">
+            <SegmentDonut
+              segments={[
+                { value: reachCount, color: '#F87171' },
+                { value: matchCount, color: '#FBBF24' },
+                { value: likelyCount, color: '#4ADE80' },
+              ]}
+              total={total}
+              centerBig={total}
+              centerCap="SCHOOLS"
+            />
+            <div className="cl-donut-legend">
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#F87171' }} />{reachCount} reach</span>
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#FBBF24' }} />{matchCount} match</span>
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#4ADE80' }} />{likelyCount} likely</span>
+            </div>
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* ── Tabs ── */}
       <div className="ws-clist-tabs">
@@ -131,7 +185,7 @@ export default function CollegeList() {
       {tab === 'discover' && recs && !loadingRecs && (
         <div className="ws-feedback-panel ws-recs-panel">
           <div className="ws-feedback-header">
-            <span><Sparkles size={14} /> Nova's Suggestions</span>
+            <span><NovaMascot size={16} /> Nova's Suggestions</span>
             <button className="ws-icon-btn" onClick={() => setTab('list')}><X size={14} /></button>
           </div>
 
@@ -218,7 +272,7 @@ export default function CollegeList() {
                       </ul>
                     )}
                     {s.strategy_note && (
-                      <p className="ws-recs-strategy"><Sparkles size={11} /> {s.strategy_note}</p>
+                      <p className="ws-recs-strategy"><Compass size={11} /> {s.strategy_note}</p>
                     )}
                   </div>
                 );
@@ -255,7 +309,7 @@ export default function CollegeList() {
             </button>
             <div className="ws-clist-th ws-clist-th-static">Nova fit</div>
             <button className="ws-clist-th" onClick={() => setSortKey('tier')}>
-              Category <ArrowUpDown size={12} />
+              Your tier <ArrowUpDown size={12} />
             </button>
             <div className="ws-clist-th" />
           </div>
@@ -280,7 +334,7 @@ export default function CollegeList() {
                       state={{ prompt: `What are my chances of getting into ${u.name}? Be honest about my profile's strengths and gaps.` }}
                       className="ws-clist-chances"
                     >
-                      <Sparkles size={11} /> See my chances <ArrowRight size={11} />
+                      <NovaMascot size={13} /> See my chances <ArrowRight size={11} />
                     </Link>
                   </div>
                 </div>

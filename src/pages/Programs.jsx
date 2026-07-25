@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Calendar, Clock, ExternalLink } from 'lucide-react';
+import { Search, ExternalLink } from 'lucide-react';
 import LogoTile from '../components/LogoTile';
 import { fetchPrograms } from '../api/catalog';
 import './Programs.css';

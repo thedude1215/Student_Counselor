@@ -1,19 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Trash2, Plus, Sparkles, ArrowLeft, ArrowRight, Pencil, GraduationCap, ThumbsUp, ThumbsDown, Square } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, Compass, ArrowLeft, ArrowUp, Pencil, ThumbsUp, ThumbsDown, Square } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { sendMessageStream, listConversations, createConversation, loadMessages, deleteConversation } from '../api/nova.js';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import NovaMascot from '../components/NovaMascot.jsx';
 import './Nova.css';
 
 const PROMPTS = [
-  { icon: <Sparkles size={18} />, label: 'Help me build my college list', prompt: 'Help me build a balanced college list based on my profile.' },
-  { icon: <Pencil size={18} />,   label: 'Review my essay',               prompt: 'Can you help me review and improve my college essay?' },
-  { icon: <GraduationCap size={18} />, label: 'Find scholarships I can get', prompt: 'What scholarships can I apply to as an international student?' },
+  { label: 'Help me build my college list', prompt: 'Help me build a balanced college list based on my profile.' },
+  { label: 'Review my essay',               prompt: 'Can you help me review and improve my college essay?' },
+  { label: 'Find scholarships I can get',   prompt: 'What scholarships can I apply to as an international student?' },
+];
+
+const LOADING_PHRASES = [
+  'Looking into that for you…',
+  'Digging into your profile…',
+  'Thinking it through…',
+  'Checking your college list…',
 ];
 
 const FOLLOW_UPS = [
-  { icon: <Sparkles size={16} />, label: 'Help me choose a major', prompt: 'Help me choose a major that suits my interests and goals.' },
-  { icon: <Pencil size={16} />,   label: 'Find the right colleges for me', prompt: 'Based on my profile, which colleges should I apply to?' },
+  { icon: <Compass size={20} />, label: 'Help me choose a major', sub: 'Explore majors based on your interests and goals', prompt: 'Help me choose a major that suits my interests and goals.' },
+  { icon: <Pencil size={20} />,   label: 'Find the right colleges for me', sub: 'Get personalized college matches based on your profile', prompt: 'Based on my profile, which colleges should I apply to?' },
 ];
 
 function formatTime(date) {
@@ -50,7 +58,8 @@ function renderContent(text) {
 function inlineFormat(text) {
   return escapeHtml(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g, '<a href="$2" class="nova-msg-link" data-internal-link="true">$1</a>');
 }
 
 function escapeHtml(text) {
@@ -71,7 +80,10 @@ export default function Nova() {
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const pendingPromptRef = useRef(location.state?.prompt || null);
+  const rawContext = location.state?.from || null;
+  const locationContext = rawContext === 'Home' ? 'Home overview' : rawContext;
 
   const hasMessages = messages.length > 0;
 
@@ -152,7 +164,8 @@ export default function Nova() {
     setInput('');
     setLoading(true);
     try {
-      const novaMsg = { role: 'nova', text: '', time: new Date() };
+      const loadingPhrase = LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)];
+      const novaMsg = { role: 'nova', text: '', time: new Date(), loadingPhrase };
       setMessages(prev => [...prev, novaMsg]);
       let cancelled = false;
       abortRef.current = () => { cancelled = true; setLoading(false); };
@@ -214,7 +227,7 @@ export default function Nova() {
     return (
       <div className="nova-page nova-page-unauth">
         <div className="nova-unauth-card">
-          <div className="nova-brand-icon" style={{ width: 56, height: 56, borderRadius: 18, margin: '0 auto 1rem' }}><Sparkles size={26} /></div>
+          <div className="nova-brand-icon" style={{ width: 56, height: 56, margin: '0 auto 1rem' }}><NovaMascot size={56} /></div>
           <h2>Sign in to use Nova</h2>
           <p>Nova needs your profile to give personalized advice.</p>
           <Link to="/auth" className="nova-new-btn" style={{ justifyContent: 'center', marginTop: '1rem' }}>Sign in</Link>
@@ -230,7 +243,7 @@ export default function Nova() {
         <Link to="/dashboard" className="nova-back"><ArrowLeft size={14} /> Back</Link>
 
         <div className="nova-sidebar-brand">
-          <div className="nova-brand-icon"><Sparkles size={17} /></div>
+          <div className="nova-brand-icon"><NovaMascot size={28} /></div>
           <div className="nova-brand-info">
             <div className="nova-brand-name">Nova</div>
             <div className="nova-brand-role">AI Counselor</div>
@@ -270,15 +283,18 @@ export default function Nova() {
           /* ── Welcome ── */
           <div className="nova-welcome">
             <div className="nova-welcome-inner">
-              <div className="nova-welcome-avatar"><Sparkles size={28} /></div>
-              <div className="nova-welcome-text">
-                <p className="nova-welcome-sub">Hi{profile?.first_name ? `, ${profile.first_name}` : ''}. I'm Nova.</p>
-                <h1 className="nova-welcome-title">Here to help you<br />get into your dream school.</h1>
-              </div>
+              <div className="nova-mascot"><NovaMascot size={64} idle /></div>
+              <div className="nova-badge"><span className="nova-badge-dot" />ALWAYS-ON ASSISTANT</div>
+              <h1 className="nova-welcome-title">Ask Nova anything</h1>
+              <p className="nova-tagline">Majors, colleges, chances, money — one thread, the whole journey.</p>
+              <p className="nova-context">
+                {profile?.first_name ? `Hi, ${profile.first_name}. ` : ''}
+                I follow you across the app — your shortlist, your profile, your progress — so context never resets.
+                {locationContext ? ` Right now you're on your ${locationContext}.` : ''}
+              </p>
               <div className="nova-prompts">
                 {PROMPTS.map((p, i) => (
                   <button key={i} className="nova-prompt-card" onClick={() => send(p.prompt)}>
-                    <span className="nova-prompt-icon">{p.icon}</span>
                     <span className="nova-prompt-label">{p.label}</span>
                   </button>
                 ))}
@@ -287,7 +303,15 @@ export default function Nova() {
           </div>
         ) : (
           /* ── Messages ── */
-          <div className="nova-messages">
+          <div
+            className="nova-messages"
+            onClick={e => {
+              const link = e.target.closest('[data-internal-link]');
+              if (!link) return;
+              e.preventDefault();
+              navigate(link.getAttribute('href'));
+            }}
+          >
             {messages.map((m, i) => {
               const isTyping = m.role === 'nova' && !m.text;
               const isLastNova = m.role === 'nova' && i === messages.length - 1 && m.text && !loading;
@@ -303,13 +327,17 @@ export default function Nova() {
 
               return (
                 <div key={i} className="nova-msg-row nova">
-                  <div className="nova-msg-avatar av-nova"><Sparkles size={14} /></div>
                   <div className="nova-nova-content">
                     {isTyping ? (
-                      <div className="nova-typing"><span /><span /><span /></div>
+                      <div className="nova-loading-row">
+                        <NovaMascot size={28} animated />
+                        <span className="nova-loading-text">{m.loadingPhrase || 'Looking into that for you…'}</span>
+                      </div>
                     ) : (
                       <>
-                        <div className="nova-nova-text">{renderContent(m.text)}</div>
+                        <div className="nova-nova-box">
+                          <div className="nova-nova-text">{renderContent(m.text)}</div>
+                        </div>
                         <div className="nova-msg-meta">
                           <span className="nova-msg-time-inline">{formatTime(m.time)}</span>
                           <button
@@ -326,7 +354,10 @@ export default function Nova() {
                             {FOLLOW_UPS.map((f, fi) => (
                               <button key={fi} className="nova-follow-card" onClick={() => send(f.prompt)}>
                                 <span className="nova-follow-icon">{f.icon}</span>
-                                <span>{f.label}</span>
+                                <span className="nova-follow-text">
+                                  <span className="nova-follow-title">{f.label}</span>
+                                  <span className="nova-follow-sub">{f.sub}</span>
+                                </span>
                               </button>
                             ))}
                           </div>
@@ -363,7 +394,7 @@ export default function Nova() {
                 onClick={() => send(input)}
                 disabled={!input.trim()}
               >
-                <ArrowRight size={15} />
+                <ArrowUp size={15} />
               </button>
             )}
           </div>

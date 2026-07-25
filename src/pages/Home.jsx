@@ -1,17 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, ListChecks, MessageCircle, PenLine } from 'lucide-react';
+import { ArrowRight, CalendarDays, Award, Target, Flag } from 'lucide-react';
 import LogoTile from '../components/LogoTile';
+import FlightPath from '../components/FlightPath';
 import HeroConnectionLine from '../components/HeroConnectionLine';
-import {
-  comparisonRows,
-  counselorFeatures,
-  getFeaturedStories,
-  getFeaturedUniversities,
-  homeStats,
-  processSteps,
-  storyCardColors,
-} from '../api/catalog';
+import NovaMascot from '../components/NovaMascot';
+import { ProfileArt, CollegeListArt, EssayArt, TasksArt } from './HomeActArt.jsx';
+import { getFeaturedUniversities } from '../api/catalog';
+import { useAuth } from '../context/AuthContext.jsx';
 import './Home.css';
 
 /* ─── Count-up animation hook ─── */
@@ -57,138 +53,147 @@ function StatCounter({ target, suffix, label }) {
   );
 }
 
-/* ─── Feature bento mockups ─── */
-function FeatureMockup({ type }) {
-  if (type === 'essay-review') {
-    return (
-      <div className="mockup essay-mockup">
-        <div className="mockup-toolbar">
-          <span>Personal statement</span>
-          <span>Reviewing</span>
-        </div>
-        <p>
-          My earliest memory of engineering was not a robot kit, but the water
-          pump my father fixed every monsoon. I{' '}
-          <span className="typo">
-            <s>redisigned</s>
-            <span className="correction">redesigned</span>
-          </span>{' '}
-          his solution at 12, using PVC pipe and a{' '}
-          <span className="typo">
-            <s>bicicle</s>
-            <span className="correction">bicycle</span>
-          </span>{' '}
-          pump.
-        </p>
-        <div className="essay-note">
-          <PenLine size={14} />
-          Strong opening. Add one concrete detail about the problem you solved.
-        </div>
-      </div>
-    );
-  }
-
-  if (type === 'deadline-list') {
-    return (
-      <div className="mockup task-mockup">
-        {['Yale supplement', 'CSS Profile', 'Recommendation reminder'].map((task, index) => (
-          <div key={task} className="task-row">
-            <CheckCircle2 size={16} />
-            <span>{task}</span>
-            <strong>{index === 0 ? 'Today' : `Nov ${12 + index}`}</strong>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (type === 'message-nudge') {
-    return (
-      <div className="mockup message-mockup">
-        <div className="message-bubble incoming">Your Brown deadline is in 5 days.</div>
-        <div className="message-bubble outgoing">What should I do first?</div>
-        <div className="message-bubble incoming">Finish the activity essay, then send your counselor transcript request.</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mockup college-mockup">
-      {['MIT', 'Brown', 'NYU Abu Dhabi'].map((school, index) => (
-        <div key={school} className="college-row">
-          <span>{school}</span>
-          <strong>{['Reach', 'Match', 'Scholarship fit'][index]}</strong>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─── Story card (used in marquee) ─── */
-function StoryCard({ story, colorIndex }) {
-  const cardColor = storyCardColors[colorIndex % storyCardColors.length];
-  return (
-    <Link
-      to="/stories"
-      className="story-card marquee-card"
-      style={{ background: cardColor.bg, borderColor: cardColor.border }}
-    >
-      <img
-        src={story.photo}
-        alt={story.name}
-        className="story-card-photo"
-        width="300"
-        height="276"
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-      />
-      <div className="story-card-body">
-        <div className="story-card-uni">
-          <LogoTile item={story} size={24} radius={7} />
-          <span>{story.university}</span>
-        </div>
-        <h3 className="story-card-title">{story.title}</h3>
-        <div className="story-card-footer">
-          <div className="story-card-name">{story.name.split(' ')[0]}</div>
-          <div className="story-card-from">from {story.country} {story.flag}</div>
-          <span className="story-card-read">Read the story <ArrowRight size={13} /></span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-/* ─── University pill for waitlist ticker ─── */
-const WAITLIST_UNIS = [
-  'Harvard', 'MIT', 'Stanford', 'Cambridge', 'Oxford',
-  'Caltech', 'ETH Zürich', 'Imperial', 'NUS', 'Yale',
-  'Princeton', 'Columbia', 'Brown', 'Dartmouth', 'Cornell',
-  'Penn', 'Duke', 'NYU Abu Dhabi', 'UCL', 'Edinburgh',
-  'U of Toronto', 'UBC', 'Minerva', 'Sciences Po', 'LSE',
-  'Tsinghua', 'HKU', 'KAIST', 'Waseda', 'MBZUAI',
+/* ─── The four acts ───
+ * Names and headlines are kept identical to the dashboard's Journey map
+ * (see workspace/Journey.jsx). A visitor who signs up lands in a structure
+ * they have already been walked through — that continuity is the point.
+ */
+const ACTS = [
+  {
+    num: 'I',
+    name: 'The Foundation',
+    headline: 'Tell us who you are.',
+    copy: `Nova opens the way a counselor would on day one — your grades, your
+           budget, your country, the schools you daydream about. Everything that
+           follows is shaped by that. No generic advice, ever.`,
+    cta: 'Build your profile',
+    to: '/dashboard/profile',
+    expression: 'curious',
+    holding: 'compass',
+    note: 'Nova knows you now',
+  },
+  {
+    num: 'II',
+    name: 'The List',
+    headline: 'Decide what to study, and where.',
+    copy: `No flattery, no filler schools. Nova weighs your grades, your budget,
+           and real international admit rates — then tells you straight: reach,
+           match, or likely, and exactly why.`,
+    cta: 'Explore universities',
+    to: '/universities',
+    expression: 'thinking',
+    holding: 'map',
+    note: '94% profile fit',
+    noteGreen: true,
+  },
+  {
+    num: 'III',
+    name: 'The Story',
+    headline: 'Write essays that sound like you.',
+    copy: `From blank page to final draft — feedback anchored to your exact
+           sentences, in your own voice. Nova never writes it for you; it makes
+           what you wrote impossible to ignore.`,
+    cta: 'Get your draft reviewed',
+    to: '/dashboard/essays',
+    expression: 'focused',
+    holding: 'pen',
+    note: 'In your voice \u2713',
+  },
+  {
+    num: 'IV',
+    name: 'The Finish',
+    headline: 'Track every deadline to the end.',
+    copy: `Every deadline, test date, and supplement in one place, ordered by what
+           actually matters this week. Nova updates it the moment something moves
+           — and nudges you before anything slips.`,
+    cta: 'See your timeline',
+    to: '/dashboard/tasks',
+    expression: 'cheering',
+    holding: 'check',
+    note: '4 days to your first deadline',
+    noteGreen: true,
+  },
 ];
 
-/* Split into 4 rows, then duplicate for seamless loop */
-function chunkForRows(arr, rows) {
-  const perRow = Math.ceil(arr.length / rows);
-  return Array.from({ length: rows }, (_, i) => {
-    const slice = arr.slice(i * perRow, (i + 1) * perRow);
-    return [...slice, ...slice]; // duplicate for seamless loop
-  });
+const FAQS = [
+  {
+    q: 'Is using Nova considered cheating?',
+    a: "No. Nova works the way a school counselor does — it plans with you, reviews your work, and tells you the truth about your chances. It never writes essays for you or invents achievements. Wealthy families have always had counselors; Nova just makes that normal for everyone.",
+  },
+  {
+    q: 'Does Nova write my essays for me?',
+    a: "Never. Nova reviews your drafts line by line — what works, what falls flat, and how to fix it — but every word stays yours. Admissions officers can spot a ghost-written essay; an essay in your own voice, sharpened by honest feedback, is what actually gets you in.",
+  },
+  {
+    q: "I'm not in the US. Does this actually work for my country?",
+    a: "That's exactly who ScholarPath is built for. Nova knows the Common App, UCAS, and direct-application systems across 40+ destination countries — plus the scholarships, admit rates, and aid policies that apply specifically to international students.",
+  },
+  {
+    q: 'Is ScholarPath free?',
+    a: "Yes. The counselor, the college matching, the essay reviews, the scholarship search — free. We believe the students who need this most are precisely the ones who can't pay for it.",
+  },
+  {
+    q: 'Is my data safe?',
+    a: "Your profile is used for one thing: personalizing your guidance. We don't sell your data, and you can delete your account and everything in it at any time.",
+  },
+];
+
+/* ─── One act of the journey ───
+ * data-waypoint marks the anchor the page-long flight path threads through.
+ * `is-seen` lands on the artwork when it scrolls in, so the replicas can play
+ * their real entrance animations (the essay highlight sweep, for one).
+ */
+function Act({ act, index, flip, children }) {
+  const artRef = useRef(null);
+  const [seen, setSeen] = useState(false);
+
+  useEffect(() => {
+    const el = artRef.current;
+    if (!el || seen) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setSeen(true);
+        observer.disconnect();
+      },
+      { threshold: 0.35 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [seen]);
+
+  return (
+    <section className={`act act-${index + 1}`} data-waypoint={`act-${index + 1}`}>
+      <div className={`wrap act-wrap${flip ? ' flip' : ''}`}>
+        <div className="act-text">
+          <div className="act-label">
+            <span className="act-badge">
+              <NovaMascot size={22} expression={act.expression} />
+            </span>
+            <span className="act-num">Act {act.num}</span>
+            <span className="act-name">{act.name}</span>
+          </div>
+          <h2 className="act-h2">{act.headline}</h2>
+          <p className="act-sub">{act.copy}</p>
+          <Link to={act.to} className="act-link">
+            {act.cta} <ArrowRight size={15} />
+          </Link>
+        </div>
+        <div className={`act-art${seen ? ' is-seen' : ''}`} ref={artRef}>
+          {children}
+          <div className={`sticker-note${act.noteGreen ? ' note-green' : ''}`}>{act.note}</div>
+          <div className="act-art-nova" aria-hidden="true">
+            <NovaMascot size={104} expression={act.expression} holding={act.holding} idle />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default function Home() {
-  const featuredStories = getFeaturedStories(8); // get 8 for two rows of 4
+  const { user } = useAuth();
   const logoRail = [...getFeaturedUniversities(), ...getFeaturedUniversities()];
-
-  // Split stories into two rows; duplicate for seamless marquee
-  const row1 = featuredStories.slice(0, 4);
-  const row2 = featuredStories.slice(4, 8).length >= 2
-    ? featuredStories.slice(4, 8)
-    : [...featuredStories].reverse().slice(0, 4);
-  const marqueeRow1 = [...row1, ...row1];
-  const marqueeRow2 = [...row2, ...row2];
-
-  const tickerRows = chunkForRows(WAITLIST_UNIS, 4);
 
   /* WhatsApp chat messages */
   const chatMessages = [
@@ -203,22 +208,28 @@ export default function Home() {
   return (
     <main className="home">
 
-      {/* ── Hero ── */}
+      {/* ══════════════════════════════════════
+          DEPARTURE — night. The journey begins.
+      ══════════════════════════════════════ */}
       <HeroConnectionLine />
-      <section className="hero">
+      <FlightPath />
+      <section className="hero" data-waypoint="departure">
+        <div className="hero-mascot" aria-hidden="true"><NovaMascot size={72} idle /></div>
+
         <div className="wrap hero-wrap">
           <h1 className="hero-title fade-up">
             <span id="hero-every" className="hero-every">Talent</span> is Everywhere.<br />
             Opportunity is Not.
           </h1>
           <p className="hero-sub fade-up d1">
-            A top university abroad used to be reserved for the lucky few who happened
-            to have access to a college counselor. <strong>Not anymore.</strong> Nova is
-            the AI counselor that plans, researches, and walks beside you through every step.
+            ScholarPath puts a world-class counselor in every student's pocket. Nova
+            knows your grades, your budget, and your dream schools — and works beside
+            you the whole cycle, from first list to final submit.{' '}
+            <strong>From anywhere on Earth.</strong>
           </p>
           <div className="hero-cta fade-up d2">
             <Link to="/nova" className="btn btn-outline btn-xl">
-              Talk to Nova <ArrowRight size={18} />
+              Start your journey <ArrowRight size={18} />
             </Link>
           </div>
         </div>
@@ -240,15 +251,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Stats with count-up animation ── */}
-      <section className="stats-section">
-        <div className="wrap">
-          <span className="eyebrow on-dark">Trusted by students worldwide</span>
-          <h2 className="stats-headline">
-            10,000+ students are getting into schools nobody thought they could.{' '}
-            <Link to="/stories" className="stats-cta-link">Are you next?</Link>
-          </h2>
-          <div className="stats-row">
+      {/* ══════════════════════════════════════
+          THE RECEIPTS — still night, one notch deeper.
+      ══════════════════════════════════════ */}
+      <section className="stats-section" data-waypoint="receipts">
+        <div className="wrap stats-wrap">
+          <div className="stats-text">
+            <span className="eyebrow on-dark">The receipts</span>
+            <h2 className="stats-headline">
+              Talent is everywhere. These students proved opportunity can be, too.{' '}
+              <Link to="/stories" className="stats-cta-link">Your turn.</Link>
+            </h2>
+          </div>
+          <div className="stats-grid">
             <StatCounter target={12000} suffix="+" label="students onboarded" />
             <StatCounter target={170}   suffix="+" label="countries represented" />
             <StatCounter target={300}   suffix="+" label="acceptances this cycle" />
@@ -257,68 +272,91 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Infinite marquee story carousel ── */}
-      <section className="cards-section" id="student-proof">
-        <div className="wrap">
-          <span className="eyebrow">From others around the world</span>
-          <div className="section-header">
-            <h2 className="section-h2">Real stories</h2>
-            <Link to="/stories" className="see-all">
-              See all <ArrowRight size={14} />
+      {/* ══════════════════════════════════════
+          THE FOUR ACTS — the light comes up, act by act.
+      ══════════════════════════════════════ */}
+
+      {/* ── Act I · The Foundation ── */}
+      <Act act={ACTS[0]} index={0}><ProfileArt /></Act>
+
+      {/* ── Act II · The List ── */}
+      <Act act={ACTS[1]} index={1} flip><CollegeListArt /></Act>
+
+      {/* ── Act III · The Story ── */}
+      <Act act={ACTS[2]} index={2}><EssayArt /></Act>
+
+      {/* ── Act IV · The Finish ── */}
+      <Act act={ACTS[3]} index={3} flip><TasksArt /></Act>
+
+      {/* ══════════════════════════════════════
+          SCHOLARSHIPS — full daylight.
+      ══════════════════════════════════════ */}
+      <section className="feat-section" data-waypoint="scholarships">
+        <div className="wrap feat-wrap">
+          <div className="feat-text">
+            <span className="eyebrow">Money on the table</span>
+            <h2 className="feat-h2">Scholarships that actually fit you.</h2>
+            <p className="feat-sub">
+              Full rides, need-blind schools, country-specific awards — curated
+              for international students and matched to your profile, with every
+              deadline tracked so nothing slips.
+            </p>
+            <Link to={user ? '/dashboard/scholarships' : '/nova'} className="feat-link">
+              Find your scholarships <ArrowRight size={15} />
             </Link>
           </div>
-        </div>
-
-        <div className="marquee-wrapper" aria-label="Student success stories">
-          {/* Row 1 – scrolls left */}
-          <div className="marquee-row">
-            <div className="marquee-track">
-              {marqueeRow1.map((story, index) => (
-                <StoryCard key={`r1-${story.id}-${index}`} story={story} colorIndex={index} />
-              ))}
+          <div className="feat-art">
+            <div className="sticker-card tilt-l">
+              <div className="sticker-card-head">
+                <strong>Schwarzman Scholars</strong>
+                <span className="sticker-pill pill-aid">Full ride</span>
+              </div>
+              <ul className="sticker-rows">
+                <li><Award size={14} /> Tuition + housing + travel</li>
+                <li><CalendarDays size={14} /> Due Sep 9 — 39 days left</li>
+                <li><Target size={14} /> Matched: your leadership profile</li>
+              </ul>
             </div>
-          </div>
-
-          {/* Row 2 – scrolls right */}
-          <div className="marquee-row">
-            <div className="marquee-track reverse">
-              {marqueeRow2.map((story, index) => (
-                <StoryCard key={`r2-${story.id}-${index}`} story={story} colorIndex={index + 2} />
-              ))}
-            </div>
+            <div className="sticker-note tilt-r">$55K+ / year</div>
           </div>
         </div>
       </section>
 
-      {/* ── Counselor bento ── */}
-      <section className="counselor-section">
-        <div className="wrap">
-          <span className="eyebrow">Meet Nova</span>
-          <h2 className="counselor-title">
-            Not a chatbot. A <span className="counselor-word">counselor</span> that
-            plans, guides, reviews, and follows up until you hit submit
-          </h2>
-          <p className="counselor-sub">
-            Most AI tools wait for you to ask the right question. Nova takes weight off
-            your shoulders and turns it into one clear next step. Every day, for the whole cycle.
+      {/* ══════════════════════════════════════
+          THE MAP — dusk. Zoom out; see the whole route.
+      ══════════════════════════════════════ */}
+      <section className="map-section" data-waypoint="map">
+        <div className="wrap map-wrap">
+          <span className="eyebrow on-dark">The whole route</span>
+          <h2 className="map-title">All of it, on one map.</h2>
+          <p className="map-sub">
+            Four acts, twelve milestones, one line from where you are to where
+            you're going. Every student gets the same map — and Nova walks the
+            whole thing beside you.
           </p>
 
-          <div className="bento">
-            {counselorFeatures.map((feature) => (
-              <article key={feature.title} className="bento-card" style={{ background: feature.bg }}>
-                <div>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.desc}</p>
-                </div>
-                <FeatureMockup type={feature.mockup} />
-              </article>
+          <ol className="map-acts">
+            {ACTS.map((act) => (
+              <li key={act.name} className="map-act">
+                <span className="map-act-node">
+                  <Flag size={13} />
+                </span>
+                <span className="map-act-num">Act {act.num}</span>
+                <span className="map-act-name">{act.name}</span>
+              </li>
             ))}
-          </div>
+          </ol>
+
+          <Link to="/nova" className="btn btn-outline btn-lg map-cta">
+            See your map <ArrowRight size={16} />
+          </Link>
         </div>
       </section>
 
-      {/* ── WhatsApp chat bubble section ── */}
-      <section className="whatsapp-section">
+      {/* ══════════════════════════════════════
+          NOVA ON WHATSAPP — night.
+      ══════════════════════════════════════ */}
+      <section className="whatsapp-section" data-waypoint="nova">
         <div className="wrap whatsapp-wrap">
           <div className="whatsapp-text">
             <div className="whatsapp-badge">
@@ -373,126 +411,60 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Workspace + 24/7 counselor dashboard ── */}
-      <section className="workspace-section">
-        <div className="wrap">
-          <span className="eyebrow">Everything in one place</span>
-          <h2 className="workspace-title">
-            Workspace + <span>24/7</span> counselor
+      {/* ══════════════════════════════════════
+          VALUE — night.
+      ══════════════════════════════════════ */}
+      <section className="value-section" data-waypoint="value">
+        <div className="wrap value-wrap">
+          <span className="eyebrow on-dark">Yes, really</span>
+          <h2 className="value-title">
+            A $10,000 counselor.<br />
+            <span>For $0.</span>
           </h2>
-          <p className="workspace-sub">
-            Your whole application in one place, with a counselor on call around the clock.
+          <p className="value-sub">
+            Private counselors charge thousands per application cycle. Nova does the
+            same job — planning, matching, reviewing, reminding — for free, in every
+            timezone. Because talent shouldn't need a trust fund.
           </p>
-          <div className="workspace-shell-outer">
-            <div className="workspace-shell">
-              <aside className="workspace-sidebar">
-                <div className="workspace-brand">ScholarPath</div>
-                {['Home', 'Profile', 'Colleges', 'Essays', 'Tasks'].map((item, index) => (
-                  <div key={item} className={`workspace-nav-item ${index === 0 ? 'active' : ''}`}>{item}</div>
-                ))}
-              </aside>
-              <div className="workspace-main">
-                <p className="workspace-date">Friday, April 24</p>
-                <h3>Good afternoon, Veronica</h3>
-                <p>3 tasks due this week and your first application deadline is in 156 days.</p>
-                <div className="workspace-status">
-                  <span>Overall</span>
-                  <strong>On track</strong>
-                  <p>Your college list, testing plan, and essay drafts are moving together.</p>
-                </div>
-                <div className="workspace-grid">
-                  <div>
-                    <ListChecks size={18} />
-                    <strong>3 due soon</strong>
-                    <span>Application tasks</span>
-                  </div>
-                  <div>
-                    <MessageCircle size={18} />
-                    <strong>2 new notes</strong>
-                    <span>Nova follow-ups</span>
-                  </div>
-                </div>
-              </div>
-              <div className="workspace-chat">
-                <div className="message-bubble incoming">Should I really apply without a perfect SAT?</div>
-                <div className="message-bubble outgoing">Yes. Your research project makes your profile stronger than the score suggests.</div>
-                <div className="message-bubble incoming">Then what should I finish today?</div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* ── Process steps ── */}
-      <section className="process-section">
-        <div className="wrap">
-          <span className="eyebrow">Three simple steps</span>
-          <h2 className="process-title">How ScholarPath works</h2>
-          <div className="process-grid">
-            {processSteps.map((step) => (
-              <article key={step.number} className="process-card">
-                <span>{step.number}</span>
-                <h3>{step.title}</h3>
-                <p>{step.desc}</p>
-              </article>
+      {/* ══════════════════════════════════════
+          FAQ — night.
+      ══════════════════════════════════════ */}
+      <section className="faq-section" data-waypoint="faq">
+        <div className="wrap faq-wrap">
+          <span className="eyebrow on-dark">Still unsure?</span>
+          <h2 className="faq-title">Questions, answered.</h2>
+          <div className="faq-list">
+            {FAQS.map((faq) => (
+              <details key={faq.q} className="faq-item">
+                <summary>{faq.q}</summary>
+                <p>{faq.a}</p>
+              </details>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Comparison table ── */}
-      <section className="comparison-section">
-        <div className="wrap comparison-wrap">
-          <span className="eyebrow on-dark">Why Nova</span>
-          <h2 className="comparison-title">
-            A counselor is different from a generic chatbot
+      {/* ══════════════════════════════════════
+          ARRIVAL — deepest night. The plane lands.
+      ══════════════════════════════════════ */}
+      <section className="arrival-section" data-waypoint="arrival">
+        <div className="wrap arrival-wrap">
+          <div className="arrival-mascot" aria-hidden="true">
+            <NovaMascot size={64} expression="cheering" idle />
+          </div>
+          <h2 className="arrival-title">
+            Your journey starts with one message.
           </h2>
-          <div className="comparison-table">
-            <div className="comparison-head">Generic AI</div>
-            <div className="comparison-head highlight">Nova</div>
-            {comparisonRows.map((row) => (
-              <div key={row.chatgpt} className="comparison-row">
-                <p>{row.chatgpt}</p>
-                <p>{row.nova}</p>
-              </div>
-            ))}
-          </div>
-          <Link to="/nova" className="btn btn-blue btn-xl comparison-cta">
-            Talk to Nova <ArrowRight size={18} />
+          <p className="arrival-sub">
+            No waitlist. No credit card. Tell Nova where you are, and it will draw
+            the rest of the map with you.
+          </p>
+          <Link to="/nova" className="btn btn-outline btn-xl arrival-cta">
+            Start your journey <ArrowRight size={18} />
           </Link>
-        </div>
-      </section>
-
-      {/* ── Waitlist section with university ticker ── */}
-      <section className="waitlist-section">
-        <div className="waitlist-content">
-          <div className="wrap">
-            <div className="waitlist-badge">🎓 Join 12,000+ students</div>
-            <h2 className="waitlist-title">
-              Your dream university is on this list.
-              <br />
-              <span>Let's get you in.</span>
-            </h2>
-            <p className="waitlist-sub">
-              Students from 170+ countries are applying to these universities with Nova's help.
-            </p>
-            <Link to="/nova" className="btn btn-outline btn-xl waitlist-cta">
-              Start for free <ArrowRight size={18} />
-            </Link>
-          </div>
-
-          {/* 4-row scrolling university tickers */}
-          <div className="ticker-stack">
-            {tickerRows.map((row, rowIdx) => (
-              <div key={rowIdx} className="ticker-row" aria-hidden="true">
-                <div className={`ticker-track ${rowIdx % 2 === 1 ? 'reverse' : ''}`}>
-                  {row.map((uni, i) => (
-                    <span key={i} className="uni-pill">{uni}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

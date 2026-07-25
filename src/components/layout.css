@@ -105,6 +105,7 @@
   text-decoration: none;
   transition: all var(--t);
   font-family: var(--font);
+  white-space: nowrap;
 }
 .nav-link:hover  { color: #F4F2EC; background: rgba(244,242,236,0.08); }
 .nav-link.active { color: #F4F2EC; font-weight: 700; }
@@ -128,6 +129,8 @@
   transition: all var(--t);
   font-family: var(--font);
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-nova:hover { border-color: var(--blue); color: var(--blue); }
 
@@ -141,6 +144,7 @@
   border-radius: var(--r-pill);
   transition: color var(--t);
   font-family: var(--font);
+  white-space: nowrap;
 }
 .nav-login:hover { color: var(--blue); }
 
@@ -215,7 +219,14 @@
   font-weight: 700;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
+  /* .nav-link's base color (rgba(244,242,236,.75), cream) is meant for the
+     dark glass navbar. This drawer is a near-white overlay (rgba(255,255,255,.98))
+     and never overrode it, so every link rendered at roughly cream-on-white —
+     about 1:1 contrast, functionally invisible. */
+  color: var(--ink-2, #3B443C);
 }
+.nav-mobile .nav-link:hover,
+.nav-mobile .nav-link.active { color: var(--blue-dark, #047857); background: none; }
 
 /* ============================================================
    FOOTER
@@ -279,9 +290,28 @@
 .footer-copy   { font-size: 0.78rem; color: rgba(255,255,255,0.2); }
 .footer-legal  { display: flex; gap: 1.5rem; }
 
-@media (max-width: 768px) {
+/* The full logo + 5 links + Log in + Talk to Nova measures ~949px at rest
+   (144 + 465 + 219 + padding). Collapsing at 768px left every width from
+   769–949px — every iPad in portrait included — showing the full nav with too
+   little room: "Talk to Nova" and "Log in" would shrink until their text
+   wrapped, squeezing the pill into a near-circle. 1024px leaves real margin. */
+@media (max-width: 1024px) {
   .nav-links    { display: none; }
   .nav-hamburger { display: flex; }
+}
+
+@media (max-width: 768px) {
   .footer-grid  { grid-template-columns: 1fr 1fr; gap: 2rem; }
   .footer-brand { grid-column: 1 / -1; }
+}
+
+/* On a phone, .nav-cta still carried the logo (118px) + Log in (58px) +
+   Talk to Nova (105px) + hamburger (32px) all at once — 381px of content
+   fighting for the ~327px .nav-inner actually had at 375px wide, forcing the
+   whole navbar (and with it the page) into horizontal scroll. Log in /
+   Dashboard already exists in the .nav-mobile drawer the hamburger opens, so
+   it is redundant here; Talk to Nova is not duplicated there and stays as the
+   one CTA that fits beside the hamburger. */
+@media (max-width: 480px) {
+  .nav-login, .nav-dashboard { display: none; }
 }

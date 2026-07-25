@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, Trash2, Award, Users, Star, GripVertical,
-  ChevronUp, ChevronDown, Pencil, X, Upload, Loader2,
+  ChevronDown, Pencil, X, Upload, Loader2,
   BookOpen, Palette, Trophy, Heart, Code2, FlaskConical,
   Music, MessageSquare, Newspaper, Flag, Briefcase,
-  Sparkles, Leaf, Globe, Mic, Calculator, Dumbbell,
+  Compass, Leaf, Globe, Mic, Calculator, Dumbbell,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
@@ -14,7 +14,9 @@ import {
   parsePdf,
 } from '../../api/workspace.js';
 import { reviewActivity } from '../../api/nova.js';
-import { gradeTitle, gradeDescription, gradesFromReview, gradeColor } from '../../lib/activityGrades.js';
+import { gradeTitle, gradeDescription, gradesFromReview, gradeColor, gradeBg, bestGrade, isLeadershipRole } from '../../lib/activityGrades.js';
+import NovaMascot from '../../components/NovaMascot.jsx';
+import Confetti from './Confetti.jsx';
 import './workspace.css';
 
 const ACTIVITY_TYPES = [
@@ -68,10 +70,10 @@ const TYPE_ICON_MAP = {
   'Student Government':     { Icon: Flag,        color: '#ef4444', bg: '#FEF2F2' },
   'Theater / Drama':        { Icon: Users,       color: '#ec4899', bg: '#FDF2F8' },
   'Work (Paid)':            { Icon: Briefcase,   color: '#f59e0b', bg: '#FFFBEB' },
-  'Other':                  { Icon: Sparkles,    color: '#8b5cf6', bg: '#F5F3FF' },
+  'Other':                  { Icon: Compass,    color: '#8b5cf6', bg: '#F5F3FF' },
 };
 
-const DEFAULT_ICON = { Icon: Sparkles, color: '#8b5cf6', bg: '#F5F3FF' };
+const DEFAULT_ICON = { Icon: Compass, color: '#8b5cf6', bg: '#F5F3FF' };
 
 function getTypeIcon(type) {
   return TYPE_ICON_MAP[type] || DEFAULT_ICON;
@@ -276,7 +278,7 @@ function HonorModal({ initial, onSave, onClose }) {
 }
 
 /* ── Import PDF Modal ── */
-function ImportModal({ existingActCount, existingHonCount, onImport, onClose }) {
+function ImportModal({ onImport, onClose }) {
   const [stage, setStage] = useState('drop'); // 'drop' | 'parsing' | 'preview' | 'error'
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
@@ -470,6 +472,7 @@ export default function Activities() {
   const [novaOpenId, setNovaOpenId] = useState(null);      // activity id with panel open
   const [novaLoadingId, setNovaLoadingId] = useState(null);
   const [novaReviews, setNovaReviews] = useState({});      // activity id → review | { error }
+  const [celebrate, setCelebrate] = useState(false);       // confetti when Nova returns an A
 
   useEffect(() => {
     if (!user) return;
@@ -497,18 +500,6 @@ export default function Activities() {
     setActivities(prev => prev.filter(a => a.id !== id));
   }
 
-  async function moveAct(idx, dir) {
-    const next = idx + dir;
-    if (next < 0 || next >= activities.length) return;
-    const arr = [...activities];
-    [arr[idx], arr[next]] = [arr[next], arr[idx]];
-    setActivities(arr);
-    await Promise.all([
-      updateActivity(arr[idx].id, { sort_order: idx }),
-      updateActivity(arr[next].id, { sort_order: next }),
-    ]);
-  }
-
   async function reorderAct(fromIdx, toIdx) {
     if (fromIdx === toIdx) return;
     const arr = [...activities];
@@ -534,18 +525,6 @@ export default function Activities() {
   async function delHon(id) {
     await deleteHonor(id);
     setHonors(prev => prev.filter(h => h.id !== id));
-  }
-
-  async function moveHon(idx, dir) {
-    const next = idx + dir;
-    if (next < 0 || next >= honors.length) return;
-    const arr = [...honors];
-    [arr[idx], arr[next]] = [arr[next], arr[idx]];
-    setHonors(arr);
-    await Promise.all([
-      updateHonor(arr[idx].id, { sort_order: idx }),
-      updateHonor(arr[next].id, { sort_order: next }),
-    ]);
   }
 
   async function reorderHon(fromIdx, toIdx) {
@@ -580,6 +559,7 @@ export default function Activities() {
       });
       setNovaReviews(prev => ({ ...prev, [a.id]: review }));
       setNovaOpenId(a.id);
+      if (review.rating === 'strong') setCelebrate(true);   // grade A → celebrate
     } catch (err) {
       setNovaReviews(prev => ({ ...prev, [a.id]: { error: err.message } }));
       setNovaOpenId(a.id);
@@ -603,19 +583,50 @@ export default function Activities() {
 
   if (loading) return <div className="ws-loading">Loading…</div>;
 
+  // ── Profile-at-a-glance stats for the hero band ──
+  const totalHours = activities.reduce((s, a) => s + (Number(a.hours_per_week) || 0), 0);
+  const leadershipCount = activities.filter(a => isLeadershipRole(a.role)).length;
+  const topGrade = bestGrade(activities.map(a => {
+    const rg = gradesFromReview(novaReviews[a.id]);
+    return bestGrade([rg?.title ?? gradeTitle(a), rg?.description ?? gradeDescription(a)]);
+  }));
+
   return (
-    <div className="ws-section">
-      <header className="ws-header">
-        <div>
-          <h1 className="ws-title">Activities &amp; Honors</h1>
-          <p className="ws-subtitle">The extracurriculars and awards that make your application stand out.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="ws-btn ws-btn-import" onClick={() => setShowImport(true)}>
-            <Upload size={14} /> Import PDF
+    <div className="ws-section ah-page">
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
+
+      {/* ── Forest hero stat band ── */}
+      <div className="ah-hero">
+        <div className="ah-hero-main">
+          <span className="ah-hero-eyebrow"><span className="ah-hero-dot" /> Your extracurricular profile</span>
+          <h1 className="ah-hero-title">Activities &amp; Honors</h1>
+          <p className="ah-hero-sub">The extracurriculars and awards that make your application stand out.</p>
+          <button className="ah-hero-import" onClick={() => setShowImport(true)}>
+            <Upload size={14} /> Import from PDF
           </button>
         </div>
-      </header>
+        <div className="ah-hero-right">
+          <div className="ah-hero-mascot"><NovaMascot size={46} idle /></div>
+          <div className="ah-hero-stats">
+            <div className="ah-stat-sticker st-cream">
+              <span className="ah-stat-big">{activities.length}</span>
+              <span className="ah-stat-cap">of 10 activities</span>
+            </div>
+            <div className="ah-stat-sticker st-yellow">
+              <span className="ah-stat-big">{totalHours}</span>
+              <span className="ah-stat-cap">hrs / week</span>
+            </div>
+            <div className="ah-stat-sticker st-mint">
+              <span className="ah-stat-big">{leadershipCount}</span>
+              <span className="ah-stat-cap">leadership roles</span>
+            </div>
+            <div className="ah-stat-sticker st-white">
+              <span className="ah-stat-big">{topGrade || '—'}</span>
+              <span className="ah-stat-cap">top grade</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ── Activities ── */}
       <section className="ah-section">
@@ -640,7 +651,7 @@ export default function Activities() {
         ) : (
           <div className="ah-cards">
             {activities.map((a, i) => {
-              const { color, bg } = getTypeIcon(a.activity_type);
+              const { color, bg, Icon: TypeIcon } = getTypeIcon(a.activity_type);
               const review = novaReviews[a.id];
               const panelOpen = novaOpenId === a.id && !!review;
               const reviewGrades = gradesFromReview(review);
@@ -662,6 +673,9 @@ export default function Activities() {
                 >
                   <GripVertical size={13} className="ah-grip" />
                   <span className="ah-rank-num">{i + 1}</span>
+                  <span className="ah-icon-tile" style={{ background: bg, color }} aria-hidden="true">
+                    <TypeIcon size={18} />
+                  </span>
 
                   {/* Body */}
                   <div className="ah-card-body" onClick={() => setActModal(a)} style={{ cursor: 'pointer' }}>
@@ -674,8 +688,8 @@ export default function Activities() {
                       )}
                       {chipGrade && (
                         <span
-                          className="ah-grade-chip"
-                          style={{ color: gradeColor(chipGrade), borderColor: `${gradeColor(chipGrade)}40` }}
+                          className="ah-grade-sticker"
+                          style={{ color: gradeColor(chipGrade), background: gradeBg(chipGrade) }}
                           title={`Title: ${tGrade || '—'} · Description: ${dGrade || '—'}${reviewGrades ? ' (Nova-reviewed)' : ''}`}
                         >
                           {chipGrade}
@@ -718,7 +732,7 @@ export default function Activities() {
                   >
                     {novaLoadingId === a.id
                       ? <Loader2 size={12} className="ah-nova-spin" />
-                      : <Sparkles size={12} />}
+                      : <NovaMascot size={15} />}
                     <span>Nova</span>
                   </button>
 
@@ -734,7 +748,7 @@ export default function Activities() {
                   {review && (
                     <div className="ah-nova-panel-inner">
                       <div className="ah-nova-panel-head">
-                        <span className="ah-nova-byline"><Sparkles size={12} /> Nova · Activity review</span>
+                        <span className="ah-nova-byline"><NovaMascot size={15} /> Nova's take</span>
                         <div className="ah-nova-head-actions">
                           {!review.error && (
                             <button
@@ -811,7 +825,6 @@ export default function Activities() {
         ) : (
           <div className="ah-cards">
             {honors.map((h, i) => {
-              const lvl = getLevelStyle(h.level);
               return (
                 <div
                   className={`ah-honor-card ah-card-v2${honDragOver === i && honDrag !== i ? ' ah-drag-over' : ''}`}
@@ -876,8 +889,6 @@ export default function Activities() {
       )}
       {showImport && (
         <ImportModal
-          existingActCount={activities.length}
-          existingHonCount={honors.length}
           onImport={handleImport}
           onClose={() => setShowImport(false)}
         />

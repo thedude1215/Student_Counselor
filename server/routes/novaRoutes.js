@@ -329,6 +329,121 @@ router.post('/university-suggestions', async (req, res) => {
   }
 });
 
+/* ─── Scholarship Matches (LLM-ranked, cached) ─── */
+
+// Hash of the profile fields the ranking depends on. When any change, the cache
+// is stale and we recompute — this is the "auto-refresh on profile change".
+async function computeProfileFingerprint(userId) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('gpa, sat_score, act_score, country, budget, intended_major, target_countries, interests')
+    .eq('id', userId)
+    .single();
+
+  const { count: actCount } = await supabase
+    .from('activities')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', userId);
+  const { count: honCount } = await supabase
+    .from('honors')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', userId);
+
+  const basis = JSON.stringify({
+    gpa: profile?.gpa || null,
+    sat: profile?.sat_score || null,
+    act: profile?.act_score || null,
+    country: profile?.country || null,
+    budget: profile?.budget || null,
+    major: profile?.intended_major || null,
+    targets: (profile?.target_countries || []).slice().sort(),
+    interests: (profile?.interests || []).slice().sort(),
+    acts: actCount || 0,
+    hons: honCount || 0,
+  });
+  return crypto.createHash('sha256').update(basis).digest('hex').slice(0, 32);
+}
+
+router.post('/scholarship-matches', async (req, res) => {
+  const force = !!req.body?.force;
+
+  try {
+    const fingerprint = await computeProfileFingerprint(req.userId);
+
+    // Cache hit: every stored row must match the current fingerprint (fresh).
+    if (!force) {
+      const { data: cached } = await supabase
+        .from('scholarship_matches')
+        .select('scholarship_id, match_score, tier, rationale, why_fits, eligible, profile_fingerprint')
+        .eq('profile_id', req.userId);
+
+      if (cached && cached.length && cached.every(r => r.profile_fingerprint === fingerprint)) {
+        return res.json({
+          matches: cached
+            .filter(r => r.eligible)
+            .map(r => ({
+              scholarship_id: r.scholarship_id,
+              match_score: r.match_score,
+              tier: r.tier,
+              rationale: r.rationale,
+              why_fits: r.why_fits,
+            }))
+            .sort((a, b) => b.match_score - a.match_score),
+          ineligible_ids: cached.filter(r => !r.eligible).map(r => r.scholarship_id),
+          missing_info: [],
+          cached: true,
+        });
+      }
+    }
+
+    // Only real LLM computations count against the rate limit (cache hits are free).
+    if (!checkRate(req.userId, 'sch-match', 5)) {
+      return res.status(429).json({ error: 'Rate limit reached (5 re-ranks/hour). Please wait.' });
+    }
+
+    const data = await proxyToAgent('/api/scholarship-matches', { user_id: req.userId }, 90_000);
+    const matches = data.matches || [];
+    const ineligible = data.ineligible_ids || [];
+    const missing = data.missing_info || [];
+
+    // Profile too thin — agent returned guidance, nothing to cache.
+    if (!matches.length && missing.length) {
+      return res.json({ matches: [], ineligible_ids: ineligible, missing_info: missing });
+    }
+
+    // Refresh the cache with this computation.
+    await supabase.from('scholarship_matches').delete().eq('profile_id', req.userId);
+    const rows = [
+      ...matches.map(m => ({
+        profile_id: req.userId,
+        scholarship_id: m.scholarship_id,
+        match_score: m.match_score,
+        tier: m.tier,
+        rationale: m.rationale,
+        why_fits: m.why_fits,
+        eligible: true,
+        profile_fingerprint: fingerprint,
+      })),
+      ...ineligible.map(id => ({
+        profile_id: req.userId,
+        scholarship_id: id,
+        eligible: false,
+        profile_fingerprint: fingerprint,
+      })),
+    ];
+    if (rows.length) {
+      const { error } = await supabase.from('scholarship_matches').insert(rows);
+      if (error) console.error('[Nova] scholarship_matches cache insert error:', error.message);
+    }
+
+    res.json({ matches, ineligible_ids: ineligible, missing_info: missing, cached: false });
+  } catch (err) {
+    console.error('[Nova] /scholarship-matches error:', err.message, '| status:', err.status);
+    const status = err.status || 503;
+    res.status(status).json({ error: err.message || 'Failed to rank scholarships' });
+  }
+});
+
 /* ─── Activity Review ─── */
 
 router.post('/activity-review', async (req, res) => {

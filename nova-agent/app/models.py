@@ -105,6 +105,24 @@ class UniversitySuggestionsResponse(BaseModel):
     list_analysis: ListAnalysis | None = None
 
 
+class ScholarshipMatchRequest(BaseModel):
+    user_id: str
+
+
+class ScholarshipMatch(BaseModel):
+    scholarship_id: str
+    match_score: int           # 0-100
+    tier: str                  # strong | possible | stretch
+    rationale: str             # one sentence grounded in the student's real profile
+    why_fits: str = ""         # short chip, e.g. "Matches your leadership profile"
+
+
+class ScholarshipMatchesResponse(BaseModel):
+    matches: list[ScholarshipMatch] = []
+    missing_info: list[str] = []
+    ineligible_ids: list[str] = []   # deterministically filtered out (frontend can hide/grey)
+
+
 class ActivityReviewRequest(BaseModel):
     user_id: str
     activity_title: str

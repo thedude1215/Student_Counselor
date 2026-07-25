@@ -2,8 +2,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800;9..144,900&display=swap');
 
 /* ============================================================
-   SCHOLARPATH  ·  EXACT BORDERLESS.SO CLONE
-   Colors measured pixel-by-pixel from screenshots
+   SCHOLARPATH  ·  DESIGN TOKENS
+   Visual system: the application as a journey. The landing page
+   travels night → dawn → day → night, the four acts mirror the
+   dashboard's Journey map, and Fraunces carries every display
+   heading so marketing and product read as one product.
    ============================================================ */
 
 :root {
@@ -34,7 +37,8 @@
   /* ── Priority dots (calm, low-chroma) ── */
   --prio-high:     #C0392B;
   --prio-med:      #B7791F;
-  --prio-low:      #AEAEC8;
+  --prio-low:      #9BB0A3;   /* sage — was a lavender-grey, the only cool
+                                 cast left in an otherwise warm palette */
 
   /* ── Text ── */
   --ink:           #10140F;   /* near-black for big headings */
@@ -44,17 +48,13 @@
 
   /* ── Story card pastels (EXACT from Borderless cards) ── */
   --card-pink:     #FFE8E6;   /* border: #F5C4BE */
-  --card-blue:     #E5EAFF;   /* border: #C5CBEE */
   --card-peach:    #FEF1E6;   /* border: #F5DFC5 */
-  --card-lavender: #EDE9FF;   /* border: #D5CEEE */
   --card-mint:     #E8F5EF;   /* border: #C8E8D8 */
   --card-cream:    #FFF8E6;   /* border: #F0E5C8 */
 
   /* ── Card border colors (2px, same hue but darker) ── */
   --cb-pink:       #F5C4BE;
-  --cb-blue:       #C5CBEE;
   --cb-peach:      #F5DFC5;
-  --cb-lavender:   #D5CEEE;
   --cb-mint:       #C8E8D8;
   --cb-cream:      #F0E5C8;
 
@@ -63,14 +63,27 @@
   --border-2:      #B8CFC0;
 
   /* ── Feature section backgrounds ── */
-  --feat-purple:   #EBE8FF;
   --feat-green:    #EBF5EF;
   --feat-yellow:   #FEF9E6;
   --feat-pink:     #FEE8E6;
 
-  /* ── Font — DM Sans matches Borderless best ── */
+  /* ── Type ──
+     DM Sans carries everything, display headings included. Fraunces stays
+     reserved for the small serif-italic accents that already used it. */
   --font: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+  /* ── Day/night ramp ──
+     The landing page is a flight from night through daylight and back.
+     Hero and stats sit in the dark; the four acts brighten act by act;
+     the payoff onward returns to night for the arrival. */
+  --night:      #0a1f13;   /* departure — deep forest */
+  --night-deep: #06140c;   /* arrival — deepest, end of the line */
+  --night-2:    #08190f;   /* the receipts, one notch under the hero */
+  --dawn-1:     #E9E2D2;   /* act I — dustiest, first light */
+  --dawn-2:     #EFEAE0;   /* act II */
+  --dawn-3:     #F4F1E8;   /* act III */
+  --dawn-4:     #FBF9F3;   /* act IV — full daylight, the finish */
 
   /* ── Layout ── */
   --nav-h:  72px;
@@ -141,19 +154,19 @@ ul   { list-style: none; }
 .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
 
 .btn-dark {
-  background: #1A1A2E;
+  background: var(--forest, #0E2A1C);
   color: white;
   padding: 0.65rem 1.4rem;
   font-size: 0.9rem;
 }
-.btn-dark:hover { background: #2A2A45; }
+.btn-dark:hover { background: #16341f; }
 
 .btn-blue {
   background: var(--blue);
   color: white;
   padding: 0.65rem 1.4rem;
   font-size: 0.9rem;
-  box-shadow: 0 4px 14px rgba(64,85,245,0.3);
+  box-shadow: 0 4px 14px rgba(5,150,105,0.3);
 }
 .btn-blue:hover { background: var(--blue-dark); transform: translateY(-1px); }
 
@@ -185,7 +198,7 @@ ul   { list-style: none; }
 }
 .search-bar input:focus {
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(64,85,245,0.1);
+  box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
 }
 .search-bar input::placeholder { color: var(--ink-4); }
 
@@ -330,3 +343,7 @@ ul   { list-style: none; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 
 @media (max-width: 768px) { .wrap { padding: 0 1rem; } }
+
+/* Route chunk placeholder — reserves the viewport so the header does not
+   collapse while a lazily-loaded page arrives. */
+.route-fallback { min-height: 60vh; }

@@ -1,36 +1,37 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Compass, CheckCircle2 } from 'lucide-react';
+import NovaMascot from '../../components/NovaMascot.jsx';
 
 const CHIP = {
-  specificity:  { label: 'BE SPECIFIC', bg: '#FEF3C7', color: '#92400E' },
-  clarity:      { label: 'CLARITY',     bg: '#DBEAFE', color: '#1E40AF' },
-  impact:       { label: 'TIGHTEN',     bg: '#FEF3C7', color: '#92400E' },
-  structure:    { label: 'STRUCTURE',   bg: '#E0E7FF', color: '#3730A3' },
-  authenticity: { label: 'AUTHENTIC',   bg: '#FCE7F3', color: '#9D174D' },
-  grammar:      { label: 'GRAMMAR',     bg: '#FEE2E2', color: '#991B1B' },
-  strength:     { label: 'STRENGTH',    bg: '#DCFCE7', color: '#15803D' },
+  specificity:  { label: 'BE SPECIFIC', bg: '#FFF8E6', color: '#92400E' },
+  clarity:      { label: 'CLARITY',     bg: '#E5EAFF', color: '#2E3A8C' },
+  impact:       { label: 'TIGHTEN',     bg: '#FEF1E6', color: '#B45309' },
+  structure:    { label: 'STRUCTURE',   bg: '#EDE9FF', color: '#065f46' },
+  authenticity: { label: 'AUTHENTIC',   bg: '#FFE8E6', color: '#9D174D' },
+  grammar:      { label: 'GRAMMAR',     bg: '#FFE8E6', color: '#C0392B' },
+  strength:     { label: 'STRENGTH',    bg: '#ECFDF5', color: '#047857' },
 };
 const dfChip = CHIP.clarity;
 
 const HL = {
-  specificity:  'rgba(245,158,11,0.25)',
-  clarity:      'rgba(59,130,246,0.20)',
-  impact:       'rgba(245,158,11,0.25)',
-  structure:    'rgba(99,102,241,0.22)',
-  authenticity: 'rgba(236,72,153,0.20)',
-  grammar:      'rgba(239,68,68,0.20)',
-  strength:     'rgba(34,197,94,0.22)',
+  specificity:  'rgba(146,64,14,0.16)',
+  clarity:      'rgba(46,58,140,0.16)',
+  impact:       'rgba(180,83,9,0.16)',
+  structure:    'rgba(6,95,70,0.14)',
+  authenticity: 'rgba(157,23,77,0.16)',
+  grammar:      'rgba(192,57,43,0.16)',
+  strength:     'rgba(4,120,87,0.18)',
 };
 
 const LC = {
-  specificity:  '#D97706',
-  clarity:      '#2563EB',
-  impact:       '#D97706',
-  structure:    '#6366F1',
-  authenticity: '#DB2777',
-  grammar:      '#DC2626',
-  strength:     '#16A34A',
+  specificity:  '#92400E',
+  clarity:      '#2E3A8C',
+  impact:       '#B45309',
+  structure:    '#065f46',
+  authenticity: '#9D174D',
+  grammar:      '#C0392B',
+  strength:     '#047857',
 };
 
 const CARD_W   = 300;
@@ -335,7 +336,7 @@ export default function EssayReview({ review, content, title, university, prompt
         {/* Sticky header */}
         <div className="erv-head">
           <div className="erv-head-l">
-            <span className="erv-nova-badge"><Sparkles size={12} /> Nova · Essay review</span>
+            <span className="erv-nova-badge"><NovaMascot size={15} /> Nova · Essay review</span>
             <h2 className="erv-head-title">{title || 'Essay'}</h2>
             {university && <span className="erv-head-uni">— {university}</span>}
           </div>
@@ -355,7 +356,7 @@ export default function EssayReview({ review, content, title, university, prompt
                 disabled={reviewing}
                 title="Run a fresh review"
               >
-                <Sparkles size={12} />
+                <Compass size={12} />
                 {reviewing ? 'Analyzing…' : 'Re-analyze'}
               </button>
             )}
@@ -463,7 +464,7 @@ export default function EssayReview({ review, content, title, university, prompt
               >
                 <div className="erv-card-meta">
                   <div className={`erv-avatar ${isStrength ? 'erv-avatar-strength' : ''}`}>
-                    {isStrength ? <CheckCircle2 size={10} /> : <Sparkles size={10} />}
+                    {isStrength ? <CheckCircle2 size={10} /> : <Compass size={10} />}
                   </div>
                   <span className="erv-card-byline">Nova · Essay review</span>
                 </div>
