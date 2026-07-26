@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
     signInWithGoogle: () =>
       supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/dashboard` },
+        options: { redirectTo: `${window.location.origin}/onboarding` },
       }),
     signOut: () => supabase.auth.signOut(),
     refreshProfile: () => loadProfile(session?.user?.id),

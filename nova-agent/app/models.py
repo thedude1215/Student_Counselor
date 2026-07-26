@@ -32,10 +32,23 @@ class EssaySuggestion(BaseModel):
     suggestion: str          # concrete, rewriteable fix
 
 
+class StrengthAnnotation(BaseModel):
+    quote: str                # exact phrase copied verbatim from the essay
+    comment: str              # why this moment is effective
+
+
+class EssayCorrection(BaseModel):
+    original: str             # exact text as it appears in the essay
+    corrected: str            # correct spelling, or "" if it should be deleted
+    type: str = "spelling"    # "spelling" | "delete"
+
+
 class EssayReviewResponse(BaseModel):
     overall: str = ""
     score: int = 0
     strengths: list[str] = []
+    strength_annotations: list[StrengthAnnotation] = []
+    corrections: list[EssayCorrection] = []
     suggestions: list[EssaySuggestion] = []
     # Legacy markdown blob — kept for backward compatibility / graceful fallback.
     feedback: str = ""
@@ -55,3 +68,72 @@ class SuggestedTask(BaseModel):
 
 class TaskSuggestResponse(BaseModel):
     suggestions: list[SuggestedTask] = []
+
+
+class UniversitySuggestionsRequest(BaseModel):
+    user_id: str
+
+
+class UniversitySuggestion(BaseModel):
+    university_id: str | None = None
+    name: str
+    tier: str                  # reach | match | likely
+    rationale: str             # why it fits THIS student
+    fit_highlights: list[str] = []
+    strategy_note: str = ""
+
+
+class ListedSchoolNote(BaseModel):
+    name: str
+    current_tier: str
+    suggested_tier: str | None = None
+    note: str
+
+
+class ListAnalysis(BaseModel):
+    balance_summary: str
+    reach_count: int = 0
+    match_count: int = 0
+    likely_count: int = 0
+    overall_advice: str
+    tier_flags: list[ListedSchoolNote] = []
+
+
+class UniversitySuggestionsResponse(BaseModel):
+    suggestions: list[UniversitySuggestion] = []
+    missing_info: list[str] = []
+    list_analysis: ListAnalysis | None = None
+
+
+class ScholarshipMatchRequest(BaseModel):
+    user_id: str
+
+
+class ScholarshipMatch(BaseModel):
+    scholarship_id: str
+    match_score: int           # 0-100
+    tier: str                  # strong | possible | stretch
+    rationale: str             # one sentence grounded in the student's real profile
+    why_fits: str = ""         # short chip, e.g. "Matches your leadership profile"
+
+
+class ScholarshipMatchesResponse(BaseModel):
+    matches: list[ScholarshipMatch] = []
+    missing_info: list[str] = []
+    ineligible_ids: list[str] = []   # deterministically filtered out (frontend can hide/grey)
+
+
+class ActivityReviewRequest(BaseModel):
+    user_id: str
+    activity_title: str
+    activity_type: str | None = None
+    role: str | None = None
+    description: str
+    hours_per_week: str | int | None = None
+    weeks_per_year: str | int | None = None
+
+
+class ActivityReviewResponse(BaseModel):
+    rating: str                # strong | good | needs_work
+    feedback: str
+    rewrite_example: str

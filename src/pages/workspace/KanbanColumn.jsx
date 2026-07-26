@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, ChevronDown, Plus, X } from 'lucide-react';
+import { Compass, ChevronDown, Plus, X } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 import TaskComposer from './TaskComposer.jsx';
 import LogoTile from '../../components/LogoTile.jsx';
@@ -69,22 +69,47 @@ function SuggestRow({ s, onAccept, onDismiss }) {
 }
 
 export default function KanbanColumn({
-  status, label, tasks, suggestions = [], nova = {},
+  status, label, tasks, suggestions = [],
   composerOpen = false, onAdd, onComposerClose,
   onDelete, onEdit, onAccept, onDismiss, dnd = {},
 }) {
   const [dropActive, setDropActive] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [insertBefore, setInsertBefore] = useState(null); // task id to insert before (null = end)
 
   const count = tasks.length + suggestions.length;
   const schoolGroups = groupBySchool(suggestions);
+
+  function handleCardDragOver(e, taskId) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropActive(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    setInsertBefore(e.clientY < midY ? taskId : null);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDropActive(false);
+    const draggedId = dnd.dragId;
+    if (!draggedId) return;
+    const dragged = tasks.find(t => t.id === draggedId);
+    const isSameColumn = !!dragged;
+    if (isSameColumn) {
+      dnd.onReorder?.(status, draggedId, insertBefore);
+    } else {
+      dnd.onDrop?.(status, draggedId, insertBefore);
+    }
+    setInsertBefore(null);
+  }
 
   return (
     <div
       className={`ws-kcol ${dropActive ? 'droppable' : ''}`}
       onDragOver={e => { e.preventDefault(); setDropActive(true); }}
-      onDragLeave={() => setDropActive(false)}
-      onDrop={() => { setDropActive(false); dnd.onDrop?.(status); }}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) { setDropActive(false); setInsertBefore(null); } }}
+      onDrop={handleDrop}
     >
       {/* Column pill header */}
       <div className="ws-kcol-head">
@@ -100,7 +125,7 @@ export default function KanbanColumn({
         {suggestions.length > 0 && (
           <>
             <button className="ws-kcol-suggest-toggle" onClick={() => setSuggestOpen(o => !o)}>
-              <Sparkles size={13} />
+              <Compass size={13} />
               <span>Suggestions from Nova</span>
               <ChevronDown
                 size={13}
@@ -150,17 +175,26 @@ export default function KanbanColumn({
         )}
 
         {tasks.map(t => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            onDelete={onDelete}
-            onEdit={onEdit}
-            draggable
-            isDragging={dnd.dragId === t.id}
-            onDragStart={() => dnd.onDragStart?.(t.id)}
-            onDragEnd={() => dnd.onDragEnd?.()}
-          />
+          <div key={t.id} onDragOver={e => handleCardDragOver(e, t.id)}>
+            {insertBefore === t.id && dropActive && dnd.dragId !== t.id && (
+              <div className="ws-drop-ghost" />
+            )}
+            <TaskCard
+              task={t}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              draggable
+              isDragging={dnd.dragId === t.id}
+              onDragStart={() => dnd.onDragStart?.(t.id)}
+              onDragEnd={() => { dnd.onDragEnd?.(); setInsertBefore(null); }}
+            />
+          </div>
         ))}
+
+        {/* Ghost at end of list */}
+        {insertBefore === null && dropActive && tasks.length > 0 && dnd.dragId && !tasks.find(t => t.id === dnd.dragId) && (
+          <div className="ws-drop-ghost" />
+        )}
 
         {tasks.length === 0 && suggestions.length === 0 && (
           <p className="ws-kcol-empty">Drop tasks here</p>

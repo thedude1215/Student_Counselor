@@ -1,8 +1,8 @@
 export const storyCardColors = [
   { bg: '#FFE8E6', border: '#F5C4BE' },
-  { bg: '#E5EAFF', border: '#C5CBEE' },
+  { bg: '#E8F5EF', border: '#C8E8D8' },
   { bg: '#FEF1E6', border: '#F5DFC5' },
-  { bg: '#EDE9FF', border: '#D5CEEE' },
+  { bg: '#FFF8E6', border: '#F0E5C8' },
 ];
 
 export const homeStats = [
@@ -119,7 +119,7 @@ export const homeUniversityLogos = [
 
 export const counselorFeatures = [
   {
-    bg: '#EBE8FF',
+    bg: '#EAF2E3',
     title: 'Researches and recommends colleges. Helps you decide.',
     desc: 'Your university list evolves as you do: new schools in, wrong ones out. You never have to do research alone again.',
     mockup: 'college-list',

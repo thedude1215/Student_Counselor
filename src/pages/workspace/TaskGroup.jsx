@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronDown, Compass, Loader2 } from 'lucide-react';
 import TaskRow from './TaskRow.jsx';
 import SuggestionRow from './SuggestionRow.jsx';
 import LogoTile from '../../components/LogoTile.jsx';
@@ -72,7 +72,7 @@ export default function TaskGroup({
           >
             {nova.generating
               ? <><Loader2 size={14} className="ws-spin" /> Finding…</>
-              : <><Sparkles size={14} /> Suggest tasks</>}
+              : <><Compass size={14} /> Suggest tasks</>}
           </span>
         )}
       </button>
@@ -86,7 +86,7 @@ export default function TaskGroup({
                 className="ws-suggest-toggle"
                 onClick={() => setSuggestCollapsed(c => !c)}
               >
-                <Sparkles size={12} />
+                <Compass size={12} />
                 <span>{suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} from Nova</span>
                 <span className="ws-suggest-toggle-action">{suggestCollapsed ? 'Review' : 'Hide'}</span>
               </button>

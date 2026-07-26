@@ -1,29 +1,101 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckSquare, Square, Plus } from 'lucide-react';
+import { ArrowRight, CheckSquare, Square, Plus, UserRound, GraduationCap, PenLine, Award, Compass, Flag, CalendarClock, Check } from 'lucide-react';
+import NovaMascot from '../../components/NovaMascot.jsx';
+import Confetti from './Confetti.jsx';
 import LogoTile from '../../components/LogoTile';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { fetchCollegeList, fetchTasks, fetchEssays, fetchProfile, updateTask } from '../../api/workspace.js';
+import { fetchCollegeList, fetchTasks, fetchEssays, fetchProfile, fetchScholarships, updateTask } from '../../api/workspace.js';
 import { computeReadiness } from '../../lib/readiness.js';
+import { computeJourney } from '../../lib/journey.js';
 import { overviewCardStyle } from '../../lib/brandColors.js';
 import './workspace.css';
+
+/* Circular progress ring, Kollegio-style */
+function ProgressRing({ percent, size = 62, stroke = 6 }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} className="ws-ring" role="img" aria-label={`${percent}% complete`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="#047857" strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - percent / 100)}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 700ms cubic-bezier(0.22,1,0.36,1)' }}
+      />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="ws-ring-text">
+        {percent}%
+      </text>
+    </svg>
+  );
+}
 
 export default function Overview() {
   const { user, profile } = useAuth();
   const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
-  const [data, setData] = useState({ colleges: [], tasks: [], essays: [], profileRow: {} });
+  const [data, setData] = useState({ colleges: [], tasks: [], essays: [], profileRow: {}, scholarships: [] });
   const [loading, setLoading] = useState(true);
+  const [celebrate, setCelebrate] = useState(false);   // confetti when readiness first hits "On track"
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([fetchCollegeList(user.id), fetchTasks(user.id), fetchEssays(user.id), fetchProfile(user.id)])
-      .then(([colleges, tasks, essays, profileRow]) => setData({ colleges, tasks, essays, profileRow }))
+    Promise.all([fetchCollegeList(user.id), fetchTasks(user.id), fetchEssays(user.id), fetchProfile(user.id), fetchScholarships()])
+      .then(([colleges, tasks, essays, profileRow, scholarships]) => setData({ colleges, tasks, essays, profileRow, scholarships }))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [user]);
 
-  const { colleges, tasks, essays, profileRow } = data;
+  const { colleges, tasks, essays, profileRow, scholarships } = data;
   const readiness = computeReadiness({ profile: profileRow, collegeList: colleges, essays, tasks });
+
+  // Celebrate the first time readiness reaches "On track" (re-armable if it lapses).
+  useEffect(() => {
+    if (loading || !user) return;
+    const key = `jrn-ontrack-${user.id}`;
+    const onTrack = readiness.tone === 'ontrack';
+    const wasOnTrack = localStorage.getItem(key) === 'true';
+    if (onTrack && !wasOnTrack) setCelebrate(true);
+    try { localStorage.setItem(key, onTrack ? 'true' : 'false'); } catch { /* ignore */ }
+     
+  }, [loading, user, readiness.tone]);
+  const journey = computeJourney({ profile: profileRow, collegeList: colleges, essays, tasks });
+
+  // Quick actions — suggest what's missing, Kollegio "New in" style
+  const quickActions = [
+    (!profileRow.gpa && !profileRow.sat_score) && {
+      icon: <UserRound size={18} strokeWidth={2.25} />, tone: 'green',
+      title: 'Complete your profile',
+      sub: 'Add academics so Nova can gauge your fit',
+      to: '/dashboard/profile',
+    },
+    colleges.length < 4 && {
+      icon: <GraduationCap size={18} strokeWidth={2.25} />, tone: 'blue',
+      title: 'Build your college list',
+      sub: colleges.length === 0 ? 'Add your first schools to start tracking' : 'Aim for a balanced list of 4+ schools',
+      to: '/dashboard/colleges',
+    },
+    {
+      icon: <Compass size={18} strokeWidth={2.25} />, tone: 'lime',
+      title: 'Find out if you can get in',
+      sub: 'Your odds at any college, based on your profile',
+      to: '/nova',
+      state: { prompt: 'Based on my profile, what are my chances at the schools on my college list?' },
+    },
+    {
+      icon: <Award size={18} strokeWidth={2.25} />, tone: 'pink',
+      title: 'Find scholarships that fit you',
+      sub: 'Curated for international students',
+      to: '/dashboard/scholarships',
+    },
+    essays.length === 0 && {
+      icon: <PenLine size={18} strokeWidth={2.25} />, tone: 'gold',
+      title: 'Start your first essay',
+      sub: 'Nova reviews drafts line by line',
+      to: '/dashboard/essays',
+    },
+  ].filter(Boolean).slice(0, 4);
 
   const open = tasks.filter(t => t.status !== 'done');
   const today = new Date(new Date().toDateString());
@@ -36,6 +108,13 @@ export default function Overview() {
   const todayStr = today.toLocaleDateString('en-CA');
   const firstDeadline = open.filter(t => t.due_date && t.due_date >= todayStr).map(t => t.due_date).sort()[0];
   const daysToDeadline = firstDeadline ? Math.round((new Date(firstDeadline + 'T00:00:00') - today) / 86_400_000) : null;
+  const nextDeadlineTask = firstDeadline ? open.find(t => t.due_date === firstDeadline) : null;
+  const closingScholarship = [...scholarships]
+    .filter(s => s.deadline && s.deadline >= todayStr)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
+  const scholarshipDaysLeft = closingScholarship
+    ? Math.round((new Date(closingScholarship.deadline + 'T00:00:00') - today) / 86_400_000)
+    : null;
 
   async function toggle(task) {
     const next = task.status === 'done' ? 'todo' : 'done';
@@ -49,10 +128,18 @@ export default function Overview() {
     profileRow.intended_major ? `Intended major: ${profileRow.intended_major}` : null,
   ].filter(Boolean);
 
-  if (loading) return <div className="ws-loading">Loading your workspace…</div>;
+  if (loading) {
+    return (
+      <div className="ws-loading ws-loading-nova">
+        <NovaMascot size={44} expression="thinking" idle />
+        Loading your workspace…
+      </div>
+    );
+  }
 
   return (
     <div className="ws-home">
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
       {/* ── Left column ── */}
       <div className="ws-home-main">
         <p className="ws-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
@@ -62,6 +149,48 @@ export default function Overview() {
           {daysToDeadline != null && ` · your first deadline is in ${daysToDeadline} day${daysToDeadline === 1 ? '' : 's'}`}.
         </p>
 
+        {/* Journey hero — gamified progress, Kollegio-style */}
+        {!journey.complete && (
+          <div className="ws-journey">
+            <div className="ws-journey-body">
+              <span className="ws-journey-act">Act {journey.num}: {journey.name}</span>
+              <h2 className="ws-journey-headline">{journey.headline}</h2>
+              <div className="ws-journey-progress">
+                <div className="ws-journey-bar">
+                  <span style={{ width: `${journey.percent}%` }} />
+                </div>
+                <span className="ws-journey-count"><Flag size={13} /> {journey.done}/{journey.total}</span>
+              </div>
+              <Link to={journey.to} className="ws-journey-btn">
+                {journey.cta} <ArrowRight size={15} />
+              </Link>
+            </div>
+            <div className="ws-journey-art" aria-hidden="true">
+              <NovaMascot size={64} expression={journey.expression} idle />
+            </div>
+          </div>
+        )}
+
+        {/* The whole arc, not just the act you are in — same four waypoints the
+            landing page walks you through, so signing up continues the story. */}
+        <ol className="ws-actrail">
+          {journey.acts.map(act => (
+            <li
+              key={act.num}
+              className={`ws-actrail-act${act.complete ? ' is-done' : ''}${act.current ? ' is-current' : ''}`}
+            >
+              <Link to={act.to}>
+                <span className="ws-actrail-node">
+                  {act.complete ? <Check size={12} strokeWidth={3} /> : <Flag size={11} />}
+                </span>
+                <span className="ws-actrail-num">Act {act.num}</span>
+                <span className="ws-actrail-name">{act.name}</span>
+                <span className="ws-actrail-count">{act.done}/{act.total}</span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+
         {/* Status card */}
         <div className={`ws-status tone-${readiness.tone}`}>
           <div className="ws-status-top">
@@ -69,7 +198,7 @@ export default function Overview() {
               <span className="ws-status-label">Overall</span>
               <h2 className="ws-status-value">{readiness.label}</h2>
             </div>
-            <div className="ws-status-pct">{readiness.percent}%</div>
+            <ProgressRing percent={readiness.percent} />
           </div>
           <div className="ws-status-bar"><span style={{ width: `${readiness.percent}%` }} /></div>
           <div className="ws-status-scale"><span>Early</span><span>Ready</span></div>
@@ -99,6 +228,25 @@ export default function Overview() {
           )}
         </div>
 
+        {/* Quick actions */}
+        {quickActions.length > 0 && (
+          <div className="ws-home-section">
+            <div className="ws-home-section-head"><h3>Suggested for you</h3></div>
+            <div className="ws-qa-list">
+              {quickActions.map((qa) => (
+                <Link key={qa.title} to={qa.to} state={qa.state} className="ws-qa-row">
+                  <span className={`ws-qa-icon tone-${qa.tone}`}>{qa.icon}</span>
+                  <span className="ws-qa-text">
+                    <span className="ws-qa-title">{qa.title}</span>
+                    <span className="ws-qa-sub">{qa.sub}</span>
+                  </span>
+                  <span className="ws-qa-arrow"><ArrowRight size={15} /></span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Today */}
         <div className="ws-home-section">
           <div className="ws-home-section-head"><h3>Today</h3><Link to="/dashboard/tasks">Open tasks</Link></div>
@@ -126,13 +274,25 @@ export default function Overview() {
           </Link>
         ) : (
           essays.slice(0, 5).map((e) => {
-            const cs = overviewCardStyle(e.universities);
+            const words = e.content ? e.content.trim().split(/\s+/).filter(Boolean).length : 0;
+            const cs = overviewCardStyle(e.universities, {
+              words,
+              limit: e.word_limit,
+              status: e.status,
+            });
+            const unstarted = words === 0;
+            // Only quote a limit the essay actually carries — no invented target.
+            const length = unstarted
+              ? 'Not started'
+              : e.word_limit
+                ? `${words} / ${e.word_limit} words${cs.over ? ' · over' : ''}`
+                : `${words} words`;
             return (
               <Link
                 key={e.id}
                 to="/dashboard/essays"
-                className="ws-essay-card"
-                style={{ background: cs.background, borderColor: cs.borderColor, boxShadow: cs.boxShadow }}
+                className={`ws-essay-card${unstarted ? ' is-unstarted' : ''}`}
+                style={cs.style}
               >
                 {e.universities ? (
                   <LogoTile item={{ logoUrl: e.universities.logo_url, logoStyle: e.universities.logo_style, fallback: e.universities.fallback, name: e.universities.name }} size={32} radius={8} />
@@ -140,15 +300,54 @@ export default function Overview() {
                   <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={32} radius={8} />
                 )}
                 <div className="ws-essay-card-body">
-                  <div className="ws-essay-card-uni" style={{ color: cs.uniColor }}>
+                  <div className="ws-essay-card-uni" style={{ color: cs.color }}>
                     {e.universities ? (e.universities.short_name || e.universities.name) : 'Common App'}
                   </div>
                   <div className="ws-essay-card-title">{e.title || 'Untitled'}</div>
-                  <div className="ws-essay-card-meta">{new Date(e.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {e.content ? `${e.content.trim().split(/\s+/).filter(Boolean).length} words` : 'Empty'}</div>
+                  <div className={`ws-essay-card-meta${cs.over ? ' is-over' : ''}`}>
+                    {new Date(e.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {' · '}
+                    {length}
+                  </div>
                 </div>
+                {/* The stamp names the workflow stage. It doubles as the stage
+                    chip, so the two never repeat each other. Unstarted essays
+                    get none — there is no stage to be at yet. */}
+                {cs.stage && (
+                  <span className={`ws-essay-stamp stamp-${cs.stageKey}`}>{cs.stage}</span>
+                )}
               </Link>
             );
           })
+        )}
+
+        {nextDeadlineTask && (
+          <>
+            <div className="ws-home-section-head ws-rail-gap"><h3>Next deadline</h3><Link to="/dashboard/tasks">Tasks</Link></div>
+            <Link to="/dashboard/tasks" className="ws-rail-deadline">
+              <span className="ws-rail-deadline-days">{daysToDeadline}d</span>
+              <div className="ws-rail-deadline-body">
+                <div className="ws-rail-deadline-title">{nextDeadlineTask.title}</div>
+                <div className="ws-rail-deadline-date">
+                  <CalendarClock size={12} />
+                  {new Date(firstDeadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+            </Link>
+          </>
+        )}
+
+        {closingScholarship && (
+          <>
+            <div className="ws-home-section-head ws-rail-gap"><h3>Closing soon</h3><Link to="/dashboard/scholarships">All</Link></div>
+            <Link to="/dashboard/scholarships" className="ws-rail-sch">
+              <div className="ws-rail-sch-body">
+                <div className="ws-rail-sch-name">{closingScholarship.name}</div>
+                <div className="ws-rail-sch-meta">{closingScholarship.org} · {scholarshipDaysLeft}d left</div>
+              </div>
+              <span className="ws-rail-sch-amount">{closingScholarship.amountText}</span>
+            </Link>
+          </>
         )}
       </aside>
     </div>

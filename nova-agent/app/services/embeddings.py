@@ -29,6 +29,13 @@ def embed_text(text: str) -> list[float]:
 
 def semantic_search(table: str, query: str, limit: int = 5) -> list[dict]:
     embedding = embed_text(query)
+    return semantic_search_by_embedding(table, embedding, limit)
+
+
+def semantic_search_by_embedding(table: str, embedding: list[float], limit: int = 5) -> list[dict]:
+    """Same as semantic_search but takes a precomputed embedding — lets callers
+    embed a query once and reuse it across multiple tables instead of paying
+    for a fresh Gemini embedding call per table."""
     rpc_name = f"match_{table}"
 
     result = supabase.rpc(rpc_name, {

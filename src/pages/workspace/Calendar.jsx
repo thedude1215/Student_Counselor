@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchTasks } from '../../api/workspace.js';
+import NovaMascot from '../../components/NovaMascot.jsx';
 import './workspace.css';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -68,13 +69,47 @@ export default function Calendar() {
 
   if (loading) return <div className="ws-loading">Loading your calendar…</div>;
 
+  // ── Calendar-at-a-glance stats ──
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const thisMonthCount = tasks.filter(t => t.due_date && t.due_date.startsWith(monthPrefix) && t.status !== 'done').length;
+  const overdueCount = tasks.filter(t => t.status !== 'done' && t.due_date && t.due_date < todayStr).length;
+  const nextDue = tasks.filter(t => t.status !== 'done' && t.due_date && t.due_date >= todayStr).map(t => t.due_date).sort()[0];
+  const nextDays = nextDue ? Math.round((new Date(nextDue + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86_400_000) : null;
+  const calRead =
+    thisMonthCount === 0 ? 'No deadlines this month — you\'re clear'
+    : overdueCount > 0 ? `${overdueCount} overdue · ${thisMonthCount} due this month`
+    : nextDays != null ? `Next deadline ${nextDays === 0 ? 'today' : `in ${nextDays} day${nextDays === 1 ? '' : 's'}`}`
+    : `${thisMonthCount} deadline${thisMonthCount === 1 ? '' : 's'} this month`;
+
   return (
-    <div className="ws-section">
-      <header className="ws-header">
-        <div>
-          <h1 className="ws-title">Calendar</h1>
-          <p className="ws-subtitle">Every deadline and test date in one view.</p>
+    <div className="ws-section ah-page">
+      {/* ── Forest hero stat band ── */}
+      <div className="ah-hero">
+        <div className="ah-hero-main">
+          <span className="ah-hero-eyebrow"><span className="ah-hero-dot" /> Your calendar</span>
+          <h1 className="ah-hero-title">Calendar</h1>
+          <p className="ah-hero-sub">{calRead}</p>
         </div>
+        <div className="ah-hero-right cal-hero-right">
+          <div className="ah-hero-mascot cl-hero-mascot"><NovaMascot size={38} idle /></div>
+          <div className="cal-countdown">
+            <span className="cal-cd-num">{nextDays != null ? (nextDays === 0 ? 'Today' : `${nextDays}d`) : '—'}</span>
+            <span className="cal-cd-cap">until your next deadline</span>
+            {upcoming[0] && <span className="cal-cd-title">{upcoming[0].title}</span>}
+            <div className="cal-cd-chips">
+              <span className="cal-cd-chip">{thisMonthCount} this month</span>
+              {overdueCount > 0 && <span className="cal-cd-chip over">{overdueCount} overdue</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Month navigation bar ── */}
+      <div className="cal-navbar">
+        <span className="cal-month-label">
+          <span className="cal-month-name">{MONTHS[month]}</span>
+          <span className="cal-month-year">{year}</span>
+        </span>
         <div className="cal-nav">
           <button
             className="cal-today-btn"
@@ -83,15 +118,11 @@ export default function Calendar() {
           <button className="ws-icon-btn" onClick={() => { setCursor(new Date(year, month - 1, 1)); setSelectedDs(null); }}>
             <ChevronLeft size={16} />
           </button>
-          <span className="cal-month-label">
-            <span className="cal-month-name">{MONTHS[month]}</span>
-            <span className="cal-month-year">{year}</span>
-          </span>
           <button className="ws-icon-btn" onClick={() => { setCursor(new Date(year, month + 1, 1)); setSelectedDs(null); }}>
             <ChevronRight size={16} />
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="cal-wrap">
         {/* Day-of-week header */}
@@ -124,7 +155,8 @@ export default function Calendar() {
               >
                 <div className="cal-cell-top">
                   <span className="cal-day-num">{c.day}</span>
-                  {prio && <span className="cal-dot" style={{ background: PRIO[prio].dot }} />}
+                  {isToday && <span className="cal-today-mascot"><NovaMascot size={22} idle /></span>}
+                  {prio && !isToday && <span className="cal-dot" style={{ background: PRIO[prio].dot }} />}
                 </div>
                 <div className="cal-events">
                   {c.items.slice(0, 2).map(t => {

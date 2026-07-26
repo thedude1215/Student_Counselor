@@ -34,7 +34,7 @@ export default function TaskCard({ task, onDelete, onEdit, draggable, onDragStar
 
   return (
     <div
-      className={`ws-card2 ${isDone ? 'done' : ''} ${isDragging ? 'dragging' : ''}`}
+      className={`ws-card2 ${isDone ? 'done' : ''} ${isDragging ? 'dragging' : ''} prio-${task.priority || 'medium'}`}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}

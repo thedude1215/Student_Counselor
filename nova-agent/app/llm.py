@@ -15,7 +15,7 @@ def _build_llm():
             model=GROQ_MODEL,
             api_key=GROQ_API_KEY,
             temperature=0.7,
-            max_tokens=2048,
+            max_tokens=4096,
         )
 
     # Default: Gemini
@@ -29,7 +29,7 @@ def _build_llm():
         # max_output_tokens and an unbounded thinking budget, a longer conversation
         # context can spend the entire budget on hidden thinking and return an empty
         # answer (output_tokens=0). Cap thinking and give the visible reply headroom.
-        max_output_tokens=2048,
+        max_output_tokens=4096,
         thinking_budget=1024,
     )
 

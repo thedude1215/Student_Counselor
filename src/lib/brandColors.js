@@ -225,26 +225,66 @@ export function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-export function essayCardStyle(uni, isActive) {
-  const color = getBrandColor(uni);
-  const [r, g, b] = hexToRgb(color);
-  return {
-    background:  `rgba(${r},${g},${b},${isActive ? 0.08 : 0.05})`,
-    borderColor: `rgba(${r},${g},${b},${isActive ? 0.45 : 0.22})`,
-    boxShadow:   isActive
-      ? `0 4px 14px rgba(${r},${g},${b},0.22)`
-      : `0 2px 8px rgba(${r},${g},${b},0.10)`,
-    _color: color,
-  };
-}
+/* Card surfaces stay in the product's cream/emerald palette; each school's
+ * colour survives in its logo tile, a 3px left edge and the small label.
+ *
+ * These used to tint the whole card in the university's colour, which turned
+ * the essay rail into a wash of pastel navy/maroon/purple — handsome on its own
+ * but a different palette from the rest of the product, and the giveaway that
+ * this half of the app was designed separately from the landing page. */
 
-export function overviewCardStyle(uni) {
+/* Where an essay sits in the writing workflow.
+ *
+ * Deliberately NOT derived from word count. Length is not completion: a
+ * 650-word essay can be finished at 590, and a 250-word supplement may be
+ * deliberately tight at 180. Measuring by words marks both permanently
+ * unfinished, and quietly implies you ought to use the whole allowance —
+ * bad writing advice from a product that sells honest counselling. */
+// Matches the wording on the editor's own status button (STATUS_META in
+// Essays.jsx) — same product concept, same label, not a rail-only rephrasing.
+const STAGE_LABEL = { final: 'Final ✓', reviewed: 'Reviewed', drafting: 'Drafting' };
+
+/* Over the word limit — worth catching from the rail, since it can get an
+   essay cut before anyone reads it. */
+const OVER_LIMIT_COLOR = '#C0392B';
+
+/*
+ * The essay card: white surface, a solid spine in the school's colour, and the
+ * workflow stage named on a stamp.
+ *
+ * An earlier version tilted the cards, gave them an offset shadow in the
+ * school's colour, and turned the spine into a part-filled gauge. Rendered, the
+ * spine, the shadow and the border stacked three coloured edges within a few
+ * pixels and read as a layout bug rather than a sticker.
+ *
+ * Returns { color, stage, over, style }: `style` spreads straight onto the
+ * element, and the extras stay out of the DOM.
+ */
+export function overviewCardStyle(uni, { words = 0, limit, status } = {}) {
   const color = getBrandColor(uni);
-  const [r, g, b] = hexToRgb(color);
+
+  // Nothing written yet outranks any stored status — you cannot be part-way
+  // through drafting an empty essay.
+  const stage = words === 0 ? null : (STAGE_LABEL[status] ?? STAGE_LABEL.drafting);
+  const stageKey = words === 0 ? null : (STAGE_LABEL[status] ? status : 'drafting');
+
+  // Only meaningful when a limit was actually stored. There used to be a silent
+  // fallback to 650 here, which rendered a guess as a fact on every essay that
+  // had no limit set.
+  const over = Boolean(limit) && words > limit;
+
   return {
-    background:  `rgba(${r},${g},${b},0.10)`,
-    borderColor: `rgba(${r},${g},${b},0.28)`,
-    boxShadow:   `0 3px 0 rgba(${r},${g},${b},0.35)`,
-    uniColor:    color,
+    color,
+    stage,
+    stageKey,
+    over,
+    style: {
+      // White, not the off-white cream: the rail sits on #F4F2EC, so a #FAF9F5
+      // card barely separated from its own background.
+      background:  'var(--white, #FFFFFF)',
+      borderColor: over ? OVER_LIMIT_COLOR : 'var(--border, #C8DDD1)',
+      boxShadow:   '0 4px 14px -2px rgba(15,40,30,0.10)',
+      '--uni':     over ? OVER_LIMIT_COLOR : color,
+    },
   };
 }

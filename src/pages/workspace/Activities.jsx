@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Trash2, Award, Users, Star, Building,
-  ChevronUp, ChevronDown, Pencil, X, Upload, Loader2,
+  Plus, Trash2, Award, Users, Star, GripVertical,
+  ChevronDown, Pencil, X, Upload, Loader2,
   BookOpen, Palette, Trophy, Heart, Code2, FlaskConical,
   Music, MessageSquare, Newspaper, Flag, Briefcase,
-  Sparkles, Leaf, Globe, Mic, Calculator, Dumbbell,
+  Compass, Leaf, Globe, Mic, Calculator, Dumbbell,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
@@ -14,6 +13,10 @@ import {
   fetchHonors, addHonor, updateHonor, deleteHonor,
   parsePdf,
 } from '../../api/workspace.js';
+import { reviewActivity } from '../../api/nova.js';
+import { gradeTitle, gradeDescription, gradesFromReview, gradeColor, gradeBg, bestGrade, isLeadershipRole } from '../../lib/activityGrades.js';
+import NovaMascot from '../../components/NovaMascot.jsx';
+import Confetti from './Confetti.jsx';
 import './workspace.css';
 
 const ACTIVITY_TYPES = [
@@ -67,10 +70,10 @@ const TYPE_ICON_MAP = {
   'Student Government':     { Icon: Flag,        color: '#ef4444', bg: '#FEF2F2' },
   'Theater / Drama':        { Icon: Users,       color: '#ec4899', bg: '#FDF2F8' },
   'Work (Paid)':            { Icon: Briefcase,   color: '#f59e0b', bg: '#FFFBEB' },
-  'Other':                  { Icon: Sparkles,    color: '#8b5cf6', bg: '#F5F3FF' },
+  'Other':                  { Icon: Compass,    color: '#8b5cf6', bg: '#F5F3FF' },
 };
 
-const DEFAULT_ICON = { Icon: Sparkles, color: '#8b5cf6', bg: '#F5F3FF' };
+const DEFAULT_ICON = { Icon: Compass, color: '#8b5cf6', bg: '#F5F3FF' };
 
 function getTypeIcon(type) {
   return TYPE_ICON_MAP[type] || DEFAULT_ICON;
@@ -166,7 +169,7 @@ function ActivityModal({ initial, onSave, onClose }) {
           <div className="ws-modal-field">
             <label className="ws-modal-label">
               Description / impact
-              <span className={`ah-char-count ${descLen > DESC_LIMIT ? 'ah-char-over' : descLen > DESC_LIMIT * 0.85 ? 'ah-char-warn' : ''}`}>
+              <span className={`ah-char-count ${descLen > DESC_LIMIT ? 'ah-char-over' : descLen > DESC_LIMIT * 0.85 ? 'ah-char-warn' : descLen >= DESC_LIMIT * 0.6 ? 'ah-char-good' : ''}`}>
                 {descLen}/{DESC_LIMIT}
               </span>
             </label>
@@ -275,7 +278,7 @@ function HonorModal({ initial, onSave, onClose }) {
 }
 
 /* ── Import PDF Modal ── */
-function ImportModal({ existingActCount, existingHonCount, onImport, onClose }) {
+function ImportModal({ onImport, onClose }) {
   const [stage, setStage] = useState('drop'); // 'drop' | 'parsing' | 'preview' | 'error'
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
@@ -456,13 +459,20 @@ function ImportModal({ existingActCount, existingHonCount, onImport, onClose }) 
 
 export default function Activities() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [honors, setHonors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actModal, setActModal] = useState(null);  // null | 'new' | activity object
   const [honModal, setHonModal] = useState(null);  // null | 'new' | honor object
+  const [actDrag, setActDrag] = useState(null);    // index being dragged
+  const [actDragOver, setActDragOver] = useState(null);
+  const [honDrag, setHonDrag] = useState(null);
+  const [honDragOver, setHonDragOver] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [novaOpenId, setNovaOpenId] = useState(null);      // activity id with panel open
+  const [novaLoadingId, setNovaLoadingId] = useState(null);
+  const [novaReviews, setNovaReviews] = useState({});      // activity id → review | { error }
+  const [celebrate, setCelebrate] = useState(false);       // confetti when Nova returns an A
 
   useEffect(() => {
     if (!user) return;
@@ -490,16 +500,13 @@ export default function Activities() {
     setActivities(prev => prev.filter(a => a.id !== id));
   }
 
-  async function moveAct(idx, dir) {
-    const next = idx + dir;
-    if (next < 0 || next >= activities.length) return;
+  async function reorderAct(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
     const arr = [...activities];
-    [arr[idx], arr[next]] = [arr[next], arr[idx]];
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
     setActivities(arr);
-    await Promise.all([
-      updateActivity(arr[idx].id, { sort_order: idx }),
-      updateActivity(arr[next].id, { sort_order: next }),
-    ]);
+    await Promise.all(arr.map((a, i) => updateActivity(a.id, { sort_order: i })));
   }
 
   /* ── Honors CRUD ── */
@@ -520,16 +527,45 @@ export default function Activities() {
     setHonors(prev => prev.filter(h => h.id !== id));
   }
 
-  async function moveHon(idx, dir) {
-    const next = idx + dir;
-    if (next < 0 || next >= honors.length) return;
+  async function reorderHon(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
     const arr = [...honors];
-    [arr[idx], arr[next]] = [arr[next], arr[idx]];
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
     setHonors(arr);
-    await Promise.all([
-      updateHonor(arr[idx].id, { sort_order: idx }),
-      updateHonor(arr[next].id, { sort_order: next }),
-    ]);
+    await Promise.all(arr.map((h, i) => updateHonor(h.id, { sort_order: i })));
+  }
+
+  /* ── Nova activity review ── */
+  async function runNovaReview(a, { force = false } = {}) {
+    if (!a.description?.trim()) {
+      setNovaReviews(prev => ({ ...prev, [a.id]: { error: 'Add a description first — Nova reviews the 150-character description.' } }));
+      setNovaOpenId(a.id);
+      return;
+    }
+    if (!force && novaReviews[a.id] && !novaReviews[a.id].error) {
+      setNovaOpenId(novaOpenId === a.id ? null : a.id);
+      return;
+    }
+    setNovaLoadingId(a.id);
+    try {
+      const review = await reviewActivity({
+        title: a.title,
+        type: a.activity_type,
+        role: a.role,
+        description: a.description,
+        hoursPerWeek: a.hours_per_week,
+        weeksPerYear: a.weeks_per_year,
+      });
+      setNovaReviews(prev => ({ ...prev, [a.id]: review }));
+      setNovaOpenId(a.id);
+      if (review.rating === 'strong') setCelebrate(true);   // grade A → celebrate
+    } catch (err) {
+      setNovaReviews(prev => ({ ...prev, [a.id]: { error: err.message } }));
+      setNovaOpenId(a.id);
+    } finally {
+      setNovaLoadingId(null);
+    }
   }
 
   async function handleImport(newActs, newHons) {
@@ -547,22 +583,50 @@ export default function Activities() {
 
   if (loading) return <div className="ws-loading">Loading…</div>;
 
+  // ── Profile-at-a-glance stats for the hero band ──
+  const totalHours = activities.reduce((s, a) => s + (Number(a.hours_per_week) || 0), 0);
+  const leadershipCount = activities.filter(a => isLeadershipRole(a.role)).length;
+  const topGrade = bestGrade(activities.map(a => {
+    const rg = gradesFromReview(novaReviews[a.id]);
+    return bestGrade([rg?.title ?? gradeTitle(a), rg?.description ?? gradeDescription(a)]);
+  }));
+
   return (
-    <div className="ws-section">
-      <header className="ws-header">
-        <div>
-          <h1 className="ws-title">Activities &amp; Honors</h1>
-          <p className="ws-subtitle">The extracurriculars and awards that make your application stand out.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="ws-btn ws-btn-import" onClick={() => setShowImport(true)}>
-            <Upload size={14} /> Import PDF
+    <div className="ws-section ah-page">
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
+
+      {/* ── Forest hero stat band ── */}
+      <div className="ah-hero">
+        <div className="ah-hero-main">
+          <span className="ah-hero-eyebrow"><span className="ah-hero-dot" /> Your extracurricular profile</span>
+          <h1 className="ah-hero-title">Activities &amp; Honors</h1>
+          <p className="ah-hero-sub">The extracurriculars and awards that make your application stand out.</p>
+          <button className="ah-hero-import" onClick={() => setShowImport(true)}>
+            <Upload size={14} /> Import from PDF
           </button>
-          <button className="ws-btn ws-btn-nova" onClick={() => navigate('/nova')}>
-            <Sparkles size={14} /> Review with Nova
-          </button>
         </div>
-      </header>
+        <div className="ah-hero-right">
+          <div className="ah-hero-mascot"><NovaMascot size={46} idle /></div>
+          <div className="ah-hero-stats">
+            <div className="ah-stat-sticker st-cream">
+              <span className="ah-stat-big">{activities.length}</span>
+              <span className="ah-stat-cap">of 10 activities</span>
+            </div>
+            <div className="ah-stat-sticker st-yellow">
+              <span className="ah-stat-big">{totalHours}</span>
+              <span className="ah-stat-cap">hrs / week</span>
+            </div>
+            <div className="ah-stat-sticker st-mint">
+              <span className="ah-stat-big">{leadershipCount}</span>
+              <span className="ah-stat-cap">leadership roles</span>
+            </div>
+            <div className="ah-stat-sticker st-white">
+              <span className="ah-stat-big">{topGrade || '—'}</span>
+              <span className="ah-stat-cap">top grade</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ── Activities ── */}
       <section className="ah-section">
@@ -587,44 +651,151 @@ export default function Activities() {
         ) : (
           <div className="ah-cards">
             {activities.map((a, i) => {
-              const { Icon, color, bg } = getTypeIcon(a.activity_type);
+              const { color, bg, Icon: TypeIcon } = getTypeIcon(a.activity_type);
+              const review = novaReviews[a.id];
+              const panelOpen = novaOpenId === a.id && !!review;
+              const reviewGrades = gradesFromReview(review);
+              const tGrade = reviewGrades?.title ?? gradeTitle(a);
+              const dGrade = reviewGrades?.description ?? gradeDescription(a);
+              // Chip shows the weaker of the two grades (A sorts first, F last)
+              const chipGrade = [tGrade, dGrade].filter(Boolean).sort().pop() || null;
               return (
-                <div className="ah-card ah-card-v2" key={a.id}>
-                  {/* Type icon with rank overlay */}
-                  <div className="ah-type-icon" style={{ background: bg, color }}>
-                    <Icon size={17} />
-                    <span className="ah-tile-rank">{i + 1}</span>
-                  </div>
+                <Fragment key={a.id}>
+                <div
+                  className={`ah-card ah-card-v2${actDragOver === i && actDrag !== i ? ' ah-drag-over' : ''}`}
+                  draggable
+                  onDragStart={() => setActDrag(i)}
+                  onDragOver={e => { e.preventDefault(); setActDragOver(i); }}
+                  onDragLeave={() => setActDragOver(null)}
+                  onDrop={() => { reorderAct(actDrag, i); setActDrag(null); setActDragOver(null); }}
+                  onDragEnd={() => { setActDrag(null); setActDragOver(null); }}
+                  style={{ opacity: actDrag === i ? 0.4 : 1 }}
+                >
+                  <GripVertical size={13} className="ah-grip" />
+                  <span className="ah-rank-num">{i + 1}</span>
+                  <span className="ah-icon-tile" style={{ background: bg, color }} aria-hidden="true">
+                    <TypeIcon size={18} />
+                  </span>
 
                   {/* Body */}
                   <div className="ah-card-body" onClick={() => setActModal(a)} style={{ cursor: 'pointer' }}>
                     <div className="ah-card-top">
                       <span className="ah-card-name">{a.title}</span>
-                      {a.role && <span className="ah-role-pill" style={{ color, background: bg, borderColor: color + '44' }}>{a.role}</span>}
-                      {a.activity_type && <span className="ah-type-pill">{a.activity_type}</span>}
+                      {a.activity_type && (
+                        <span className="ah-type-pill" style={{ background: bg, color, border: `1px solid ${color}28` }}>
+                          {a.activity_type}
+                        </span>
+                      )}
+                      {chipGrade && (
+                        <span
+                          className="ah-grade-sticker"
+                          style={{ color: gradeColor(chipGrade), background: gradeBg(chipGrade) }}
+                          title={`Title: ${tGrade || '—'} · Description: ${dGrade || '—'}${reviewGrades ? ' (Nova-reviewed)' : ''}`}
+                        >
+                          {chipGrade}
+                        </span>
+                      )}
+                      <ChevronDown size={13} className="ah-expand-hint" />
                     </div>
-                    {a.organization && (
-                      <div className="ah-card-org"><Building size={11} /> {a.organization}</div>
-                    )}
-                    {(a.hours_per_week || a.weeks_per_year) && (
-                      <div className="ah-card-time">
-                        {a.hours_per_week && <span>{a.hours_per_week} hrs/wk</span>}
-                        {a.hours_per_week && a.weeks_per_year && <span className="ah-time-sep">·</span>}
-                        {a.weeks_per_year && <span>{a.weeks_per_year} wks/yr</span>}
+                    {a.role && <div className="ah-card-meta"><span className="ah-meta-role">{a.role}</span></div>}
+
+                    {/* Inline expand on hover — Kollegio-style stat grid */}
+                    <div className="ah-card-extra">
+                      <div className="ah-stat-grid">
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Hours per Week</span>
+                          <span className="ah-stat-value">{a.hours_per_week ?? '—'}</span>
+                        </div>
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Weeks per Year</span>
+                          <span className="ah-stat-value">{a.weeks_per_year ?? '—'}</span>
+                        </div>
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Title</span>
+                          <span className="ah-stat-value" style={{ color: tGrade ? gradeColor(tGrade) : undefined }}>{tGrade || '—'}</span>
+                        </div>
+                        <div className="ah-stat">
+                          <span className="ah-stat-label">Description</span>
+                          <span className="ah-stat-value" style={{ color: dGrade ? gradeColor(dGrade) : undefined }}>{dGrade || '—'}</span>
+                        </div>
                       </div>
-                    )}
-                    {a.description && <div className="ah-card-desc">{a.description}</div>}
+                      {a.description && <p className="ah-preview-desc">{a.description}</p>}
+                    </div>
                   </div>
 
-                  {/* Actions: reorder + edit + delete */}
+                  {/* Review with Nova — always visible */}
+                  <button
+                    className={`ah-nova-btn${panelOpen ? ' open' : ''}`}
+                    onClick={() => runNovaReview(a)}
+                    disabled={novaLoadingId === a.id}
+                    title="Review this activity with Nova"
+                  >
+                    {novaLoadingId === a.id
+                      ? <Loader2 size={12} className="ah-nova-spin" />
+                      : <NovaMascot size={15} />}
+                    <span>Nova</span>
+                  </button>
+
+                  {/* Actions */}
                   <div className="ah-card-actions">
-                    <button className="ah-arrow-btn" disabled={i === 0} onClick={() => moveAct(i, -1)} title="Move up"><ChevronUp size={13} /></button>
-                    <button className="ah-arrow-btn" disabled={i === activities.length - 1} onClick={() => moveAct(i, 1)} title="Move down"><ChevronDown size={13} /></button>
-                    <div className="ah-actions-sep" />
                     <button className="ah-action-btn" onClick={() => setActModal(a)} title="Edit"><Pencil size={13} /></button>
                     <button className="ah-action-btn ah-action-del" onClick={() => delAct(a.id)} title="Delete"><Trash2 size={13} /></button>
                   </div>
                 </div>
+
+                {/* Nova feedback panel — inline expansion below the card */}
+                <div className={`ah-nova-panel${panelOpen ? ' open' : ''}`}>
+                  {review && (
+                    <div className="ah-nova-panel-inner">
+                      <div className="ah-nova-panel-head">
+                        <span className="ah-nova-byline"><NovaMascot size={15} /> Nova's take</span>
+                        <div className="ah-nova-head-actions">
+                          {!review.error && (
+                            <button
+                              className="ah-nova-rerun"
+                              onClick={() => runNovaReview(a, { force: true })}
+                              disabled={novaLoadingId === a.id}
+                            >
+                              {novaLoadingId === a.id ? 'Reviewing…' : 'Re-review'}
+                            </button>
+                          )}
+                          <button className="ah-nova-close" onClick={() => setNovaOpenId(null)} title="Close"><X size={13} /></button>
+                        </div>
+                      </div>
+
+                      {review.error ? (
+                        <p className="ah-nova-panel-feedback">{review.error}</p>
+                      ) : (
+                        <>
+                          <div className={`ah-nova-panel-rating rating-${review.rating}`}>
+                            <span className="ah-nova-dot" />
+                            {review.rating === 'strong' ? 'Strong' : review.rating === 'good' ? 'Good' : 'Needs work'}
+                          </div>
+                          <p className="ah-nova-panel-feedback">{review.feedback}</p>
+                          {review.rewrite_example && (
+                            <div className="ah-nova-panel-rewrite">
+                              <div className="ah-nova-rewrite-label">
+                                Suggested rewrite
+                                <span className="ah-nova-charcount">{review.rewrite_example.length}/150</span>
+                              </div>
+                              <p className="ah-nova-rewrite-text">{review.rewrite_example}</p>
+                              <button
+                                className="ah-nova-use-btn"
+                                onClick={async () => {
+                                  await updateActivity(a.id, { description: review.rewrite_example });
+                                  setNovaOpenId(null);
+                                }}
+                              >
+                                Use this
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                </Fragment>
               );
             })}
           </div>
@@ -654,36 +825,43 @@ export default function Activities() {
         ) : (
           <div className="ah-cards">
             {honors.map((h, i) => {
-              const lvl = getLevelStyle(h.level);
               return (
-                <div className="ah-honor-card ah-card-v2" key={h.id}>
-                  {/* Medal tile with rank overlay */}
-                  <div className="ah-medal" style={{ background: lvl.bg, color: lvl.color, borderColor: lvl.border }}>
-                    <Award size={17} />
-                    <span className="ah-tile-rank">{i + 1}</span>
-                  </div>
-
+                <div
+                  className={`ah-honor-card ah-card-v2${honDragOver === i && honDrag !== i ? ' ah-drag-over' : ''}`}
+                  key={h.id}
+                  draggable
+                  onDragStart={() => setHonDrag(i)}
+                  onDragOver={e => { e.preventDefault(); setHonDragOver(i); }}
+                  onDragLeave={() => setHonDragOver(null)}
+                  onDrop={() => { reorderHon(honDrag, i); setHonDrag(null); setHonDragOver(null); }}
+                  onDragEnd={() => { setHonDrag(null); setHonDragOver(null); }}
+                  style={{ opacity: honDrag === i ? 0.4 : 1 }}
+                >
+                  <GripVertical size={13} className="ah-grip" />
+                  <span className="ah-rank-num">{i + 1}</span>
                   {/* Body */}
                   <div className="ah-card-body" onClick={() => setHonModal(h)} style={{ cursor: 'pointer' }}>
                     <div className="ah-card-top">
                       <span className="ah-card-name">{h.title}</span>
                       {h.year && <span className="ah-year-badge">{h.year}</span>}
-                    </div>
-                    <div className="ah-honor-meta">
                       {h.level && (
-                        <span className="ah-level-badge" style={{ background: lvl.bg, color: lvl.color, borderColor: lvl.border }}>
+                        <span className="ah-type-pill" style={{ background: getLevelStyle(h.level).bg, color: getLevelStyle(h.level).color, border: `1px solid ${getLevelStyle(h.level).color}28` }}>
                           {h.level}
                         </span>
                       )}
-                      {h.description && <span className="ah-card-desc">{h.description}</span>}
+                      <ChevronDown size={13} className="ah-expand-hint" />
                     </div>
+
+                    {/* Inline expand on hover */}
+                    {h.description && (
+                      <div className="ah-card-extra">
+                        <p className="ah-preview-desc">{h.description}</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Actions: reorder + edit + delete */}
+                  {/* Actions */}
                   <div className="ah-card-actions">
-                    <button className="ah-arrow-btn" disabled={i === 0} onClick={() => moveHon(i, -1)} title="Move up"><ChevronUp size={13} /></button>
-                    <button className="ah-arrow-btn" disabled={i === honors.length - 1} onClick={() => moveHon(i, 1)} title="Move down"><ChevronDown size={13} /></button>
-                    <div className="ah-actions-sep" />
                     <button className="ah-action-btn" onClick={() => setHonModal(h)} title="Edit"><Pencil size={13} /></button>
                     <button className="ah-action-btn ah-action-del" onClick={() => delHon(h.id)} title="Delete"><Trash2 size={13} /></button>
                   </div>
@@ -711,8 +889,6 @@ export default function Activities() {
       )}
       {showImport && (
         <ImportModal
-          existingActCount={activities.length}
-          existingHonCount={honors.length}
           onImport={handleImport}
           onClose={() => setShowImport(false)}
         />

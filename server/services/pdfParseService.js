@@ -1,6 +1,4 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL   = 'gemini-2.5-flash';
@@ -62,8 +60,14 @@ PDF TEXT:
 `;
 
 export async function extractTextFromPdf(buffer) {
-  const data = await pdfParse(buffer);
-  return data.text;
+  const parser = new PDFParse({ data: buffer });
+  try {
+    await parser.load();
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy();
+  }
 }
 
 export async function parseActivitiesFromText(text) {

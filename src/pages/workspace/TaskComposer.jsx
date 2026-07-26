@@ -44,8 +44,6 @@ export default function TaskComposer({ onAdd, onCancel }) {
     if (e.key === 'Escape') onCancel();
   }
 
-  const prioCls = { low: '', medium: 'cat-general', high: 'cat-essays' };
-
   return (
     <form className="ws-composer-card" onSubmit={handleSubmit} onKeyDown={handleKey}>
       <input

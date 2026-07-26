@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, PenLine, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, PenLine, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import LogoTile from '../../components/LogoTile';
+import NovaMascot from '../../components/NovaMascot.jsx';
+import Confetti from './Confetti.jsx';
+import { ProgressArc } from './HeroRings.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchEssays, addEssay, updateEssay, deleteEssay, fetchCollegeList } from '../../api/workspace.js';
 import { reviewEssay } from '../../api/nova.js';
 import NewEssayModal from './NewEssayModal.jsx';
 import EssayReview from './EssayReview.jsx';
-import { essayCardStyle } from '../../lib/brandColors.js';
+import { overviewCardStyle } from '../../lib/brandColors.js';
 import './workspace.css';
 
-/* ai_feedback may be new structured JSON, legacy {feedback:"markdown"}, or a plain string. */
 function parseReview(raw) {
   if (!raw) return null;
   if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
@@ -19,23 +21,31 @@ function parseReview(raw) {
   try {
     const obj = JSON.parse(str);
     if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-      // New format: has overall or suggestions
       if ('suggestions' in obj || 'overall' in obj) return obj;
-      // Legacy format: {feedback: "markdown text"}
       if ('feedback' in obj) {
         const text = (obj.feedback || '').trim();
         return text ? { overall: text, score: 0, strengths: [], suggestions: [] } : null;
       }
     }
-  } catch { /* not JSON — treat as plain text */ }
+  } catch { /* not JSON */ }
   return { overall: str, score: 0, strengths: [], suggestions: [] };
 }
 
 const WORD_LIMIT = 650;
-const GENERAL = { id: '', name: 'Common App / General' };
+
+const STATUS_META = {
+  drafting: { label: 'Drafting',  cls: 'st-drafting', next: 'reviewed' },
+  reviewed: { label: 'Reviewed',  cls: 'st-reviewed', next: 'final' },
+  final:    { label: 'Final ✓',   cls: 'st-final',    next: 'drafting' },
+};
 
 function wordCount(text) {
   return text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+}
+
+function EssayLogo({ uni }) {
+  if (uni) return <LogoTile item={{ logoUrl: uni.logo_url, logoStyle: uni.logo_style, fallback: uni.fallback, name: uni.name }} size={28} radius={7} />;
+  return <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={28} radius={7} />;
 }
 
 export default function Essays() {
@@ -45,15 +55,19 @@ export default function Essays() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState({ title: '', prompt: '', content: '', university_id: '' });
-  const [saveState, setSaveState] = useState('idle'); // 'idle' | 'pending' | 'saving' | 'saved'
+  const [saveState, setSaveState] = useState('idle');
   const autoSaveTimer = useRef(null);
-  const textareaRef   = useRef(null);
+  const textareaRef = useRef(null);
   const [feedback, setFeedback] = useState(null);
-  const [reviewedContent, setReviewedContent] = useState(''); // content snapshot at review time
+  const [reviewedContent, setReviewedContent] = useState('');
   const [reviewing, setReviewing] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null); // essay id pending deletion
+  const [celebrate, setCelebrate] = useState(false);   // confetti when an essay hits "Final"
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [expandedGroup, setExpandedGroup] = useState(null);
+  const switcherRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
@@ -64,17 +78,42 @@ export default function Essays() {
     }).catch(console.error).finally(() => setLoading(false));
   }, [user]);
 
+  useEffect(() => {
+    if (!showSwitcher) return;
+    function handle(e) {
+      if (switcherRef.current && !switcherRef.current.contains(e.target)) {
+        setShowSwitcher(false);
+        setConfirmDelete(null);
+        setExpandedGroup(null);
+      }
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [showSwitcher]);
+
   function selectEssay(essay) {
     setSelectedId(essay.id);
     const content = essay.content || '';
     setDraft({ title: essay.title, prompt: essay.prompt || '', content, university_id: essay.university_id || '' });
-    setReviewedContent(content); // seed so saved reviews also show essay text
+    setReviewedContent(content);
     setSaveState('idle');
     setFeedback(parseReview(essay.ai_feedback));
     setShowFeedback(false);
+    setShowSwitcher(false);
+    setConfirmDelete(null);
+    setExpandedGroup(null);
   }
 
-  // Show saved review instantly if one exists; otherwise run the API
+  function prevEssay() {
+    const idx = essays.findIndex(e => e.id === selectedId);
+    if (idx > 0) selectEssay(essays[idx - 1]);
+  }
+
+  function nextEssay() {
+    const idx = essays.findIndex(e => e.id === selectedId);
+    if (idx < essays.length - 1) selectEssay(essays[idx + 1]);
+  }
+
   function openFeedback() {
     if (feedback) { setShowFeedback(true); return; }
     runReview();
@@ -87,10 +126,8 @@ export default function Essays() {
     try {
       const uni = colleges.find(u => u.id === draft.university_id);
       const result = await reviewEssay({
-        essayId: selectedId,
-        essayContent: contentSnap,
-        essayPrompt: draft.prompt,
-        essayTitle: draft.title,
+        essayId: selectedId, essayContent: contentSnap,
+        essayPrompt: draft.prompt, essayTitle: draft.title,
         universityName: uni?.name || null,
       });
       const parsed = result.review
@@ -99,6 +136,7 @@ export default function Essays() {
       setReviewedContent(contentSnap);
       setFeedback(parsed || { overall: 'Feedback received but could not be parsed.', score: 0, strengths: [], suggestions: [] });
       setShowFeedback(true);
+      if (parsed && Number(parsed.score) >= 8) setCelebrate(true);   // strong essay → celebrate
     } catch (err) {
       setReviewedContent(contentSnap);
       setFeedback({ overall: `Failed to get feedback: ${err.message}`, score: 0, strengths: [], suggestions: [] });
@@ -118,7 +156,6 @@ export default function Essays() {
     }
   }
 
-  // Auto-resize textarea so the page scrolls, not the textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -126,7 +163,6 @@ export default function Essays() {
     el.style.height = el.scrollHeight + 'px';
   }, [draft.content]);
 
-  // Auto-save: debounce 1.2s after any draft change
   useEffect(() => {
     if (!selectedId) return;
     setSaveState('pending');
@@ -137,17 +173,30 @@ export default function Essays() {
         const updated = await updateEssay(selectedId, { ...draft, university_id: draft.university_id || null });
         setEssays(prev => prev.map(e => (e.id === selectedId ? updated : e)));
         setSaveState('saved');
-      } catch {
-        setSaveState('idle');
-      }
+      } catch { setSaveState('idle'); }
     }, 1200);
     return () => clearTimeout(autoSaveTimer.current);
-  }, [draft, selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draft, selectedId]);  
+
+  async function cycleStatus() {
+    if (!selectedId) return;
+    const current = activeEssay?.status || 'drafting';
+    const next = STATUS_META[current].next;
+    try {
+      const updated = await updateEssay(selectedId, { status: next });
+      setEssays(prev => prev.map(e => (e.id === selectedId ? updated : e)));
+      if (next === 'final') setCelebrate(true);   // celebrate crossing the finish line
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    }
+  }
 
   async function remove(id) {
     await deleteEssay(id);
     const rest = essays.filter(e => e.id !== id);
     setEssays(rest);
+    setConfirmDelete(null);
+    setShowSwitcher(false);
     if (selectedId === id) {
       if (rest.length) selectEssay(rest[0]);
       else { setSelectedId(null); setDraft({ title: '', prompt: '', content: '' }); }
@@ -155,22 +204,68 @@ export default function Essays() {
   }
 
   const activeEssay = essays.find(e => e.id === selectedId);
+  const activeIdx = essays.findIndex(e => e.id === selectedId);
   const essayLimit = activeEssay?.word_limit || WORD_LIMIT;
   const wc = wordCount(draft.content);
   const pct = Math.min(100, Math.round((wc / essayLimit) * 100));
   const overLimit = wc > essayLimit;
+  const activeCs = activeEssay ? overviewCardStyle(activeEssay.universities) : null;
+
+  const essayGroups = (() => {
+    const map = new Map();
+    for (const e of essays) {
+      const key = e.university_id || '__general__';
+      if (!map.has(key)) map.set(key, { uni: e.universities || null, items: [], groupKey: key });
+      map.get(key).items.push(e);
+    }
+    return [...map.values()];
+  })();
 
   if (loading) return <div className="ws-loading">Loading your essays…</div>;
 
+  // ── Essays-at-a-glance status breakdown ──
+  const total = essays.length;
+  const draftingCount = essays.filter(e => (e.status || 'drafting') === 'drafting').length;
+  const reviewedCount = essays.filter(e => e.status === 'reviewed').length;
+  const finalCount = essays.filter(e => e.status === 'final').length;
+  const statusRead =
+    total === 0                    ? 'Start your first draft'
+    : finalCount === total         ? 'Every essay is final — nice work'
+    : finalCount > 0               ? 'Some essays are ready — keep polishing the rest'
+    : reviewedCount > 0            ? 'Reviewed and drafting — keep the momentum'
+    : 'Drafts in progress';
+  // Weighted completeness: reviewed counts as half, final as whole.
+  const progressPct = total ? Math.round(((reviewedCount * 0.5 + finalCount) / total) * 100) : 0;
+
   return (
-    <div className="ws-section">
-      <header className="ws-header">
-        <div>
-          <h1 className="ws-title">Essays</h1>
-          <p className="ws-subtitle">{essays.length} draft{essays.length !== 1 ? 's' : ''}</p>
+    <div className="ws-section ah-page">
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
+
+      {/* ── Forest hero stat band ── */}
+      <div className="ah-hero">
+        <div className="ah-hero-main">
+          <span className="ah-hero-eyebrow"><span className="ah-hero-dot" /> Your essays</span>
+          <h1 className="ah-hero-title">Essays</h1>
+          <p className="ah-hero-sub">{total} draft{total !== 1 ? 's' : ''} · {statusRead}</p>
+
+          <div className="ah-hero-actions">
+            <button className="ah-hero-btn solid" onClick={() => setShowNewModal(true)}>
+              <Plus size={15} /> New essay
+            </button>
+          </div>
         </div>
-        <button className="ws-btn ws-btn-primary" onClick={() => setShowNewModal(true)}><Plus size={16} /> New essay</button>
-      </header>
+        <div className="ah-hero-right cl-hero-right">
+          <div className="ah-hero-mascot cl-hero-mascot"><NovaMascot size={38} idle /></div>
+          <div className="cl-donut-wrap">
+            <ProgressArc percent={progressPct} centerBig={`${progressPct}%`} centerCap="READY" />
+            <div className="cl-donut-legend">
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: 'rgba(255,255,255,0.55)' }} />{draftingCount} drafting</span>
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#FBBF24' }} />{reviewedCount} reviewed</span>
+              <span className="cl-leg"><span className="cl-leg-dot" style={{ background: '#4ADE80' }} />{finalCount} final</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {essays.length === 0 ? (
         <div className="ws-empty">
@@ -179,138 +274,148 @@ export default function Essays() {
           <p>Start a draft and refine it over time.</p>
           <button className="ws-btn ws-btn-primary" onClick={() => setShowNewModal(true)}>Start writing</button>
         </div>
-      ) : (
-        <div className="ws-essay-layout">
+      ) : selectedId && activeEssay ? (
+        <div className="ws-essay-editor">
 
-          {/* ── Left: essay list ── */}
-          <div className="ws-essay-list">
-            {essays.map(e => {
-              const wc2 = wordCount(e.content || '');
-              const pct2 = Math.min(100, Math.round((wc2 / WORD_LIMIT) * 100));
-              const uni = e.universities;
-              const isActive = selectedId === e.id;
-              const cs = essayCardStyle(uni, isActive);
-              return (
-                <div
-                  key={e.id}
-                  className={`ws-essay-item ${isActive ? 'active' : ''}`}
-                  style={{ background: cs.background, borderColor: cs.borderColor, boxShadow: cs.boxShadow }}
-                  onClick={() => selectEssay(e)}
-                >
-                  <div className="ws-essay-item-logo">
-                    {uni ? (
-                      <LogoTile item={{ logoUrl: uni.logo_url, logoStyle: uni.logo_style, fallback: uni.fallback, name: uni.name }} size={32} radius={8} />
-                    ) : (
-                      <LogoTile item={{ logoUrl: '/logos/common-app.png', logoStyle: { background: '#1273C4', padding: '0px' }, fallback: 'CA', name: 'Common App' }} size={32} radius={8} />
-                    )}
-                  </div>
-                  <div className="ws-essay-item-body">
-                    <div className="ws-essay-item-title">{e.title || 'Untitled'}</div>
-                    <div className="ws-essay-item-meta">
-                      {uni ? (uni.short_name || uni.name) : 'Common App'} · {wc2} words
-                    </div>
-                    <div className="ws-essay-item-bar">
-                      <div className="ws-essay-item-bar-fill" style={{ width: `${pct2}%`, background: cs._color }} />
-                    </div>
-                  </div>
-                  {confirmDelete === e.id ? (
-                    <div className="ws-essay-item-confirm" onClick={ev => ev.stopPropagation()}>
-                      <button className="ws-confirm-yes" onClick={ev => { ev.stopPropagation(); setConfirmDelete(null); remove(e.id); }}>Delete</button>
-                      <button className="ws-confirm-no"  onClick={ev => { ev.stopPropagation(); setConfirmDelete(null); }}>Cancel</button>
-                    </div>
-                  ) : (
-                    <button
-                      className="ws-essay-item-delete"
-                      onClick={ev => { ev.stopPropagation(); setConfirmDelete(e.id); }}
-                      title="Delete essay"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+          {/* ── Switcher bar ── */}
+          <div className="ws-essay-switcher-row" ref={switcherRef}>
+            <div className="ws-essay-switcher-wrap">
+              <button
+                className="ws-essay-switcher"
+                /* Surface only — this one is a fully rounded pill, so it takes
+                   neither the spine nor the offset shadow. The school reads
+                   from its logo and the coloured label below. */
+                style={{
+                  background: activeCs?.style.background,
+                  borderColor: activeCs?.style.borderColor,
+                }}
+                onClick={() => { setShowSwitcher(v => !v); setConfirmDelete(null); }}
+              >
+                <EssayLogo uni={activeEssay.universities} />
+                <span className="ws-essay-switcher-uni" style={{ color: activeCs?.color }}>
+                  {activeEssay.universities ? (activeEssay.universities.short_name || activeEssay.universities.name) : 'Common App'}
+                </span>
+                <ChevronDown size={14} className={`ws-essay-switcher-chevron${showSwitcher ? ' open' : ''}`} />
+              </button>
+
+              {showSwitcher && (
+                <div className="ws-essay-switcher-drop">
+                  {essayGroups.map(({ uni, items, groupKey }) => {
+                    const cs2 = overviewCardStyle(uni);
+                    const uniName = uni ? (uni.short_name || uni.name) : 'Common App';
+                    const isOpen = expandedGroup === groupKey;
+                    return (
+                      <div key={groupKey} className={`ws-essay-drop-group${isOpen ? ' open' : ''}`}>
+                        <div className="ws-essay-drop-group-head" onClick={() => setExpandedGroup(isOpen ? null : groupKey)}>
+                          <EssayLogo uni={uni} />
+                          <span className="ws-essay-drop-group-name" style={{ color: cs2.color }}>{uniName}</span>
+                          <ChevronDown size={13} className={`ws-essay-drop-group-chevron${isOpen ? ' open' : ''}`} />
+                        </div>
+                          <div className="ws-essay-drop-essays">
+                            {items.map(e => {
+                              const wc2 = wordCount(e.content || '');
+                              const isActive = e.id === selectedId;
+                              return (
+                                <div
+                                  key={e.id}
+                                  className={`ws-essay-drop-item${isActive ? ' active' : ''}`}
+                                  onClick={() => selectEssay(e)}
+                                >
+                                  <span className={`ws-essay-drop-dot ${STATUS_META[e.status || 'drafting'].cls}`} title={STATUS_META[e.status || 'drafting'].label} />
+                                  <span className="ws-essay-drop-title">{e.title || 'Untitled'}</span>
+                                  <span className="ws-essay-drop-wc">{wc2 > 0 ? `${wc2}w` : 'Empty'}</span>
+                                  {isActive && <Check size={13} className="ws-essay-drop-check" />}
+                                  {confirmDelete === e.id ? (
+                                    <div className="ws-essay-item-confirm" onClick={ev => ev.stopPropagation()}>
+                                      <button className="ws-confirm-yes" onClick={ev => { ev.stopPropagation(); remove(e.id); }}>Delete</button>
+                                      <button className="ws-confirm-no" onClick={ev => { ev.stopPropagation(); setConfirmDelete(null); }}>Cancel</button>
+                                    </div>
+                                  ) : (
+                                    <button className="ws-essay-drop-trash" onClick={ev => { ev.stopPropagation(); setConfirmDelete(e.id); }} title="Delete">
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              )}
+            </div>
+
+            <div className="ws-essay-switcher-nav-group">
+              <button className="ws-essay-switcher-nav" onClick={prevEssay} disabled={activeIdx <= 0} title="Previous essay">
+                <ChevronLeft size={15} />
+              </button>
+              <button className="ws-essay-switcher-nav" onClick={nextEssay} disabled={activeIdx >= essays.length - 1} title="Next essay">
+                <ChevronRight size={15} />
+              </button>
+            </div>
+
+            <span className="ws-essay-switcher-count">{activeIdx + 1} / {essays.length}</span>
           </div>
 
-          {/* ── Right: editor ── */}
-          {selectedId && (
-            <div className="ws-essay-editor">
-              {/* Editor header: school + prompt */}
-              <div className="ws-essay-editor-top">
-                <div className="ws-essay-meta-row">
-                  <select
-                    className="ws-essay-uni-select"
-                    value={draft.university_id}
-                    onChange={e => setDraft({ ...draft, university_id: e.target.value })}
-                  >
-                    <option value={GENERAL.id}>{GENERAL.name}</option>
-                    {colleges.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
-                </div>
-                <input
-                  className="ws-essay-title-input"
-                  placeholder="Essay title"
-                  value={draft.title}
-                  onChange={e => setDraft({ ...draft, title: e.target.value })}
-                />
-                <input
-                  className="ws-essay-prompt-input"
-                  placeholder="Paste your prompt here (e.g. Describe a challenge you've overcome…)"
-                  value={draft.prompt}
-                  onChange={e => setDraft({ ...draft, prompt: e.target.value })}
-                />
-              </div>
+          <div className="ws-essay-editor-top">
+            <input
+              className="ws-essay-title-input"
+              placeholder="Essay title"
+              value={draft.title}
+              onChange={e => setDraft({ ...draft, title: e.target.value })}
+            />
+            <input
+              className="ws-essay-prompt-input"
+              placeholder="Paste your prompt here (e.g. Describe a challenge you've overcome…)"
+              value={draft.prompt}
+              onChange={e => setDraft({ ...draft, prompt: e.target.value })}
+            />
+          </div>
 
-              {/* Writing area */}
-              <textarea
-                ref={textareaRef}
-                className="ws-essay-textarea"
-                placeholder="Start writing… your story matters."
-                value={draft.content}
-                onChange={e => setDraft({ ...draft, content: e.target.value })}
-              />
+          <textarea
+            ref={textareaRef}
+            className="ws-essay-textarea"
+            placeholder="Start writing… your story matters."
+            value={draft.content}
+            onChange={e => setDraft({ ...draft, content: e.target.value })}
+          />
 
-              {/* Word count progress */}
-              <div className="ws-essay-progress">
-                <div className="ws-essay-progress-bar">
-                  <div
-                    className={`ws-essay-progress-fill ${overLimit ? 'over' : pct >= 80 ? 'near' : ''}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <span className={`ws-essay-words ${overLimit ? 'over' : ''}`}>
-                  {wc} / {essayLimit} words {overLimit ? '— over limit' : pct >= 80 ? '— almost there' : ''}
-                </span>
-              </div>
-
-              {/* Footer actions */}
-              <div className="ws-essay-footer">
-                <div className="ws-essay-saved-state">
-                  {saveState === 'saving' && (
-                    <span className="ws-essay-saving">Saving…</span>
-                  )}
-                  {saveState === 'saved' && (
-                    <span className="ws-essay-saved"><CheckCircle2 size={13} /> Saved</span>
-                  )}
-                </div>
-                <div className="ws-essay-actions">
-                  <button
-                    className="ws-btn ws-btn-ai"
-                    onClick={openFeedback}
-                    disabled={reviewing || wc < 20}
-                    title={wc < 20 ? 'Write at least 20 words first' : feedback ? 'View saved review' : 'Get Nova feedback'}
-                  >
-                    <Sparkles size={15} /> {reviewing ? 'Reviewing…' : feedback ? 'View Review' : 'AI Feedback'}
-                  </button>
-                </div>
-              </div>
-
+          <div className="ws-essay-progress">
+            <div className="ws-essay-progress-bar">
+              <div className={`ws-essay-progress-fill ${overLimit ? 'over' : pct >= 80 ? 'near' : ''}`} style={{ width: `${pct}%` }} />
             </div>
-          )}
-        </div>
-      )}
+            <span className={`ws-essay-words ${overLimit ? 'over' : ''}`}>
+              {wc} / {essayLimit} words {overLimit ? '— over limit' : pct >= 80 ? '— almost there' : ''}
+            </span>
+          </div>
 
-      {/* Nova essay review — highlighted essay + suggestions */}
+          <div className="ws-essay-footer">
+            <div className="ws-essay-saved-state">
+              <button
+                className={`ws-essay-status ${STATUS_META[activeEssay?.status || 'drafting'].cls}`}
+                onClick={cycleStatus}
+                title="Click to change status"
+              >
+                {STATUS_META[activeEssay?.status || 'drafting'].label}
+              </button>
+              {saveState === 'saving' && <span className="ws-essay-saving">Saving…</span>}
+              {saveState === 'saved' && <span className="ws-essay-saved"><CheckCircle2 size={13} /> Saved</span>}
+            </div>
+            <div className="ws-essay-actions">
+              <button
+                className="ws-btn ws-btn-ai"
+                onClick={openFeedback}
+                disabled={reviewing || wc < 20}
+                title={wc < 20 ? 'Write at least 20 words first' : feedback ? 'View saved review' : 'Get Nova feedback'}
+              >
+                <NovaMascot size={16} /> {reviewing ? 'Reviewing…' : feedback ? 'View Review' : 'AI Feedback'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showFeedback && feedback && (
         <EssayReview
           review={feedback}

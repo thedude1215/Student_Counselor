@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Save, Check, Search, X, UserRound, BookOpen, SlidersHorizontal, Bell, BellOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { fetchProfile, updateProfile } from '../../api/workspace.js';
+import Confetti from './Confetti.jsx';
 import {
   notificationsSupported,
   getPermissionState,
@@ -330,12 +331,20 @@ function validateSatAct(val) {
   return null;
 }
 
+function isProfileComplete(p = {}) {
+  return !!(
+    p.full_name && p.country && p.gpa && p.sat_score && p.intended_major &&
+    (p.class_year || p.grade_level) && (p.target_countries || []).length
+  );
+}
+
 export default function Profile() {
   const { user, session, refreshProfile } = useAuth();
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);   // confetti when the profile first hits 100%
 
   // Notification state
   const [notifSupported] = useState(() => notificationsSupported());
@@ -401,6 +410,12 @@ export default function Profile() {
       await updateProfile(user.id, updates);
       await refreshProfile();
       setSaved(true);
+      // Celebrate the first time the profile becomes complete (re-armable if it lapses).
+      const key = `jrn-profile-complete-${user.id}`;
+      const complete = isProfileComplete(updates);
+      const wasComplete = localStorage.getItem(key) === 'true';
+      if (complete && !wasComplete) setCelebrate(true);
+      try { localStorage.setItem(key, complete ? 'true' : 'false'); } catch { /* ignore */ }
     } catch (err) {
       console.error(err);
     } finally {
@@ -414,6 +429,7 @@ export default function Profile() {
 
   return (
     <div className="ws-section">
+      {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
       <header className="ws-header">
         <div>
           <h1 className="ws-title">Your Profile</h1>

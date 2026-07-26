@@ -1,6 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import { requireAuth } from '../middleware/auth.js';
 import { extractTextFromPdf, parseActivitiesFromText } from '../services/pdfParseService.js';
 
 const router = express.Router();
@@ -17,7 +16,7 @@ const upload = multer({
   },
 });
 
-router.post('/parse-pdf', requireAuth, upload.single('pdf'), async (req, res) => {
+router.post('/parse-pdf', upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No PDF file received' });
