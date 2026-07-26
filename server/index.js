@@ -1,5 +1,4 @@
 import app from './app.js';
-import './services/reminderCron.js';
 
 const port = Number(process.env.PORT || 8787);
 

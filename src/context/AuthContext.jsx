@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 
 const AuthContext = createContext({
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     session,
     user: session?.user ?? null,
     profile,
@@ -99,7 +99,7 @@ export function AuthProvider({ children }) {
       }),
     signOut: () => supabase.auth.signOut(),
     refreshProfile: () => loadProfile(session?.user?.id),
-  };
+  }), [session, profile, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

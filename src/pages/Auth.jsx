@@ -54,6 +54,7 @@ export default function Auth() {
     const message = (err?.message || '').toLowerCase();
     if (message.includes('email not confirmed')) {
       setMode('verify');
+      setCodeStatus('idle');
       return 'Enter the verification code we sent to your email.';
     }
     if (mode === 'login' && (message.includes('invalid login credentials') || message.includes('invalid credentials'))) {
@@ -65,6 +66,13 @@ export default function Auth() {
         return `You can request another code in ${cooldown} seconds.`;
       }
       return 'That code is not correct or has expired. Use the newest code from your email.';
+    }
+    if (mode === 'verify') {
+      const cooldown = cooldownFromMessage(err?.message || '');
+      if (cooldown > 0) {
+        return `You can request another code in ${cooldown} seconds.`;
+      }
+      return 'That verification code is not correct or has expired. Use the newest code from your email.';
     }
     if (message.includes('user already registered') || message.includes('already registered')) {
       return 'An account already exists for this email. Log in instead, or reset your password.';
@@ -80,17 +88,21 @@ export default function Auth() {
       const cleanCode = otp.trim();
 
       if (mode === 'verify') {
-        if (!cleanEmail || !cleanCode) {
-          throw new Error('Enter your email and the code from your inbox.');
+        if (!cleanEmail || cleanCode.length < 6) {
+          throw new Error('Enter the code from your inbox.');
         }
+        setCodeStatus('checking');
         const { error } = await supabase.auth.verifyOtp({
           email: cleanEmail,
           token: cleanCode,
-          type: 'email',
+          type: 'signup',
         });
         if (error) throw error;
-        setOtp('');
-        navigate('/onboarding');
+        setCodeStatus('valid');
+        window.setTimeout(() => {
+          setOtp('');
+          navigate('/onboarding');
+        }, 650);
       } else if (mode === 'recover') {
         if (recoveryStep === 'email') {
           await sendRecoveryCode(cleanEmail);
@@ -141,7 +153,9 @@ export default function Auth() {
         else {
           setOtp('');
           setMode('verify');
-          setNotice(`We sent a verification code to ${cleanEmail}.`);
+          setCodeStatus('idle');
+          setResendCooldown(RESEND_COOLDOWN_SECONDS);
+          setNotice('');
         }
       } else {
         const { error } = await signIn(cleanEmail, password);
@@ -150,6 +164,7 @@ export default function Auth() {
       }
     } catch (err) {
       if (mode === 'recover' && recoveryStep === 'code') setCodeStatus('invalid');
+      if (mode === 'verify') setCodeStatus('invalid');
       setError(friendlyAuthError(err));
     } finally { setBusy(false); }
   }
@@ -216,7 +231,10 @@ export default function Auth() {
       else {
         const response = await resendVerification(cleanEmail);
         if (response.error) throw response.error;
-        setNotice('Verification code sent again.');
+        setOtp('');
+        setCodeStatus('idle');
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        setNotice('');
       }
     } catch (err) {
       const cooldown = cooldownFromMessage(err.message || '');
@@ -248,7 +266,7 @@ export default function Auth() {
 
   function authTitle() {
     if (mode === 'signup') return 'Create your account';
-    if (mode === 'verify') return 'Enter your verification code';
+    if (mode === 'verify') return 'Check your email';
     if (mode === 'recover' && recoveryStep === 'email') return 'Reset your password';
     if (mode === 'recover' && recoveryStep === 'code') return 'Check your email';
     if (mode === 'recover' && recoveryStep === 'password') return 'Create a new password';
@@ -273,14 +291,15 @@ export default function Auth() {
     if (error) setError('');
   }
 
-  const showStandardEmail = mode !== 'reset' && !(mode === 'recover' && recoveryStep !== 'email');
+  const showStandardEmail = mode !== 'reset' && mode !== 'verify' && !(mode === 'recover' && recoveryStep !== 'email');
   const showPasswordField = mode !== 'verify' && !(mode === 'recover' && recoveryStep !== 'password');
   const showRecoveryCode = mode === 'recover' && recoveryStep === 'code';
   const showVerificationCode = mode === 'verify';
+  const showAuthCodePanel = showVerificationCode || showRecoveryCode;
 
   const pageClassName = [
     'auth-page',
-    mode === 'recover' ? 'is-recover' : '',
+    mode === 'recover' || mode === 'verify' ? 'is-recover' : '',
     mode === 'recover' ? `recover-${recoveryStep}` : '',
     codeStatus === 'valid' ? 'code-is-valid' : '',
   ].filter(Boolean).join(' ');
@@ -345,34 +364,20 @@ export default function Auth() {
           </div>
           )}
 
-          {showVerificationCode && (
-            <div className="auth-field-wrap">
-              <label className="auth-label" htmlFor="auth-code">Email code</label>
-              <input
-                id="auth-code"
-                className="auth-input auth-code-input"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="00000000"
-                value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                minLength={6}
-                maxLength={8}
-                required
-              />
-            </div>
-          )}
-
-          {showRecoveryCode && (
+          {showAuthCodePanel && (
             <div className={`auth-recovery-panel status-${codeStatus}`}>
               <span className="auth-panel-mascot" aria-hidden="true">
-                <NovaMascot size={56} expression={codeStatus === 'valid' ? 'cheering' : 'focused'} holding="key" idle />
+                <NovaMascot
+                  size={56}
+                  expression={codeStatus === 'valid' ? 'cheering' : 'focused'}
+                  holding={showRecoveryCode ? 'key' : 'check'}
+                  idle
+                />
               </span>
               <div className="auth-recovery-icon" aria-hidden="true">
                 {codeStatus === 'valid' ? <ShieldCheck size={26} /> : <Mail size={25} />}
               </div>
-              <p className="auth-recovery-kicker">Code sent to</p>
+              <p className="auth-recovery-kicker">{showVerificationCode ? 'Verification code sent to' : 'Code sent to'}</p>
               <p className="auth-recovery-email">{email}</p>
               <button
                 type="button"
@@ -407,7 +412,9 @@ export default function Auth() {
                 required
               />
               <p className="auth-code-helper">
-                {codeStatus === 'valid' ? 'Code verified. One more step.' : 'Use the newest code from your email.'}
+                {codeStatus === 'valid'
+                  ? (showVerificationCode ? 'Email verified. Taking you in.' : 'Code verified. One more step.')
+                  : 'Use the newest code from your email.'}
               </p>
             </div>
           )}

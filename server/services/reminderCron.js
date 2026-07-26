@@ -1,4 +1,3 @@
-import cron from 'node-cron';
 import { supabase } from '../lib/supabase.js';
 import { sendDeadlineReminder } from './notificationService.js';
 
@@ -81,9 +80,7 @@ async function runReminders() {
   console.log(`[cron] Processed ${total} tasks (7day:${tasks7.length}, 24hr:${tasks24.length}, overdue:${tasksOverdue.length})`);
 }
 
-// Run daily at 09:00 UTC
-cron.schedule('0 9 * * *', runReminders, { timezone: 'UTC' });
-
-console.log('[cron] Deadline reminder job registered (daily 09:00 UTC)');
-
-export { runReminders }; // export for manual testing
+// Triggered by Vercel Cron (see vercel.json + server/routes/cronRoutes.js),
+// daily at 09:00 UTC. Not self-scheduling — node-cron's in-process timer
+// doesn't survive Vercel's serverless invocations, which each start fresh.
+export { runReminders };

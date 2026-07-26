@@ -16,3 +16,9 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+# Shared secret required on every request from the Express API. Without this,
+# anyone who discovers the nova-agent URL can call its endpoints directly with
+# an arbitrary user_id in the request body and read/write that user's data,
+# since these endpoints use the Supabase service-role client (bypasses RLS).
+AGENT_INTERNAL_SECRET = os.getenv("AGENT_INTERNAL_SECRET", "")

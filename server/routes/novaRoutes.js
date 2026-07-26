@@ -7,19 +7,22 @@ const router = Router();
 router.use(requireAuth);
 
 const NOVA_AGENT_URL = process.env.NOVA_AGENT_URL || 'http://localhost:8000';
+const AGENT_INTERNAL_SECRET = process.env.AGENT_INTERNAL_SECRET || '';
 
-/* ─── Rate limiting (in-memory, per-user) ─── */
-const rateLimits = new Map();
+/* ─── Rate limiting (Postgres-backed, shared across serverless invocations) ─── */
 
-function checkRate(userId, bucket, maxPerHour) {
-  const key = `${userId}:${bucket}`;
-  const now = Date.now();
-  const window = rateLimits.get(key) || [];
-  const recent = window.filter(t => now - t < 3600_000);
-  if (recent.length >= maxPerHour) return false;
-  recent.push(now);
-  rateLimits.set(key, recent);
-  return true;
+async function checkRate(userId, bucket, maxPerHour, windowSeconds = 3600) {
+  const { data, error } = await supabase.rpc('check_rate_limit', {
+    p_user_id: userId,
+    p_bucket: bucket,
+    p_max: maxPerHour,
+    p_window_seconds: windowSeconds,
+  });
+  if (error) {
+    console.error(`[Nova] check_rate_limit error for ${bucket}:`, error.message);
+    return true; // fail open — a DB hiccup shouldn't block every Nova request
+  }
+  return data;
 }
 
 /* ─── Proxy helper ─── */
@@ -32,7 +35,7 @@ async function proxyToAgent(path, body, timeoutMs = 60_000) {
   try {
     agentRes = await fetch(`${NOVA_AGENT_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': AGENT_INTERNAL_SECRET },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -73,7 +76,7 @@ router.post('/chat', async (req, res) => {
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
   if (!conversationId) return res.status(400).json({ error: 'conversationId is required' });
 
-  if (!checkRate(req.userId, 'chat', 30)) {
+  if (!(await checkRate(req.userId, 'chat', 30))) {
     return res.status(429).json({ error: 'Rate limit reached (30 messages/hour). Please wait.' });
   }
 
@@ -99,7 +102,7 @@ router.post('/chat/stream', async (req, res) => {
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
   if (!conversationId) return res.status(400).json({ error: 'conversationId is required' });
 
-  if (!checkRate(req.userId, 'chat', 30)) {
+  if (!(await checkRate(req.userId, 'chat', 30))) {
     return res.status(429).json({ error: 'Rate limit reached (30 messages/hour). Please wait.' });
   }
 
@@ -114,7 +117,7 @@ router.post('/chat/stream', async (req, res) => {
     try {
       agentRes = await fetch(`${NOVA_AGENT_URL}/api/chat/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': AGENT_INTERNAL_SECRET },
         body: JSON.stringify({
           user_id: req.userId,
           conversation_id: conversationId,
@@ -243,7 +246,7 @@ router.post('/essay-review', async (req, res) => {
   const { essayId, essayContent, essayPrompt, essayTitle, universityName } = req.body;
   if (!essayContent?.trim()) return res.status(400).json({ error: 'Essay content is required' });
 
-  if (!checkRate(req.userId, 'essay', 5)) {
+  if (!(await checkRate(req.userId, 'essay', 5))) {
     return res.status(429).json({ error: 'Rate limit reached (5 reviews/day). Please wait.' });
   }
 
@@ -289,7 +292,7 @@ router.post('/essay-review', async (req, res) => {
 /* ─── College Recommendations ─── */
 
 router.post('/recommendations', async (req, res) => {
-  if (!checkRate(req.userId, 'recs', 3)) {
+  if (!(await checkRate(req.userId, 'recs', 3))) {
     return res.status(429).json({ error: 'Rate limit reached (3 recommendations/day). Please wait.' });
   }
 
@@ -313,7 +316,7 @@ router.post('/recommendations', async (req, res) => {
 /* ─── University Suggestions (structured, tiered) ─── */
 
 router.post('/university-suggestions', async (req, res) => {
-  if (!checkRate(req.userId, 'uni-suggest', 3)) {
+  if (!(await checkRate(req.userId, 'uni-suggest', 3))) {
     return res.status(429).json({ error: 'Rate limit reached (3 suggestion runs/day). Please wait.' });
   }
 
@@ -402,7 +405,7 @@ router.post('/scholarship-matches', async (req, res) => {
     }
 
     // Only real LLM computations count against the rate limit (cache hits are free).
-    if (!checkRate(req.userId, 'sch-match', 5)) {
+    if (!(await checkRate(req.userId, 'sch-match', 5))) {
       return res.status(429).json({ error: 'Rate limit reached (5 re-ranks/hour). Please wait.' });
     }
 
@@ -456,7 +459,7 @@ router.post('/activity-review', async (req, res) => {
   if (!description?.trim()) return res.status(400).json({ error: 'Activity description is required' });
   if (!activityTitle?.trim()) return res.status(400).json({ error: 'Activity title is required' });
 
-  if (!checkRate(req.userId, 'activity-review', 10)) {
+  if (!(await checkRate(req.userId, 'activity-review', 10))) {
     return res.status(429).json({ error: 'Rate limit reached (10 activity reviews/hour). Please wait.' });
   }
 
@@ -504,7 +507,7 @@ router.post('/suggest-tasks', async (req, res) => {
       }
     }
 
-    if (!checkRate(req.userId, 'suggest', 15)) {
+    if (!(await checkRate(req.userId, 'suggest', 15))) {
       return res.status(429).json({ error: 'Rate limit reached (15 suggestion sets/hour). Please wait.' });
     }
 
