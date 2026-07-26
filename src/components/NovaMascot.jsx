@@ -5,7 +5,7 @@
  *
  *  • expression — the mood. Used as a through-line: Nova reacts differently
  *    at each act of the journey rather than wearing one frozen smile.
- *  • holding    — an optional prop (map, pen, checklist, compass) for the
+ *  • holding    — an optional prop (map, pen, checklist, compass, key) for the
  *    larger act moments. Ignored below 48px, where it would be mush.
  */
 
@@ -102,6 +102,16 @@ function Holding({ holding }) {
           <rect x="8" y="0" width="12" height="8" rx="3" fill={INK} />
           <path d="M7 18l4.5 4.5 9-10" stroke="#059669" strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M7 29h15" stroke="#9BB0A3" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      );
+
+    case 'key':
+      return (
+        <g transform="translate(56 56) rotate(-28)">
+          <circle cx="10" cy="10" r="7.5" fill={PAPER} stroke={INK} strokeWidth="2.6" />
+          <path d="M16 10h24" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />
+          <path d="M30 10v7M37 10v5" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />
+          <circle cx="10" cy="10" r="2.7" fill="#34D399" />
         </g>
       );
 

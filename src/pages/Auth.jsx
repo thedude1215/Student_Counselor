@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Check, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabase.js';
+import NovaMascot from '../components/NovaMascot.jsx';
 import './Auth.css';
+
+const RECOVERY_CODE_LENGTH = 8;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function Auth() {
   const [mode, setMode] = useState(() => (
@@ -19,6 +23,10 @@ export default function Auth() {
   const [notice, setNotice] = useState('');
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState('email');
+  const [codeStatus, setCodeStatus] = useState('idle');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const codeInputRef = useRef(null);
 
   const { signIn, signUp, signInWithGoogle, resendVerification } = useAuth();
   const navigate = useNavigate();
@@ -29,6 +37,19 @@ export default function Auth() {
     }
   }, [mode]);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setResendCooldown(seconds => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
+  function cooldownFromMessage(message = '') {
+    const match = message.match(/after\s+(\d+)\s+seconds?/i);
+    return match ? Number(match[1]) : 0;
+  }
+
   function friendlyAuthError(err) {
     const message = (err?.message || '').toLowerCase();
     if (message.includes('email not confirmed')) {
@@ -37,6 +58,13 @@ export default function Auth() {
     }
     if (mode === 'login' && (message.includes('invalid login credentials') || message.includes('invalid credentials'))) {
       return 'Account does not exist. Sign up to create one.';
+    }
+    if (mode === 'recover' && recoveryStep === 'code') {
+      const cooldown = cooldownFromMessage(err?.message || '');
+      if (cooldown > 0) {
+        return `You can request another code in ${cooldown} seconds.`;
+      }
+      return 'That code is not correct or has expired. Use the newest code from your email.';
     }
     if (message.includes('user already registered') || message.includes('already registered')) {
       return 'An account already exists for this email. Log in instead, or reset your password.';
@@ -64,21 +92,42 @@ export default function Auth() {
         setOtp('');
         navigate('/onboarding');
       } else if (mode === 'recover') {
-        if (!cleanEmail || !cleanCode || !password) {
-          throw new Error('Enter your email, reset code, and a new password.');
+        if (recoveryStep === 'email') {
+          await sendRecoveryCode(cleanEmail);
+          return;
         }
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          email: cleanEmail,
-          token: cleanCode,
-          type: 'recovery',
-        });
-        if (verifyError) throw verifyError;
-        const { error: updateError } = await supabase.auth.updateUser({ password });
-        if (updateError) throw updateError;
-        setOtp('');
-        setPassword('');
-        setMode('login');
-        setNotice('Password updated. You can log in with your new password.');
+        if (recoveryStep === 'code') {
+          if (!cleanEmail || cleanCode.length < 6) {
+            throw new Error('Enter the code from your email.');
+          }
+          setCodeStatus('checking');
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            email: cleanEmail,
+            token: cleanCode,
+            type: 'recovery',
+          });
+          if (verifyError) throw verifyError;
+          setCodeStatus('valid');
+          setNotice('Code verified. Choose a new password.');
+          window.setTimeout(() => {
+            setRecoveryStep('password');
+            setError('');
+          }, 650);
+          return;
+        }
+        if (recoveryStep === 'password') {
+          if (!password || password.length < 6) {
+            throw new Error('Use at least 6 characters for your new password.');
+          }
+          const { error: updateError } = await supabase.auth.updateUser({ password });
+          if (updateError) throw updateError;
+          setOtp('');
+          setPassword('');
+          setCodeStatus('idle');
+          setRecoveryStep('email');
+          setMode('login');
+          setNotice('Password updated. You can log in with your new password.');
+        }
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
@@ -100,6 +149,7 @@ export default function Auth() {
         navigate('/onboarding');
       }
     } catch (err) {
+      if (mode === 'recover' && recoveryStep === 'code') setCodeStatus('invalid');
       setError(friendlyAuthError(err));
     } finally { setBusy(false); }
   }
@@ -110,58 +160,98 @@ export default function Auth() {
     if (error) setError(error.message);
   }
 
+  async function sendRecoveryCode(cleanEmail, successMessage = 'If an account exists for that email, a reset code is on the way.') {
+    if (!cleanEmail) {
+      throw new Error('Enter your email so we know where to send the code.');
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    if (error) throw error;
+    setOtp('');
+    setPassword('');
+    setCodeStatus('idle');
+    setRecoveryStep('code');
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    setNotice(successMessage);
+  }
+
   async function handleForgotPassword() {
     setError('');
     setNotice('');
     setOtp('');
+    setResendCooldown(0);
     const cleanEmail = email.trim();
-    if (!cleanEmail) {
-      setError('Enter your email first, then we can send a password reset code.');
-      return;
-    }
-    setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: `${window.location.origin}/auth`,
-    });
-    if (error) {
-      setError(error.message || 'Could not send password reset code.');
-      setBusy(false);
-      return;
-    }
-    setPassword('');
     setMode('recover');
-    setNotice('If an account exists for that email, a reset code is on the way.');
-    setBusy(false);
+    setRecoveryStep(cleanEmail ? 'code' : 'email');
+    setCodeStatus('idle');
+    if (!cleanEmail) return;
+    setBusy(true);
+    try {
+      await sendRecoveryCode(cleanEmail);
+    } catch (err) {
+      const cooldown = cooldownFromMessage(err.message || '');
+      if (cooldown > 0) {
+        setResendCooldown(cooldown);
+      } else {
+        setError(err.message || 'Could not send password reset code.');
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleResendVerification() {
     setError('');
     setNotice('');
+    if (resendCooldown > 0) return;
     const cleanEmail = email.trim();
     if (!cleanEmail) {
       setError('Enter your email first so we know where to send the code.');
       return;
     }
     setBusy(true);
-    const response = mode === 'recover'
-      ? await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${window.location.origin}/auth`,
-      })
-      : await resendVerification(cleanEmail);
-    if (response.error) setError(response.error.message || 'Could not resend the code.');
-    else setNotice(mode === 'recover' ? 'Reset code sent again.' : 'Verification code sent again.');
-    setBusy(false);
+    try {
+      if (mode === 'recover') await sendRecoveryCode(cleanEmail, 'Reset code sent again.');
+      else {
+        const response = await resendVerification(cleanEmail);
+        if (response.error) throw response.error;
+        setNotice('Verification code sent again.');
+      }
+    } catch (err) {
+      const cooldown = cooldownFromMessage(err.message || '');
+      if (cooldown > 0) {
+        setResendCooldown(cooldown);
+      } else {
+        setError(err.message || 'Could not resend the code.');
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   function switchMode() {
     setMode(m => m === 'login' ? 'signup' : 'login');
-    setError(''); setNotice(''); setOtp('');
+    setError(''); setNotice(''); setOtp(''); setCodeStatus('idle'); setRecoveryStep('email'); setResendCooldown(0);
+  }
+
+  function backToLogin() {
+    setMode('login');
+    setOtp('');
+    setPassword('');
+    setError('');
+    setNotice('');
+    setCodeStatus('idle');
+    setRecoveryStep('email');
+    setResendCooldown(0);
   }
 
   function authTitle() {
     if (mode === 'signup') return 'Create your account';
     if (mode === 'verify') return 'Enter your verification code';
-    if (mode === 'recover') return 'Reset with your code';
+    if (mode === 'recover' && recoveryStep === 'email') return 'Reset your password';
+    if (mode === 'recover' && recoveryStep === 'code') return 'Check your email';
+    if (mode === 'recover' && recoveryStep === 'password') return 'Create a new password';
     if (mode === 'reset') return 'Set a new password';
     return 'Continue to ScholarPath';
   }
@@ -170,12 +260,34 @@ export default function Auth() {
     if (busy) return 'Please wait...';
     if (mode === 'signup') return 'Create account';
     if (mode === 'verify') return 'Verify email';
-    if (mode === 'recover' || mode === 'reset') return 'Update password';
+    if (mode === 'recover' && recoveryStep === 'email') return 'Send reset code';
+    if (mode === 'recover' && recoveryStep === 'code') return codeStatus === 'checking' ? 'Checking code...' : 'Verify code';
+    if (mode === 'recover' && recoveryStep === 'password') return 'Update password';
+    if (mode === 'reset') return 'Update password';
     return 'Log in';
   }
 
+  function onOtpChange(value) {
+    setOtp(value.replace(/\D/g, '').slice(0, RECOVERY_CODE_LENGTH));
+    if (codeStatus !== 'idle') setCodeStatus('idle');
+    if (error) setError('');
+  }
+
+  const showStandardEmail = mode !== 'reset' && !(mode === 'recover' && recoveryStep !== 'email');
+  const showPasswordField = mode !== 'verify' && !(mode === 'recover' && recoveryStep !== 'password');
+  const showRecoveryCode = mode === 'recover' && recoveryStep === 'code';
+  const showVerificationCode = mode === 'verify';
+
+  const pageClassName = [
+    'auth-page',
+    mode === 'recover' ? 'is-recover' : '',
+    mode === 'recover' ? `recover-${recoveryStep}` : '',
+    codeStatus === 'valid' ? 'code-is-valid' : '',
+  ].filter(Boolean).join(' ');
+  const showCodeActions = mode === 'verify' || (mode === 'recover' && recoveryStep === 'code' && codeStatus !== 'valid');
+
   return (
-    <div className="auth-page">
+    <div className={pageClassName}>
       <div className="auth-card">
 
         {/* Logo — click to go home */}
@@ -218,7 +330,7 @@ export default function Auth() {
             </div>
           )}
 
-          {mode !== 'reset' && (
+          {showStandardEmail && (
           <div className="auth-field-wrap">
             <label className="auth-label" htmlFor="auth-email">Email address</label>
             <input
@@ -233,7 +345,7 @@ export default function Auth() {
           </div>
           )}
 
-          {(mode === 'verify' || mode === 'recover') && (
+          {showVerificationCode && (
             <div className="auth-field-wrap">
               <label className="auth-label" htmlFor="auth-code">Email code</label>
               <input
@@ -252,7 +364,81 @@ export default function Auth() {
             </div>
           )}
 
-          {mode !== 'verify' && (
+          {showRecoveryCode && (
+            <div className={`auth-recovery-panel status-${codeStatus}`}>
+              <span className="auth-panel-mascot" aria-hidden="true">
+                <NovaMascot size={56} expression={codeStatus === 'valid' ? 'cheering' : 'focused'} holding="key" idle />
+              </span>
+              <div className="auth-recovery-icon" aria-hidden="true">
+                {codeStatus === 'valid' ? <ShieldCheck size={26} /> : <Mail size={25} />}
+              </div>
+              <p className="auth-recovery-kicker">Code sent to</p>
+              <p className="auth-recovery-email">{email}</p>
+              <button
+                type="button"
+                className="auth-code-grid"
+                onClick={() => codeInputRef.current?.focus()}
+                aria-label="Enter email code"
+              >
+                {Array.from({ length: RECOVERY_CODE_LENGTH }).map((_, idx) => (
+                  <span
+                    key={idx}
+                    className={[
+                      'auth-code-box',
+                      otp[idx] ? 'filled' : '',
+                      idx === otp.length && codeStatus !== 'valid' ? 'current' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {otp[idx] || ''}
+                  </span>
+                ))}
+              </button>
+              <input
+                ref={codeInputRef}
+                id="auth-code"
+                className="auth-otp-hidden"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otp}
+                onChange={e => onOtpChange(e.target.value)}
+                minLength={6}
+                maxLength={RECOVERY_CODE_LENGTH}
+                required
+              />
+              <p className="auth-code-helper">
+                {codeStatus === 'valid' ? 'Code verified. One more step.' : 'Use the newest code from your email.'}
+              </p>
+            </div>
+          )}
+
+          {mode === 'recover' && recoveryStep === 'email' && (
+            <div className="auth-recovery-panel auth-email-panel">
+              <span className="auth-panel-mascot" aria-hidden="true">
+                <NovaMascot size={56} expression="curious" holding="key" idle />
+              </span>
+              <div className="auth-recovery-icon" aria-hidden="true">
+                <Mail size={25} />
+              </div>
+              <p className="auth-recovery-kicker">Secure reset</p>
+              <p className="auth-recovery-email">We will send a one-time code to your inbox.</p>
+            </div>
+          )}
+
+          {mode === 'recover' && recoveryStep === 'password' && (
+            <div className="auth-recovery-panel status-valid">
+              <span className="auth-panel-mascot" aria-hidden="true">
+                <NovaMascot size={56} expression="cheering" holding="key" idle />
+              </span>
+              <div className="auth-recovery-icon" aria-hidden="true">
+                <Check size={25} />
+              </div>
+              <p className="auth-recovery-kicker">Verified</p>
+              <p className="auth-recovery-email">Now lock in your new password.</p>
+            </div>
+          )}
+
+          {showPasswordField && (
           <div className="auth-field-wrap">
             <label className="auth-label" htmlFor="auth-pw">{mode === 'reset' || mode === 'recover' ? 'New password' : 'Password'}</label>
             <div className="auth-pw-wrap">
@@ -276,6 +462,12 @@ export default function Auth() {
                 {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
+            {(mode === 'recover' && recoveryStep === 'password') && (
+              <div className="auth-password-hint">
+                <KeyRound size={15} />
+                Use at least 6 characters.
+              </div>
+            )}
             {mode === 'login' && (
               <button type="button" className="auth-forgot" onClick={handleForgotPassword} disabled={busy}>
                 Forgot password?
@@ -285,21 +477,20 @@ export default function Auth() {
           )}
 
           {error  && <div className="auth-error">{error}</div>}
-          {notice && <div className="auth-notice">{notice}</div>}
-          {(mode === 'verify' || mode === 'recover') && (
+          {notice && mode !== 'recover' && <div className="auth-notice">{notice}</div>}
+          <button type="submit" className="auth-submit" disabled={busy}>
+            {submitText()}
+          </button>
+          {showCodeActions && (
             <div className="auth-inline-actions">
-              <button type="button" onClick={handleResendVerification} disabled={busy}>
-                Resend code
+              <button type="button" onClick={handleResendVerification} disabled={busy || resendCooldown > 0}>
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
               </button>
-              <button type="button" onClick={() => { setMode('login'); setOtp(''); setError(''); setNotice(''); }} disabled={busy}>
+              <button type="button" onClick={backToLogin} disabled={busy}>
                 Back to login
               </button>
             </div>
           )}
-
-          <button type="submit" className="auth-submit" disabled={busy}>
-            {submitText()}
-          </button>
         </form>
 
         {(mode === 'login' || mode === 'signup') ? <p className="auth-switch">
@@ -309,7 +500,7 @@ export default function Auth() {
           </button>
         </p> : (
           <p className="auth-switch">
-            Remembered it? <button type="button" onClick={() => setMode('login')}>Log in</button>
+            Remembered it? <button type="button" onClick={backToLogin}>Log in</button>
           </p>
         )}
 
