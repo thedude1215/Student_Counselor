@@ -6,6 +6,7 @@ import catalogRoutes from './routes/catalogRoutes.js';
 import novaRoutes from './routes/novaRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
+import cronRoutes from './routes/cronRoutes.js';
 
 const app = express();
 const allowedOrigins = new Set(
@@ -38,6 +39,7 @@ app.use('/api', catalogRoutes);
 app.use('/api/nova', novaRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/cron', cronRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

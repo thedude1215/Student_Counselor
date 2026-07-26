@@ -1,10 +1,8 @@
 import json
-import time
 import traceback
 from datetime import datetime
-from collections import defaultdict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -26,6 +24,7 @@ from app.prompts.system_prompts import (
     SCHOLARSHIP_MATCH_PROMPT,
 )
 from app.supabase_client import supabase
+from app.config import AGENT_INTERNAL_SECRET
 from langchain_core.messages import SystemMessage, HumanMessage
 
 app = FastAPI(title="Nova Agent", version="0.3.0")
@@ -37,19 +36,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory rate limiting
-_rate_limits: dict[str, list[float]] = defaultdict(list)
+
+def require_internal(x_internal_secret: str | None = Header(default=None)):
+    """Every route below is called only by our own Express server, which has
+    already verified the caller's Supabase JWT and resolved req.userId. CORS
+    only blocks browsers, so without this check anyone who finds this URL
+    could POST directly with any user_id and read/write that user's data
+    (these routes use the service-role Supabase client, which bypasses RLS).
+    Fails closed if the secret isn't configured, rather than silently trusting
+    the open internet.
+    """
+    if not AGENT_INTERNAL_SECRET or x_internal_secret != AGENT_INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-def _check_rate(user_id: str, bucket: str, max_per_hour: int) -> bool:
-    key = f"{user_id}:{bucket}"
-    now = time.time()
-    window = [t for t in _rate_limits[key] if now - t < 3600]
-    if len(window) >= max_per_hour:
-        return False
-    window.append(now)
-    _rate_limits[key] = window
-    return True
+def _check_rate(user_id: str, bucket: str, max_per_hour: int, window_seconds: int = 3600) -> bool:
+    """Postgres-backed rate limiting, shared across serverless invocations
+    (an in-process dict resets on every cold start under Vercel)."""
+    try:
+        result = supabase.rpc("check_rate_limit", {
+            "p_user_id": user_id,
+            "p_bucket": bucket,
+            "p_max": max_per_hour,
+            "p_window_seconds": window_seconds,
+        }).execute()
+        return bool(result.data)
+    except Exception as exc:
+        print(f"[Nova] check_rate_limit error for {bucket}: {type(exc).__name__}: {exc}")
+        return True  # fail open — a DB hiccup shouldn't block every Nova request
 
 
 def _load_history(conversation_id: str, user_id: str, limit: int = 20) -> list[dict]:
@@ -90,7 +104,7 @@ def health():
     return {"ok": True, "service": "nova-agent"}
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(require_internal)])
 def chat(req: ChatRequest):
     if not req.messages and not req.conversation_id:
         raise HTTPException(status_code=400, detail="messages or conversation_id required")
@@ -120,7 +134,7 @@ def chat(req: ChatRequest):
     return ChatResponse(reply=reply, tool_calls_made=tools_used)
 
 
-@app.post("/api/chat/stream")
+@app.post("/api/chat/stream", dependencies=[Depends(require_internal)])
 def chat_stream(req: ChatRequest):
     if not req.messages and not req.conversation_id:
         raise HTTPException(status_code=400, detail="messages or conversation_id required")
@@ -168,7 +182,7 @@ def chat_stream(req: ChatRequest):
     )
 
 
-@app.post("/api/essay-review", response_model=EssayReviewResponse)
+@app.post("/api/essay-review", response_model=EssayReviewResponse, dependencies=[Depends(require_internal)])
 def essay_review(req: EssayReviewRequest):
     if not _check_rate(req.user_id, "essay", 5):
         raise HTTPException(status_code=429, detail="Rate limit reached (5 reviews/day).")
@@ -408,7 +422,7 @@ def _suggest_student_context(user_id: str) -> str:
     return "Student: " + ", ".join(bits) + "." if bits else ""
 
 
-@app.post("/api/tasks/suggest", response_model=TaskSuggestResponse)
+@app.post("/api/tasks/suggest", response_model=TaskSuggestResponse, dependencies=[Depends(require_internal)])
 def suggest_tasks(req: TaskSuggestRequest):
     if not _check_rate(req.user_id, "suggest", 10):
         raise HTTPException(status_code=429, detail="Rate limit reached (10 suggestions/hour).")
@@ -452,7 +466,7 @@ def _parse_json_object(raw: str) -> dict | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-@app.post("/api/university-suggestions", response_model=UniversitySuggestionsResponse)
+@app.post("/api/university-suggestions", response_model=UniversitySuggestionsResponse, dependencies=[Depends(require_internal)])
 def university_suggestions(req: UniversitySuggestionsRequest):
     if not _check_rate(req.user_id, "uni_suggest", 3):
         raise HTTPException(status_code=429, detail="Rate limit reached (3 suggestion runs/day).")
@@ -620,7 +634,7 @@ def university_suggestions(req: UniversitySuggestionsRequest):
 _SCHOLARSHIP_TIERS = {"strong", "possible", "stretch"}
 
 
-@app.post("/api/scholarship-matches", response_model=ScholarshipMatchesResponse)
+@app.post("/api/scholarship-matches", response_model=ScholarshipMatchesResponse, dependencies=[Depends(require_internal)])
 def scholarship_matches(req: ScholarshipMatchRequest):
     if not _check_rate(req.user_id, "sch_match", 10):
         raise HTTPException(status_code=429, detail="Rate limit reached (10 match runs/hour).")
@@ -782,7 +796,7 @@ def scholarship_matches(req: ScholarshipMatchRequest):
 _ACTIVITY_RATINGS = {"strong", "good", "needs_work"}
 
 
-@app.post("/api/activity-review", response_model=ActivityReviewResponse)
+@app.post("/api/activity-review", response_model=ActivityReviewResponse, dependencies=[Depends(require_internal)])
 def activity_review(req: ActivityReviewRequest):
     if not _check_rate(req.user_id, "activity", 10):
         raise HTTPException(status_code=429, detail="Rate limit reached (10 activity reviews/hour).")
