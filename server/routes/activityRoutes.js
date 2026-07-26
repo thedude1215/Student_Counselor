@@ -1,8 +1,19 @@
 import express from 'express';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import multer from 'multer';
+import { requireAuth } from '../middleware/auth.js';
 import { extractTextFromPdf, parseActivitiesFromText } from '../services/pdfParseService.js';
 
 const router = express.Router();
+
+const pdfImportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => req.userId || ipKeyGenerator(req.ip),
+  message: { error: 'Too many PDF imports. Please wait before trying again.' },
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -16,7 +27,7 @@ const upload = multer({
   },
 });
 
-router.post('/parse-pdf', upload.single('pdf'), async (req, res) => {
+router.post('/parse-pdf', requireAuth, pdfImportLimiter, upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No PDF file received' });

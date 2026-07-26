@@ -16,12 +16,17 @@ export default function Acceptances() {
   const [query, setQuery] = useState('');
   const [acceptances, setAcceptances] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     setLoading(true);
+    setLoadError('');
     fetchAcceptances({ q: query || undefined })
       .then(setAcceptances)
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setLoadError('Could not load acceptances. Check your connection and try again.');
+      })
       .finally(() => setLoading(false));
   }, [query]);
 
@@ -33,8 +38,8 @@ export default function Acceptances() {
         <div className="wrap acc-hero-content">
           <div className="acc-cycle">2025–26 ADMISSIONS CYCLE</div>
           <h1 className="acc-hero-title">
-            Our students<br />
-            got into their<br />
+            Our students <br />
+            got into their <br />
             dream schools
           </h1>
           <p className="acc-hero-sub">
@@ -99,11 +104,11 @@ export default function Acceptances() {
                 const b = BADGE[a.scholarship] || BADGE['No Aid'];
                 return (
                   <tr key={a.id}>
-                    <td className="td-bold">{a.student}</td>
-                    <td className="td-muted">{a.country}</td>
-                    <td className="td-bold">{a.university}</td>
-                    <td className="td-muted">{a.year}</td>
-                    <td>
+                    <td className="td-bold" data-label="Student">{a.student}</td>
+                    <td className="td-muted" data-label="From">{a.country}</td>
+                    <td className="td-bold" data-label="University">{a.university}</td>
+                    <td className="td-muted" data-label="Year">{a.year}</td>
+                    <td data-label="Aid">
                       <span className="acc-badge" style={{ background: b.bg, color: b.color }}>
                         {a.scholarship}
                       </span>
@@ -113,7 +118,14 @@ export default function Acceptances() {
               })}
             </tbody>
           </table>
-          {!loading && acceptances.length === 0 && (
+          {loadError && (
+            <div className="empty empty-error" role="alert">
+              <div className="empty-icon">!</div>
+              <h3>Acceptances could not load</h3>
+              <p>{loadError}</p>
+            </div>
+          )}
+          {!loadError && !loading && acceptances.length === 0 && (
             <div className="empty">
               <div className="empty-icon">🏆</div>
               <h3>No matches found</h3>

@@ -178,7 +178,7 @@ export default function FlightPath() {
     sections
       .map(el => ({ el, name: el.dataset.waypoint, rect: el.getBoundingClientRect() }))
       .filter(({ rect }) => rect.height > 0)
-      .forEach(({ el, name, rect }) => {
+      .forEach(({ name, rect }) => {
         const x = g[SIDE[name] ?? 'c'];
         const top = rect.top + window.scrollY - originY;
         const mid = top + rect.height / 2;

@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://qfmiilxytmccuihbyvga.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseServiceKey) {
-  console.warn('SUPABASE_SERVICE_ROLE_KEY not set — auth-protected routes will fail');
+function requiredEnv(key) {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is required to start the ScholarPath API.`);
+  }
+  return value;
 }
 
-const PLACEHOLDER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder.placeholder';
-
-export const supabase = createClient(supabaseUrl, supabaseServiceKey || PLACEHOLDER_KEY, {
+export const supabase = createClient(requiredEnv('SUPABASE_URL'), requiredEnv('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { autoRefreshToken: false, persistSession: false },
 });

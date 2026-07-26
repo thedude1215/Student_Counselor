@@ -185,7 +185,7 @@ export default function Onboarding() {
         ? String(Number(satReading) + Number(satMath))
         : (satReading || satMath || null);
 
-      await supabase.from('profiles').update({
+      const { error } = await supabase.from('profiles').update({
         interests: notSure ? [] : interests,
         date_of_birth: dob || null,
         country: homeCountry,
@@ -207,8 +207,11 @@ export default function Onboarding() {
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
       }).eq('id', user.id);
+      if (error) throw error;
       await refreshProfile();
       navigate('/dashboard', { replace: true });
+    } catch (err) {
+      alert(`We couldn't save your profile: ${err.message || 'Please try again.'}`);
     } finally {
       setSaving(false);
     }

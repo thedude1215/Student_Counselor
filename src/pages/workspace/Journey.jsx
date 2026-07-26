@@ -211,7 +211,7 @@ export default function Journey() {
   // Jump to the current tile on demand (from the hero "Continue" button) —
   // the page now lands on the themed hero rather than auto-scrolling past it.
   function scrollToCurrent() {
-    currentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    currentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
   }
 
   // Per-act progress for the hero tracker.

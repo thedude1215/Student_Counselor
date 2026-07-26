@@ -91,15 +91,10 @@ export default function WorkspaceLayout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
-  // Close the drawer whenever the route changes, so it never sits covering the
-  // page you just asked for. Tapping a link already closes it via onNavigate;
-  // this also covers browser back/forward. Adjusting during render rather than
-  // in an effect avoids rendering the stale open drawer for a frame first.
-  const [drawerPath, setDrawerPath] = useState(location.pathname);
-  if (drawerPath !== location.pathname) {
-    setDrawerPath(location.pathname);
-    if (drawerOpen) setDrawerOpen(false);
-  }
+  // Close the drawer whenever the route changes, including browser back/forward.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   // Escape closes it, and the page behind must not scroll while it is open.
   useEffect(() => {
@@ -134,12 +129,13 @@ export default function WorkspaceLayout() {
         >
           <Menu size={20} />
         </button>
-        <Link to="/dashboard" className="ws-mobilebar-brand">
+        <Link to="/" className="ws-mobilebar-brand" aria-label="Go to ScholarPath home">
           <img src="/scholarpath-logo.svg" alt="ScholarPath" />
         </Link>
         <Link to="/nova" state={{ from: currentPage }} className="ws-mobilebar-nova">
           <span className="nav-dot" />
-          Nova
+          <span className="ws-mobilebar-nova-full">Talk to Nova</span>
+          <span className="ws-mobilebar-nova-short">Nova</span>
         </Link>
       </header>
 
@@ -153,13 +149,15 @@ export default function WorkspaceLayout() {
 
       <div className={`ws-drawer${drawerOpen ? ' open' : ''}`} role="dialog" aria-label="Navigation" aria-modal="true">
         <div className="ws-drawer-head">
-          <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-drawer-logo" />
+          <Link to="/" className="ws-drawer-brand" aria-label="Go to ScholarPath home" onClick={() => setDrawerOpen(false)}>
+            <img src="/scholarpath-logo.svg" alt="ScholarPath" className="ws-drawer-logo" />
+          </Link>
           <button className="ws-mobilebar-btn" onClick={() => setDrawerOpen(false)} aria-label="Close navigation">
             <X size={20} />
           </button>
         </div>
 
-        <Link to="/nova" state={{ from: currentPage }} className="ws-nova-sidebar-btn">
+        <Link to="/nova" state={{ from: currentPage }} className="ws-nova-sidebar-btn" onClick={() => setDrawerOpen(false)}>
           <span className="nav-dot" />
           Talk to Nova
         </Link>

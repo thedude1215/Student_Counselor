@@ -73,11 +73,11 @@ export default function Navbar() {
           ) : (
             <Link to="/auth" className="nav-login">Log in</Link>
           )}
-          <Link to="/nova" className="nav-nova">
+          <Link to="/nova" className="nav-nova" aria-label="Talk to Nova">
             <span className="nav-dot" />
             Talk to Nova
           </Link>
-          <button className="nav-hamburger" onClick={() => setMobileOpen(o => !o)}>
+          <button className="nav-hamburger" onClick={() => setMobileOpen(o => !o)} aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}>
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
