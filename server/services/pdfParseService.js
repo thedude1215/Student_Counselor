@@ -1,5 +1,3 @@
-import { PDFParse } from 'pdf-parse';
-
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL   = 'gemini-2.5-flash';
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -60,6 +58,7 @@ PDF TEXT:
 `;
 
 export async function extractTextFromPdf(buffer) {
+  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: buffer });
   try {
     await parser.load();
