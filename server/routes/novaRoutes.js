@@ -105,6 +105,9 @@ router.post('/chat/stream', async (req, res) => {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
+  req.on('close', () => {
+    if (!res.writableEnded) controller.abort();
+  });
 
   try {
     let agentRes;
@@ -122,6 +125,7 @@ router.post('/chat/stream', async (req, res) => {
     } catch (fetchErr) {
       clearTimeout(timer);
       if (fetchErr.name === 'AbortError') {
+        if (req.destroyed) return;
         console.error('[Nova] /chat/stream: timeout waiting for nova-agent');
         return res.status(504).json({ error: 'Nova agent timed out.' });
       }
@@ -158,6 +162,7 @@ router.post('/chat/stream', async (req, res) => {
     res.end();
   } catch (err) {
     clearTimeout(timer);
+    if (err.name === 'AbortError' && req.destroyed) return;
     console.error('[Nova] /chat/stream unexpected error:', err.message, '| stack:', err.stack);
     if (!res.headersSent) {
       res.status(503).json({ error: err.message || 'Nova agent is not available.' });

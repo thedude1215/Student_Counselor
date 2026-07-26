@@ -24,7 +24,8 @@
 .logo-tile__img {
   display: block;
   height: 100%;
-  object-fit: contain;
+  object-fit: var(--logo-tile-object-fit);
+  object-position: var(--logo-tile-object-position);
   opacity: 0;
   padding: var(--logo-tile-padding);
   position: absolute;
@@ -50,7 +51,7 @@
   text-align: center;
   width: 100%;
   z-index: 1;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
   user-select: none;
 }
 

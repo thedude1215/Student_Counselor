@@ -30,7 +30,7 @@ export function sendMessage(conversationId, message) {
   });
 }
 
-export async function sendMessageStream(conversationId, message, { onText, onToolCall, onDone, onError }) {
+export async function sendMessageStream(conversationId, message, { onText, onToolCall, onDone, onError, signal }) {
   const token = await getToken();
   if (!token) throw new Error('Not authenticated');
 
@@ -41,6 +41,7 @@ export async function sendMessageStream(conversationId, message, { onText, onToo
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ conversationId, message }),
+    signal,
   });
 
   if (!res.ok) {

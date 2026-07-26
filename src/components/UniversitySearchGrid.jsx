@@ -1,10 +1,28 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, MapPin, Star, Plus, Check, SlidersHorizontal, X, ChevronDown, Trophy, Globe } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, MapPin, Star, Plus, Check, SlidersHorizontal, X, ChevronDown, Trophy, Globe, ArrowRight } from 'lucide-react';
 import LogoTile from './LogoTile';
+import NovaMascot from './NovaMascot';
 import { fetchUniversities } from '../api/catalog';
 import { fetchCollegeList, addToCollegeList } from '../api/workspace';
 import { useAuth } from '../context/AuthContext';
-import { computeFit } from '../lib/collegeFit';
+import { getBrandColor, hexToRgb } from '../lib/brandColors';
+
+/* Each card is a sticker whose offset shadow is that university's real brand
+ * colour, so the grid reads as a wall of school identity rather than 30
+ * identical white rectangles.
+ *
+ * This deliberately differs from the essay rail, where per-university tint was
+ * removed: there the school was incidental and the wash fought the palette.
+ * Here the school IS the content, and the colour lives in the shadow rather
+ * than the surface, so text contrast is untouched. */
+function stickerStyle(uni, index) {
+  const [r, g, b] = hexToRgb(getBrandColor(uni));
+  return {
+    '--uni-brand': `rgba(${r},${g},${b},0.24)`,
+    '--uni-tilt': index % 2 === 0 ? '-0.7deg' : '0.7deg',
+  };
+}
 
 const REGIONS = {
   'All Regions': [],
@@ -53,8 +71,12 @@ function parseRankNum(r) {
   return isNaN(n) ? 9999 : n;
 }
 
-export default function UniversitySearchGrid() {
-  const { user, profile } = useAuth();
+/* `hero` is only set by the standalone /universities page. The dashboard
+   embeds this same component inside its own workspace chrome, where a
+   full-bleed dark band would be wrong. */
+export default function UniversitySearchGrid({ hero = false }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState('All Regions');
   const [country, setCountry] = useState('All');
@@ -66,15 +88,21 @@ export default function UniversitySearchGrid() {
   const [showFilters, setShowFilters] = useState(false);
   const [allUniversities, setAllUniversities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [savedIds, setSavedIds] = useState(new Set());
   const [savingId, setSavingId] = useState(null);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   useEffect(() => {
     setLoading(true);
+    setLoadError('');
     fetchUniversities({})
       .then(setAllUniversities)
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setLoadError('Could not load universities. Check your connection and try again.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -151,6 +179,12 @@ export default function UniversitySearchGrid() {
     [allUniversities]
   );
 
+  // Real counts for the header strip, not copy-written guesses.
+  const countryCount = useMemo(
+    () => new Set(allUniversities.map(u => u.country).filter(Boolean)).size,
+    [allUniversities]
+  );
+
   const activeFilterCount = [
     region !== 'All Regions',
     country !== 'All',
@@ -172,13 +206,19 @@ export default function UniversitySearchGrid() {
   }, []);
 
   async function handleAdd(universityId) {
-    if (!user || savedIds.has(universityId)) return;
+    setSaveError('');
+    if (!user) {
+      navigate('/auth', { state: { from: '/universities' } });
+      return;
+    }
+    if (savedIds.has(universityId)) return;
     setSavingId(universityId);
     try {
       await addToCollegeList(user.id, universityId);
       setSavedIds(new Set([...savedIds, universityId]));
     } catch (err) {
       console.error(err);
+      setSaveError('Could not add that school. Please try again.');
     } finally {
       setSavingId(null);
     }
@@ -186,24 +226,52 @@ export default function UniversitySearchGrid() {
 
   const visible = filtered.slice(0, visibleCount);
 
+  const searchBar = (
+    <div className="search-bar uni-search">
+      <Search size={16} />
+      <input
+        id="uni-search"
+        placeholder="Search universities, countries, tags..."
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+      />
+      {query && (
+        <button className="search-clear" onClick={() => setQuery('')}><X size={14} /></button>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <div className="wrap">
-        <div className="uni-search-header">
-          <div className="search-bar uni-search">
-            <Search size={16} />
-            <input
-              id="uni-search"
-              placeholder="Search universities, countries, tags..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-            />
-            {query && (
-              <button className="search-clear" onClick={() => setQuery('')}><X size={14} /></button>
-            )}
+      {hero ? (
+        /* Night band, matching the landing page's departure section — the page
+           then opens out into the cream grid, the same night-to-day rhythm. */
+        <div className="uni-hero">
+          <div className="wrap uni-hero-wrap">
+            <div className="uni-hero-text">
+              <h1 className="uni-hero-title">Every university, in one place.</h1>
+              <p className="uni-hero-sub">
+                {loading
+                  ? 'Browse and compare universities worldwide.'
+                  : <>Compare <strong>{allUniversities.length}</strong> universities across <strong>{countryCount}</strong> countries — admit rates, real cost, and whether you actually fit.</>}
+              </p>
+              <Link to="/nova" className="uni-hero-cta">
+                <NovaMascot size={18} expression="curious" />
+                Ask Nova which ones fit you
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className="uni-hero-nova" aria-hidden="true">
+              <NovaMascot size={92} expression="thinking" holding="map" idle />
+            </div>
           </div>
+          <div className="wrap uni-hero-search">{searchBar}</div>
         </div>
-      </div>
+      ) : (
+        <div className="wrap">
+          <div className="uni-search-header">{searchBar}</div>
+        </div>
+      )}
 
       {!loading && !query && region === 'All Regions' && tag === 'All' && !aidOnly && tuitionIdx === 0 && acceptIdx === 0 && country === 'All' && (
         <div className="wrap">
@@ -213,8 +281,8 @@ export default function UniversitySearchGrid() {
               <h2>Top Ranked Universities</h2>
             </div>
             <div className="uni-top-scroll">
-              {topUniversities.map(u => (
-                <div key={u.id} className="uni-top-card">
+              {topUniversities.map((u, i) => (
+                <div key={u.id} className="uni-top-card" style={stickerStyle(u, i)}>
                   <div className="uni-top-rank">#{parseRankNum(u.ranking)}</div>
                   <LogoTile item={{
                     logoUrl: u.logo_url, logoStyle: u.logo_style,
@@ -303,7 +371,14 @@ export default function UniversitySearchGrid() {
           </div>
         )}
 
-        {loading ? (
+        {loadError ? (
+          <div className="empty empty-error" role="alert">
+            <div className="empty-icon">!</div>
+            <h3>Universities could not load</h3>
+            <p>{loadError}</p>
+            <button className="uni-clear-btn" onClick={() => window.location.reload()}>Reload page</button>
+          </div>
+        ) : loading ? (
           <div className="empty"><p>Loading…</p></div>
         ) : filtered.length === 0 ? (
           <div className="empty">
@@ -315,10 +390,9 @@ export default function UniversitySearchGrid() {
         ) : (
           <>
             <div className="uni-grid">
-              {visible.map(u => {
-                const fit = user ? computeFit(u, profile) : null;
+              {visible.map((u, i) => {
                 return (
-                <div key={u.id} className="uni-card">
+                <div key={u.id} className="uni-card" style={stickerStyle(u, i)}>
                   <div className="uni-card-top">
                     <LogoTile item={{
                       logoUrl: u.logo_url,
@@ -327,24 +401,17 @@ export default function UniversitySearchGrid() {
                       name: u.name,
                       shortName: u.short_name,
                     }} size={48} radius={12} />
-                    <div className="uni-card-top-right">
-                      {fit && (
-                        <span
-                          className="uni-fit-tag"
-                          style={{ color: fit.color, background: fit.bg, borderColor: fit.border }}
-                          title="Fit computed from your profile vs. admission rate"
-                        >
-                          {fit.label}
-                        </span>
-                      )}
-                      <div className="uni-card-rank">
-                        <Star size={10} fill="currentColor" /> #{u.ranking}
-                      </div>
+                    <div className="uni-card-rank">
+                      <Star size={10} fill="currentColor" /> #{u.ranking}
                     </div>
                   </div>
                   <div className="uni-card-name">{u.name}</div>
-                  <div className="uni-card-loc"><MapPin size={11} /> {u.location}</div>
-                  <div className="uni-card-country"><Globe size={10} /> {u.country}</div>
+                  {/* Location and country on one line — they were two stacked
+                      rows saying nearly the same thing. */}
+                  <div className="uni-card-loc">
+                    <MapPin size={11} /> {u.location}
+                    {u.country && <><span className="uni-card-dot">·</span><Globe size={10} /> {u.country}</>}
+                  </div>
                   <p className="uni-card-desc">{u.description}</p>
                   <div className="uni-card-stats">
                     <div className="uni-stat">
@@ -352,7 +419,9 @@ export default function UniversitySearchGrid() {
                       <div className="uni-stat-l">Acceptance</div>
                     </div>
                     <div className="uni-stat">
-                      <div className="uni-stat-v">{u.tuition === 0 ? 'Free' : `$${Math.round(u.tuition/1000)}k`}</div>
+                      <div className="uni-stat-v">
+                        {u.tuition === 0 ? <span className="uni-free-sticker">Free</span> : `$${Math.round(u.tuition/1000)}k`}
+                      </div>
                       <div className="uni-stat-l">Tuition/yr</div>
                     </div>
                     <div className="uni-stat">
@@ -360,24 +429,29 @@ export default function UniversitySearchGrid() {
                       <div className="uni-stat-l">Size</div>
                     </div>
                   </div>
+                  <Link
+                    to="/nova"
+                    state={{ prompt: `What are my real chances of getting into ${u.name}? Be honest about my profile's strengths and gaps.` }}
+                    className="uni-card-nova"
+                  >
+                    <NovaMascot size={13} /> Nova's take <ArrowRight size={11} />
+                  </Link>
                   <div className="uni-card-tags">
                     {u.tags?.slice(0,3).map(t => <span key={t} className="tag tag-gray">{t}</span>)}
                     {u.financial_aid && <span className="tag tag-green">Aid</span>}
                   </div>
-                  {user && (
-                    savedIds.has(u.id) ? (
-                      <button className="uni-add-btn added" disabled>
-                        <Check size={15} /> On your list
-                      </button>
-                    ) : (
-                      <button
-                        className="uni-add-btn"
-                        onClick={() => handleAdd(u.id)}
-                        disabled={savingId === u.id}
-                      >
-                        <Plus size={15} /> {savingId === u.id ? 'Adding…' : 'Add to my list'}
-                      </button>
-                    )
+                  {savedIds.has(u.id) ? (
+                    <button className="uni-add-btn added" disabled>
+                      <Check size={15} /> On your list
+                    </button>
+                  ) : (
+                    <button
+                      className="uni-add-btn"
+                      onClick={() => handleAdd(u.id)}
+                      disabled={savingId === u.id}
+                    >
+                      <Plus size={15} /> {savingId === u.id ? 'Adding…' : user ? 'Add to my list' : 'Log in to add'}
+                    </button>
                   )}
                 </div>
                 );
@@ -391,6 +465,7 @@ export default function UniversitySearchGrid() {
                 </button>
               </div>
             )}
+            {saveError && <p className="uni-save-error" role="alert">{saveError}</p>}
           </>
         )}
       </div>

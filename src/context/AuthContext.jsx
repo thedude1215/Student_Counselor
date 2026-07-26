@@ -10,6 +10,7 @@ const AuthContext = createContext({
   signIn: async () => {},
   signInWithGoogle: async () => {},
   signOut: async () => {},
+  resendVerification: async () => {},
   refreshProfile: async () => {},
 });
 
@@ -23,26 +24,50 @@ export function AuthProvider({ children }) {
       setProfile(null);
       return;
     }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+    if (error) {
+      console.error('Failed to load profile:', error.message);
+      setProfile(null);
+      return;
+    }
     setProfile(data ?? null);
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      loadProfile(session?.user?.id).finally(() => setLoading(false));
-    });
+    let active = true;
+
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        if (!active) return;
+        setSession(session);
+        await loadProfile(session?.user?.id);
+      })
+      .catch(err => {
+        console.error('Failed to load auth session:', err.message);
+        if (active) {
+          setSession(null);
+          setProfile(null);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      loadProfile(session?.user?.id);
+      loadProfile(session?.user?.id).catch(err => {
+        console.error('Failed to refresh profile after auth change:', err.message);
+      });
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const value = {
@@ -54,7 +79,10 @@ export function AuthProvider({ children }) {
       supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/onboarding`,
+        },
       }),
     signIn: (email, password) =>
       supabase.auth.signInWithPassword({ email, password }),
@@ -63,6 +91,12 @@ export function AuthProvider({ children }) {
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/onboarding` },
       }),
+    resendVerification: (email) =>
+      supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+      }),
     signOut: () => supabase.auth.signOut(),
     refreshProfile: () => loadProfile(session?.user?.id),
   };
@@ -70,7 +104,6 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext);
 }

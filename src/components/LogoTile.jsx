@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './LogoTile.css';
 
 const BRAND_COLORS = [
@@ -53,16 +53,24 @@ export default function LogoTile({
   const tileStyle = logoStyle ?? item.logoStyle ?? item.universityLogoStyle ?? item.hostLogoStyle ?? {};
   const uniName = item.name ?? item.university ?? item.host ?? '';
   const shortName = item.shortName ?? item.short_name ?? '';
-  const fallbackText = fallback ?? item.fallback ?? item.logo ?? item.universityLogo ?? item.hostLogo ?? shortName ?? uniName ?? 'SP';
+  const explicitFallback = fallback ?? item.fallback ?? item.logo ?? item.universityLogo ?? item.hostLogo ?? shortName;
+  const fallbackText = explicitFallback ?? uniName ?? 'SP';
   const accessibleName = alt ?? uniName ?? shortName ?? fallbackText;
+
+  useEffect(() => {
+    setFailed(false);
+    setLoaded(false);
+  }, [imageUrl]);
 
   const hasImage = imageUrl && !failed;
   const brandColor = getBrandColor(uniName || fallbackText);
-  const initials = getInitials(uniName, shortName);
+  const initials = getInitials(explicitFallback ?? uniName, shortName);
 
-  const background = hasImage ? (tileStyle.background ?? '#FFFFFF') : brandColor;
+  const background = hasImage ? (tileStyle.background ?? '#FFFFFF') : (tileStyle.background ?? brandColor);
   const padding = tileStyle.padding ?? '7px';
-  const textColor = '#FFFFFF';
+  const textColor = tileStyle.color ?? '#FFFFFF';
+  const objectFit = tileStyle.objectFit ?? 'contain';
+  const objectPosition = tileStyle.objectPosition ?? 'center';
 
   return (
     <div
@@ -71,6 +79,8 @@ export default function LogoTile({
         '--logo-tile-bg': background,
         '--logo-tile-color': textColor,
         '--logo-tile-padding': padding,
+        '--logo-tile-object-fit': objectFit,
+        '--logo-tile-object-position': objectPosition,
         '--logo-tile-radius': sizeToCss(radius),
         '--logo-tile-size': sizeToCss(size),
       }}
@@ -85,9 +95,12 @@ export default function LogoTile({
           src={imageUrl}
           alt={accessibleName}
           decoding="async"
-          loading="eager"
+          loading="lazy"
           onLoad={e => {
-            if (e.target.naturalWidth < 32) { setFailed(true); return; }
+            if (!e.currentTarget.naturalWidth || !e.currentTarget.naturalHeight) {
+              setFailed(true);
+              return;
+            }
             setLoaded(true);
           }}
           onError={() => setFailed(true)}

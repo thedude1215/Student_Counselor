@@ -23,24 +23,30 @@ export default function Stories() {
   const [filter, setFilter]   = useState('All');
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     setLoading(true);
+    setLoadError('');
     fetchStories({
       q: query || undefined,
       tag: filter !== 'All' ? filter : undefined,
     })
       .then(setStories)
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setLoadError('Could not load stories. Check your connection and try again.');
+      })
       .finally(() => setLoading(false));
   }, [query, filter]);
 
   return (
     <div className="stories-page">
       <div className="stories-top wrap">
+        <h1 className="stories-title">Student stories</h1>
 
         <div className="tab-bar stories-tabs">
-          {['Stories', 'Playlists'].map(t => (
+          {['Stories'].map(t => (
             <button key={t} className={`tab ${tab === t ? 'active' : ''}`}
               onClick={() => setTab(t)}>{t}</button>
           ))}
@@ -65,7 +71,13 @@ export default function Stories() {
       </div>
 
       <div className="stories-body wrap">
-        {loading ? (
+        {loadError ? (
+          <div className="empty empty-error" role="alert">
+            <div className="empty-icon">!</div>
+            <h3>Stories could not load</h3>
+            <p>{loadError}</p>
+          </div>
+        ) : loading ? (
           <div className="empty"><p>Loading…</p></div>
         ) : stories.length === 0 ? (
           <div className="empty">

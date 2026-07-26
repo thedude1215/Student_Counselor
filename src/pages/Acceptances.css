@@ -187,4 +187,69 @@
 @media (max-width: 520px) {
   .acc-hero { min-height: auto; }
   .acc-hero-title { font-size: clamp(2rem, 12vw, 3.5rem); }
+
+  .acc-body-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .acc-search { max-width: none; }
+
+  .acc-table-wrap {
+    overflow: visible;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .acc-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .acc-table thead { display: none; }
+
+  .acc-table tbody {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .acc-table tbody tr {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.9rem;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(17, 17, 24, 0.06);
+  }
+
+  .acc-table tbody tr:hover { background: var(--white); }
+
+  .acc-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0;
+    font-size: 0.84rem;
+    text-align: right;
+  }
+
+  .acc-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+  }
+
+  .acc-table td[data-label="University"] {
+    align-items: flex-start;
+  }
+
+  .acc-badge { white-space: normal; text-align: center; }
 }

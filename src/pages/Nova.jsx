@@ -168,8 +168,14 @@ export default function Nova() {
       const novaMsg = { role: 'nova', text: '', time: new Date(), loadingPhrase };
       setMessages(prev => [...prev, novaMsg]);
       let cancelled = false;
-      abortRef.current = () => { cancelled = true; setLoading(false); };
+      const controller = new AbortController();
+      abortRef.current = () => {
+        cancelled = true;
+        controller.abort();
+        setLoading(false);
+      };
       await sendMessageStream(conversationId, msg, {
+        signal: controller.signal,
         onText(content) {
           if (cancelled) return;
           setMessages(prev => {
@@ -198,6 +204,7 @@ export default function Nova() {
         return prev;
       });
     } catch (err) {
+      if (err.name === 'AbortError') return;
       setMessages(prev => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
@@ -238,6 +245,22 @@ export default function Nova() {
 
   return (
     <div className="nova-page">
+      <header className="nova-mobilebar">
+        <Link to="/dashboard" className="nova-mobile-back" aria-label="Back to dashboard">
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="nova-mobile-title">
+          <div className="nova-brand-icon"><NovaMascot size={26} /></div>
+          <div>
+            <div className="nova-brand-name">Nova</div>
+            <div className="nova-brand-role">AI Counselor</div>
+          </div>
+        </div>
+        <button className="nova-mobile-new" onClick={startNewConversation} aria-label="New chat">
+          <Plus size={18} />
+        </button>
+      </header>
+
       {/* ─── Sidebar ─── */}
       <aside className="nova-sidebar">
         <Link to="/dashboard" className="nova-back"><ArrowLeft size={14} /> Back</Link>

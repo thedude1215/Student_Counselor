@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -84,10 +85,12 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppLayout />
-      </AuthProvider>
-    </BrowserRouter>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppLayout />
+        </AuthProvider>
+      </BrowserRouter>
+    </AppErrorBoundary>
   );
 }

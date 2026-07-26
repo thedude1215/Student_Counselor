@@ -112,10 +112,14 @@ export async function generateResponse(systemPrompt, messages, config = {}) {
 
         // Function call — execute and loop
         const { name, args } = result.functionCall;
-        console.log(`[Nova] Tool call: ${name}(${JSON.stringify(args)})`);
+        if (process.env.NOVA_DEBUG_TOOLS === 'true') {
+          console.log(`[Nova] Tool call: ${name}`);
+        }
 
         const toolResult = await executeTool(name, args, userId);
-        console.log(`[Nova] Tool result: ${JSON.stringify(toolResult).slice(0, 200)}`);
+        if (process.env.NOVA_DEBUG_TOOLS === 'true') {
+          console.log(`[Nova] Tool result received for ${name}`);
+        }
 
         bodyCopy.contents.push({
           role: 'model',

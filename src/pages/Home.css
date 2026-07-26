@@ -6,6 +6,7 @@
   position: relative;   /* positioning context for the flight path overlay */
   background: var(--bg);
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 /* ══════════════════════════════════════════
@@ -202,6 +203,7 @@
   width: 100%;
   overflow: hidden;
   padding: 12px 0;
+  contain: paint;
 }
 
 .logo-strip-track {
@@ -209,6 +211,7 @@
   display: flex;
   gap: 16px;
   width: max-content;
+  will-change: transform;
 }
 .logo-strip-wrap:hover .logo-strip-track { animation-play-state: paused; }
 

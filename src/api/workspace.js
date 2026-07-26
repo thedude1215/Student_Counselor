@@ -278,6 +278,9 @@ export async function deleteHonor(id) {
 
 export async function parsePdf(file) {
   const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Please sign in again before importing a PDF.');
+  }
   const fd = new FormData();
   fd.append('pdf', file);
   const res = await fetch('/api/activities/parse-pdf', {

@@ -123,6 +123,13 @@
   background: var(--white);
 }
 
+.auth-code-input {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.42em;
+  text-align: center;
+}
+
 /* Password wrapper */
 .auth-pw-wrap { position: relative; }
 .auth-pw-wrap .auth-input { padding-right: 2.8rem; }
@@ -179,6 +186,31 @@
   font-weight: 600;
   border-radius: 10px;
   padding: 0.65rem 0.85rem;
+}
+
+.auth-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.auth-inline-actions button {
+  background: transparent;
+  border: none;
+  color: var(--blue);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 850;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-inline-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 /* Submit — brand emerald green */

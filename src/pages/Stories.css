@@ -1,6 +1,15 @@
 /* Stories page */
 .stories-page { min-height: 100vh; background: var(--bg); }
 
+.stories-title {
+  color: var(--ink);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 0.98;
+  margin: 0 0 1.25rem;
+}
+
 .stories-top {
   padding: calc(var(--nav-h) + 1.5rem) 0 0;
 }
