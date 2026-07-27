@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './LogoTile.css';
 
 const BRAND_COLORS = [
@@ -49,6 +49,7 @@ export default function LogoTile({
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef(null);
   const imageUrl = logoUrl ?? item.logoUrl ?? item.universityLogoUrl ?? item.hostLogoUrl;
   const tileStyle = logoStyle ?? item.logoStyle ?? item.universityLogoStyle ?? item.hostLogoStyle ?? {};
   const uniName = item.name ?? item.university ?? item.host ?? '';
@@ -60,6 +61,14 @@ export default function LogoTile({
   useEffect(() => {
     setFailed(false);
     setLoaded(false);
+    // A cached image can finish loading before React attaches the onLoad
+    // listener, so the synthetic onLoad event never fires and the tile
+    // stays at opacity:0 forever. Catch that case explicitly on mount/src
+    // change by checking the already-resolved `complete` state.
+    const el = imgRef.current;
+    if (el?.complete && el.naturalWidth && el.naturalHeight) {
+      setLoaded(true);
+    }
   }, [imageUrl]);
 
   const hasImage = imageUrl && !failed;
@@ -91,6 +100,7 @@ export default function LogoTile({
       </span>
       {imageUrl && !failed ? (
         <img
+          ref={imgRef}
           className={`logo-tile__img ${loaded ? 'is-loaded' : ''}`}
           src={imageUrl}
           alt={accessibleName}

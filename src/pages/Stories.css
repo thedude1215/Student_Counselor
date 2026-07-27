@@ -37,6 +37,17 @@
   transform: translateY(-2px);
   box-shadow: var(--shadow-hover);
 }
+.story-row:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.story-row-excerpt {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink-2, var(--ink));
+  margin-top: 0.25rem;
+}
 
 .story-row-photo {
   width: 130px;

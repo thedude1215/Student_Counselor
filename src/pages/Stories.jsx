@@ -24,6 +24,7 @@ export default function Stories() {
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -89,9 +90,21 @@ export default function Stories() {
           <div className="story-rows">
             {stories.map((s, idx) => {
               const c = ROW_COLORS[idx % ROW_COLORS.length];
+              const expanded = expandedId === s.id;
               return (
-                <div key={s.id} className="story-row"
-                  style={{ background: c.bg, borderColor: c.border }}>
+                <div key={s.id} className={`story-row ${expanded ? 'is-expanded' : ''}`}
+                  style={{ background: c.bg, borderColor: c.border }}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={expanded}
+                  aria-controls={`story-excerpt-${s.id}`}
+                  onClick={() => setExpandedId(expanded ? null : s.id)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setExpandedId(expanded ? null : s.id);
+                    }
+                  }}>
                   <img
                     src={s.photo}
                     alt={s.name}
@@ -121,6 +134,9 @@ export default function Stories() {
                       />
                       by <strong>{s.name.split(' ')[0]}</strong> from {s.country} {s.flag}
                     </div>
+                    {expanded && s.excerpt && (
+                      <p id={`story-excerpt-${s.id}`} className="story-row-excerpt">{s.excerpt}</p>
+                    )}
                   </div>
                 </div>
               );
