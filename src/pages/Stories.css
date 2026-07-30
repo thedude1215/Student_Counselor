@@ -135,7 +135,7 @@
    band reads as alive rather than as a static row of chips. */
 .stories-hero-cluster {
   position: relative;
-  height: 110px;
+  height: 150px;
   max-width: 1200px;
   margin: 2.5rem auto 0;
   padding: 0 2rem;
@@ -167,7 +167,6 @@
 .cluster-logo {
   border: 2px solid rgba(244, 242, 236, 0.9);
   box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
-  transition: transform 220ms ease;
 }
 /* Names like "Vanderbilt" fall back to 5-6 characters, which overflow a
    46px circle at LogoTile's default fallback size. */
@@ -176,24 +175,65 @@
   letter-spacing: -0.03em;
   padding: 4px;
 }
-.cluster-logo-wrap:hover .cluster-logo { transform: scale(1.14); }
 
-.cluster-logo-0 { left: 8%;  top: 28%; animation-delay: 0s;    }
-.cluster-logo-1 { left: 26%; top: 6%;  animation-delay: -1.1s; }
-.cluster-logo-2 { left: 45%; top: 52%; animation-delay: -2.3s; }
-.cluster-logo-3 { left: 64%; top: 10%; animation-delay: -3.4s; }
-.cluster-logo-4 { left: 84%; top: 38%; animation-delay: -0.6s; }
+/* Logos sit in the lower band, leaving a clear lane above for Nova. Their
+   tops never rise above 48px, which is what keeps Nova (54px tall, centred
+   at ≤21px) from ever overlapping a crest as it passes. */
+.cluster-logo-0 { left: 8%;  top: 48%; animation-delay: 0s;    }
+.cluster-logo-1 { left: 26%; top: 36%; animation-delay: -1.1s; }
+.cluster-logo-2 { left: 45%; top: 58%; animation-delay: -2.3s; }
+.cluster-logo-3 { left: 64%; top: 37%; animation-delay: -3.4s; }
+.cluster-logo-4 { left: 84%; top: 46%; animation-delay: -0.6s; }
 
-/* Nova walking the path between the schools, carrying a postcard home.
-   Waypoints sit at the midpoints between logos (8/26/45/64/84%), so Nova
-   weaves along the dotted line without ever covering a crest.
-   `alternate` means it retraces its steps rather than snapping back to the
-   start, and every keyframe sets only left/top — the centring transform is
-   untouched, so a stalled animation clock leaves Nova parked mid-path
-   rather than mispositioned or invisible. */
+/* Each crest lifts as Nova passes overhead. Every greet shares Nova's 17s
+   duration and `alternate` direction, so the whole scene mirrors together
+   on the return trip and the pulse always lands at the same position —
+   no JS loop needed to keep them in sync. Only the pulse instant differs
+   per logo, matching where Nova crosses that logo's column. */
+.cluster-logo { animation: none; }
+.cluster-logo-0 .cluster-logo { animation: logo-greet-0 17s ease-in-out infinite alternate; }
+.cluster-logo-1 .cluster-logo { animation: logo-greet-1 17s ease-in-out infinite alternate; }
+.cluster-logo-2 .cluster-logo { animation: logo-greet-2 17s ease-in-out infinite alternate; }
+.cluster-logo-3 .cluster-logo { animation: logo-greet-3 17s ease-in-out infinite alternate; }
+.cluster-logo-4 .cluster-logo { animation: logo-greet-4 17s ease-in-out infinite alternate; }
+
+/* Frame 0 of every greet is the resting state, so a stalled animation
+   clock leaves the crest sitting normally rather than mid-pulse. */
+@keyframes logo-greet-0 {
+  0%, 2%, 9%, 100% { transform: translateY(0) scale(1); }
+  5.4%             { transform: translateY(-4px) scale(1.1); }
+}
+@keyframes logo-greet-1 {
+  0%, 21%, 29%, 100% { transform: translateY(0) scale(1); }
+  25%                { transform: translateY(-4px) scale(1.1); }
+}
+@keyframes logo-greet-2 {
+  0%, 46%, 54%, 100% { transform: translateY(0) scale(1); }
+  50%                { transform: translateY(-4px) scale(1.1); }
+}
+@keyframes logo-greet-3 {
+  0%, 71%, 79%, 100% { transform: translateY(0) scale(1); }
+  75%                { transform: translateY(-4px) scale(1.1); }
+}
+@keyframes logo-greet-4 {
+  0%, 90%, 98%, 100% { transform: translateY(0) scale(1); }
+  94%                { transform: translateY(-4px) scale(1.1); }
+}
+
+/* Nova flies the length of the constellation, carrying a postcard home,
+   in a lane above the crests — its centre stays at or under 13% of the
+   150px band (≈20px), which clears the highest logo top (48px) by more
+   than Nova's 27px half-height. An earlier version wove *between* the
+   logos, which only cleared them at the waypoints: in motion it slid
+   straight over the crests.
+
+   `alternate` means it retraces its steps rather than snapping back to
+   the start, and every keyframe sets only left/top — the centring
+   transform is untouched, so a stalled animation clock leaves Nova
+   parked on the path rather than mispositioned or invisible. */
 .cluster-nova {
   position: absolute;
-  left: 17%; top: 6%;
+  left: 3%; top: 12%;
   transform: translate(-50%, -50%);
   z-index: 2;
   filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
@@ -203,15 +243,34 @@
   display: block;
   animation: nova-tilt 3.4s ease-in-out infinite;
 }
+.cluster-nova-hop {
+  display: block;
+  animation: nova-hop 17s ease-in-out infinite alternate;
+}
+/* Waypoints land exactly on the columns of logos 1, 2 and 3 (26/45/64%) at
+   25/50/75%, which is what lets the hop and the crest greets be keyed to
+   round numbers. Logos 0 and 4 are crossed at ~5.4% and ~94%. */
 @keyframes nova-travel {
-  0%   { left: 17%; top: 6%;  }
-  33%  { left: 35%; top: 46%; }
-  66%  { left: 55%; top: 8%;  }
-  100% { left: 74%; top: 44%; }
+  0%   { left: 3%;  top: 12%; }
+  25%  { left: 26%; top: 7%;  }
+  50%  { left: 45%; top: 13%; }
+  75%  { left: 64%; top: 7%;  }
+  100% { left: 90%; top: 12%; }
 }
 @keyframes nova-tilt {
   0%, 100% { transform: rotate(-6deg); }
   50%      { transform: rotate(6deg); }
+}
+/* A small hop each time Nova crosses a school's column. Shares the travel
+   animation's duration and direction, so the hops stay pinned to the
+   crossings on the return trip too. */
+@keyframes nova-hop {
+  0%, 2%, 9%, 21%, 29%, 46%, 54%, 71%, 79%, 90%, 98%, 100% { transform: translateY(0); }
+  5.4% { transform: translateY(-8px); }
+  25%  { transform: translateY(-8px); }
+  50%  { transform: translateY(-8px); }
+  75%  { transform: translateY(-8px); }
+  94%  { transform: translateY(-8px); }
 }
 
 /* ══════════════════════════════════════════

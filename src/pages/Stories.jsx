@@ -178,7 +178,7 @@ export default function Stories() {
         {logoCluster.length > 0 && (
           <div className="stories-hero-cluster" aria-hidden="true">
             <svg className="stories-hero-cluster-lines" viewBox="0 0 200 90" preserveAspectRatio="none">
-              <polyline points="23,31 59,13 97,54 135,16 175,40" />
+              <polyline points="20,57 56,46 94,66 132,47 172,55" />
             </svg>
             {logoCluster.map((s, i) => (
               <span key={s.id} className={`cluster-logo-wrap cluster-logo-${i}`}>
@@ -191,12 +191,16 @@ export default function Stories() {
               </span>
             ))}
 
-            {/* Nova walks the path between the schools — "every path here was
-                walked by someone", carrying a postcard home. Waypoints sit at
-                the midpoints between logos so Nova never covers one. */}
+            {/* Nova walks the path the students walked — "every path here was
+                walked by someone" — carrying a postcard home, and hops as it
+                passes over each school while that crest lifts to greet it.
+                Three nested spans because travel, tilt and hop are all
+                transforms and would otherwise overwrite one another. */}
             <span className="cluster-nova">
               <span className="cluster-nova-inner">
-                <NovaMascot size={54} expression="happy" holding="letter" />
+                <span className="cluster-nova-hop">
+                  <NovaMascot size={54} expression="happy" holding="letter" />
+                </span>
               </span>
             </span>
           </div>
