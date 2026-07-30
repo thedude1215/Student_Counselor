@@ -31,6 +31,8 @@ function StoryPhoto({ src, alt, className = '' }) {
         src={src}
         alt={alt}
         className="story-photo"
+        loading="lazy"
+        decoding="async"
         onError={e => { e.target.parentElement.style.visibility = 'hidden'; }}
       />
     </div>
@@ -93,6 +95,7 @@ export default function Stories() {
   const [quoteIdx, setQuoteIdx] = useState(0);
   useEffect(() => {
     if (stories.length < 2) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const id = setInterval(() => setQuoteIdx(i => (i + 1) % stories.length), 5000);
     return () => clearInterval(id);
   }, [stories.length]);
@@ -168,7 +171,7 @@ export default function Stories() {
             <div className="stories-hero-quote postcard" aria-live="polite">
               <p className="stories-hero-quote-text">{heroQuoteStory.excerpt}</p>
               <div className="stories-hero-quote-by">
-                <img src={heroQuoteStory.photo} alt="" onError={e => { e.target.style.visibility = 'hidden'; }} />
+                <img src={heroQuoteStory.photo} alt="" loading="lazy" decoding="async" onError={e => { e.target.style.visibility = 'hidden'; }} />
                 <span><strong>{heroQuoteStory.name?.split(' ')[0]}</strong> → {heroQuoteStory.university}</span>
               </div>
             </div>
