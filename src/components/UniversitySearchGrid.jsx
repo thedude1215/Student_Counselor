@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Star, Plus, Check, SlidersHorizontal, X, ChevronDown, Trophy, Globe, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Star, Plus, Check, SlidersHorizontal, X, ChevronDown, Stamp, Globe, ArrowRight } from 'lucide-react';
 import LogoTile from './LogoTile';
 import NovaMascot from './NovaMascot';
 import { fetchUniversities } from '../api/catalog';
@@ -8,19 +8,18 @@ import { fetchCollegeList, addToCollegeList } from '../api/workspace';
 import { useAuth } from '../context/AuthContext';
 import { getBrandColor, hexToRgb } from '../lib/brandColors';
 
-/* Each card is a sticker whose offset shadow is that university's real brand
- * colour, so the grid reads as a wall of school identity rather than 30
- * identical white rectangles.
+/* Each card's offset shadow is that university's real brand colour, so the
+ * grid reads as a wall of school identity rather than 30 identical white
+ * rectangles.
  *
  * This deliberately differs from the essay rail, where per-university tint was
  * removed: there the school was incidental and the wash fought the palette.
  * Here the school IS the content, and the colour lives in the shadow rather
  * than the surface, so text contrast is untouched. */
-function stickerStyle(uni, index) {
+function stickerStyle(uni) {
   const [r, g, b] = hexToRgb(getBrandColor(uni));
   return {
     '--uni-brand': `rgba(${r},${g},${b},0.24)`,
-    '--uni-tilt': index % 2 === 0 ? '-0.7deg' : '0.7deg',
   };
 }
 
@@ -247,6 +246,11 @@ export default function UniversitySearchGrid({ hero = false }) {
         /* Night band, matching the landing page's departure section — the page
            then opens out into the cream grid, the same night-to-day rhythm. */
         <div className="uni-hero">
+          <div className="uni-hero-stamps" aria-hidden="true">
+            <span className="hero-stamp hero-stamp-1"><Stamp size={64} strokeWidth={1} /></span>
+            <span className="hero-stamp hero-stamp-2"><Stamp size={48} strokeWidth={1} /></span>
+            <span className="hero-stamp hero-stamp-3"><Stamp size={80} strokeWidth={1} /></span>
+          </div>
           <div className="wrap uni-hero-wrap">
             <div className="uni-hero-text">
               <h1 className="uni-hero-title">Every university, in one place.</h1>
@@ -277,12 +281,12 @@ export default function UniversitySearchGrid({ hero = false }) {
         <div className="wrap">
           <div className="uni-top-section">
             <div className="uni-section-header">
-              <Trophy size={18} />
+              <Stamp size={18} />
               <h2>Top Ranked Universities</h2>
             </div>
             <div className="uni-top-scroll">
-              {topUniversities.map((u, i) => (
-                <div key={u.id} className="uni-top-card" style={stickerStyle(u, i)}>
+              {topUniversities.map((u) => (
+                <div key={u.id} className="uni-top-card" style={stickerStyle(u)}>
                   <div className="uni-top-rank">#{parseRankNum(u.ranking)}</div>
                   <LogoTile item={{
                     logoUrl: u.logo_url, logoStyle: u.logo_style,
@@ -390,9 +394,9 @@ export default function UniversitySearchGrid({ hero = false }) {
         ) : (
           <>
             <div className="uni-grid">
-              {visible.map((u, i) => {
+              {visible.map((u) => {
                 return (
-                <div key={u.id} className="uni-card" style={stickerStyle(u, i)}>
+                <div key={u.id} className="uni-card" style={stickerStyle(u)}>
                   <div className="uni-card-top">
                     <LogoTile item={{
                       logoUrl: u.logo_url,
