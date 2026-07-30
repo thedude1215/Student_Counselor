@@ -57,6 +57,17 @@ export default function Auth() {
       setCodeStatus('idle');
       return 'Enter the verification code we sent to your email.';
     }
+    /* Supabase throttles outbound auth mail, and the built-in SMTP silently
+     * drops anything sent to an address outside the project team. Without this
+     * branch the verify/recover cases below answer "that code is wrong" —
+     * blaming the user for an email that was never delivered in the first
+     * place. Checked before those so it wins. */
+    if (message.includes('rate limit') || message.includes('over_email_send_rate_limit')) {
+      const cooldown = cooldownFromMessage(err?.message || '');
+      return cooldown > 0
+        ? `Too many emails just went out. Try again in ${cooldown} seconds.`
+        : 'Too many verification emails were sent in the last hour. Wait a few minutes, then use Resend.';
+    }
     if (mode === 'login' && (message.includes('invalid login credentials') || message.includes('invalid credentials'))) {
       return 'Account does not exist. Sign up to create one.';
     }
