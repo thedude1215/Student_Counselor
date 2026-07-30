@@ -5,8 +5,8 @@
  *
  *  • expression — the mood. Used as a through-line: Nova reacts differently
  *    at each act of the journey rather than wearing one frozen smile.
- *  • holding    — an optional prop (map, pen, checklist, compass, key) for the
- *    larger act moments. Ignored below 48px, where it would be mush.
+ *  • holding    — an optional prop (map, pen, checklist, compass, key, letter)
+ *    for the larger act moments. Ignored below 48px, where it would be mush.
  */
 
 import { useId } from 'react';
@@ -112,6 +112,18 @@ function Holding({ holding }) {
           <path d="M16 10h24" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />
           <path d="M30 10v7M37 10v5" stroke={INK} strokeWidth="3.2" strokeLinecap="round" />
           <circle cx="10" cy="10" r="2.7" fill="#34D399" />
+        </g>
+      );
+
+    /* Postcard home — used on the Stories page, where every card is framed
+       as something a student mailed back. The stamp is drawn last so it
+       reads as stuck on top of the flap rather than behind it. */
+    case 'letter':
+      return (
+        <g transform="translate(52 58) rotate(-7)">
+          <rect x="0" y="0" width="38" height="27" rx="3" fill={PAPER} stroke={INK} strokeWidth="2.6" />
+          <path d="M1.5 2.5 19 16 36.5 2.5" fill="none" stroke={INK} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="27" y="3" width="8.5" height="8.5" rx="1.4" fill="#EF4444" stroke={INK} strokeWidth="1.5" />
         </g>
       );
 

@@ -1,100 +1,422 @@
-/* Stories page */
-.stories-page { min-height: 100vh; background: var(--bg); }
+/* Stories page — "postcard from abroad." Every card reads as something a
+   student actually mailed home: one piece of tape holding the photo down,
+   a top edge in that university's real brand colour, and a soft lifted
+   shadow rather than a hard border. */
+.stories-page { min-height: 100vh; max-width: 100vw; overflow-x: clip; background: var(--bg); }
 
-.stories-title {
-  color: var(--ink);
-  font-size: clamp(2rem, 5vw, 4rem);
-  font-weight: 950;
-  letter-spacing: 0;
-  line-height: 0.98;
-  margin: 0 0 1.25rem;
+/* ══════════════════════════════════════════
+   HERO — night band, voice-first rather than stat-first.
+══════════════════════════════════════════ */
+.stories-hero {
+  background: var(--night, #0a1f13);
+  padding: calc(var(--nav-h) + 3rem) 0 3rem;
+  position: relative;
+  overflow: hidden;
+}
+.stories-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 65% 65% at 15% 25%, rgba(143, 216, 115, 0.16) 0%, transparent 70%);
+  pointer-events: none;
 }
 
-.stories-top {
-  padding: calc(var(--nav-h) + 1.5rem) 0 0;
+/* Mail motif in the hero background — a faint postmark ring and a few
+   paper planes echoing the ScholarPath logo. Purely decorative. */
+.stories-hero-decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.hero-postmark-ring {
+  position: absolute;
+  top: -70px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  border: 2px solid rgba(143, 216, 115, 0.13);
+}
+.hero-postmark-ring::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 1px dashed rgba(143, 216, 115, 0.13);
+}
+.hero-plane { position: absolute; color: var(--accent-lime, #8FD873); opacity: 0.17; }
+.hero-plane-1 { top: 16%; right: 14%; transform: rotate(-18deg); }
+.hero-plane-2 { top: 62%; right: 30%; transform: rotate(12deg); }
+.hero-plane-3 { top: 6%;  right: 40%; transform: rotate(24deg); }
+
+.stories-hero-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  align-items: start;
+  gap: 2.5rem;
+  position: relative;
+  z-index: 1;
 }
 
-.stories-tabs  { max-width: 500px; margin-bottom: 2rem; }
-.stories-search { max-width: 560px; margin-bottom: 1.25rem; }
-
-.stories-body { padding: 0 0 4rem; }
-
-/* ── Story row — exact Borderless style ── */
-.story-rows { display: flex; flex-direction: column; gap: 12px; }
-
-.story-row {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  border-radius: 20px;
-  border: 2px solid transparent;
-  padding: 1.25rem;
-  cursor: pointer;
-  transition: transform var(--t), box-shadow var(--t);
-  box-shadow: 0 1px 6px rgba(5,150,105,0.07);
+.stories-hero-title {
+  font-size: clamp(2rem, 4.4vw, 3.1rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: var(--cream, #F4F2EC);
+  margin-bottom: 0.9rem;
 }
-.story-row:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hover);
+.stories-hero-sub {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(244, 242, 236, 0.68);
+  margin-bottom: 1.3rem;
+}
+.stories-hero-sub strong {
+  color: var(--accent-lime, #8FD873);
+  font-weight: 800;
 }
 
-.story-row-photo {
-  width: 130px;
-  height: 140px;
-  object-fit: cover;
-  border-radius: 14px;
-  flex-shrink: 0;
-}
-
-.story-row-content { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
-
-.story-row-uni {
-  display: flex;
+.stories-hero-cta {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.story-row-uni-sq {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  background: rgba(255,255,255,0.75);
-  border: 1px solid rgba(0,0,0,0.07);
-  flex-shrink: 0;
-}
-
-.story-row-uni-info { display: flex; flex-direction: column; gap: 1px; }
-.story-row-uni-name { font-size: 0.875rem; font-weight: 700; color: var(--ink); }
-.story-row-uni-loc  { font-size: 0.75rem; color: var(--ink-3); font-weight: 500; }
-
-.story-row-title {
-  font-size: 1.2rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: var(--r-pill);
+  background: var(--cream, #F4F2EC);
+  color: var(--night, #0a1f13);
+  font-size: 0.88rem;
   font-weight: 800;
-  line-height: 1.32;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform var(--t), box-shadow var(--t);
 }
+.stories-hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32); }
 
-.story-row-by {
+/* The rotating quote — a postcard laid on the dark hero, tilted slightly
+   like something dropped there rather than a UI panel. */
+.stories-hero-quote {
+  padding: 1.75rem 1.5rem 1.25rem;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  transform: rotate(1.2deg);
+  /* No opacity-based entrance animation — a fade-in that starts at
+     opacity:0 is a permanent-invisibility risk if the animation clock
+     ever stalls (backgrounded tab, reduced-motion edge cases). */
+  animation: story-quote-slide 400ms ease;
+}
+@keyframes story-quote-slide {
+  from { transform: rotate(1.2deg) translateY(4px); }
+  to   { transform: rotate(1.2deg) translateY(0); }
+}
+.stories-hero-quote-text {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+.stories-hero-quote-by {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.82rem;
+  gap: 10px;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.1));
+  font-size: 0.8rem;
   color: var(--ink-3);
-  font-weight: 500;
 }
-
-.story-row-avatar {
-  width: 22px; height: 22px;
+.stories-hero-quote-by img {
+  width: 28px; height: 28px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
+.stories-hero-quote-by strong { color: var(--ink); }
+
+/* Constellation of the schools these students actually got into. Scattered
+   at varied heights (no two share a column) and drifting gently, so the
+   band reads as alive rather than as a static row of chips. */
+.stories-hero-cluster {
+  position: relative;
+  height: 110px;
+  max-width: 1200px;
+  margin: 2.5rem auto 0;
+  padding: 0 2rem;
+}
+.stories-hero-cluster-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.stories-hero-cluster-lines polyline {
+  fill: none;
+  stroke: rgba(143, 216, 115, 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+.cluster-logo-wrap {
+  position: absolute;
+  display: block;
+  width: 46px; height: 46px;
+  /* Base keyframe is translateY(0), so a stalled animation clock leaves the
+     logo exactly where it belongs rather than hidden or displaced. */
+  animation: cluster-float 5s ease-in-out infinite;
+}
+@keyframes cluster-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.cluster-logo {
+  border: 2px solid rgba(244, 242, 236, 0.9);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4) !important;
+  transition: transform 220ms ease;
+}
+/* Names like "Vanderbilt" fall back to 5-6 characters, which overflow a
+   46px circle at LogoTile's default fallback size. */
+.cluster-logo .logo-tile__fallback {
+  font-size: 0.58rem;
+  letter-spacing: -0.03em;
+  padding: 4px;
+}
+.cluster-logo-wrap:hover .cluster-logo { transform: scale(1.14); }
+
+.cluster-logo-0 { left: 8%;  top: 28%; animation-delay: 0s;    }
+.cluster-logo-1 { left: 26%; top: 6%;  animation-delay: -1.1s; }
+.cluster-logo-2 { left: 45%; top: 52%; animation-delay: -2.3s; }
+.cluster-logo-3 { left: 64%; top: 10%; animation-delay: -3.4s; }
+.cluster-logo-4 { left: 84%; top: 38%; animation-delay: -0.6s; }
+
+/* Nova walking the path between the schools, carrying a postcard home.
+   Waypoints sit at the midpoints between logos (8/26/45/64/84%), so Nova
+   weaves along the dotted line without ever covering a crest.
+   `alternate` means it retraces its steps rather than snapping back to the
+   start, and every keyframe sets only left/top — the centring transform is
+   untouched, so a stalled animation clock leaves Nova parked mid-path
+   rather than mispositioned or invisible. */
+.cluster-nova {
+  position: absolute;
+  left: 17%; top: 6%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+  animation: nova-travel 17s ease-in-out infinite alternate;
+}
+.cluster-nova-inner {
+  display: block;
+  animation: nova-tilt 3.4s ease-in-out infinite;
+}
+@keyframes nova-travel {
+  0%   { left: 17%; top: 6%;  }
+  33%  { left: 35%; top: 46%; }
+  66%  { left: 55%; top: 8%;  }
+  100% { left: 74%; top: 44%; }
+}
+@keyframes nova-tilt {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(6deg); }
+}
+
+/* ══════════════════════════════════════════
+   POSTCARD — shared by the hero quote, the featured card, and the grid.
+══════════════════════════════════════════ */
+.postcard {
+  position: relative;
+  background: #FFFEFB;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.04),
+    0 14px 30px -10px rgba(17, 24, 39, 0.16),
+    0 0 0 1px var(--story-accent-soft, rgba(17, 24, 39, 0.05));
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+/* Tape — one washi-tape strip pinning the photo down, angled at the top. */
+.tape {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 46px;
+  height: 17px;
+  background: rgba(255, 233, 178, 0.7);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transform: translateX(-50%) rotate(-2deg);
+  z-index: 2;
+}
+
+.story-photo-wrap { position: relative; }
+.story-photo { display: block; }
+
+/* ══════════════════════════════════════════
+   BODY
+══════════════════════════════════════════ */
+.stories-body { padding: 2rem 0 4rem; }
+
+.stories-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.stories-search { max-width: 340px; flex-shrink: 0; }
+
+/* ── Featured story — the one lead card, full width ── */
+.story-featured {
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) minmax(0, 1fr);
+  gap: 2rem;
+  padding: 1.75rem;
+  margin-bottom: 1.75rem;
+  border-top: 5px solid var(--story-accent, var(--blue));
+}
+.story-featured:hover {
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.04),
+    0 22px 44px -12px rgba(17, 24, 39, 0.22),
+    0 0 0 1px var(--story-accent-soft, rgba(17, 24, 39, 0.05));
+  transform: translateY(-2px);
+}
+.story-featured .story-photo-wrap { height: 100%; min-height: 260px; }
+.story-featured .story-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.story-featured-content { display: flex; flex-direction: column; min-width: 0; }
+.story-featured-quote {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0.85rem 0 1rem;
+}
+.story-featured-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  margin: 0 0 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.1));
+}
+
+/* ── Grid of remaining stories ── */
+.story-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.story-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 5px solid var(--story-accent, var(--blue));
+  transform: rotate(var(--story-tilt, 0deg));
+}
+.story-card:hover {
+  transform: rotate(0deg) translateY(-5px) scale(1.015);
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.04),
+    0 20px 38px -10px rgba(17, 24, 39, 0.2),
+    0 0 0 1px var(--story-accent-soft, rgba(17, 24, 39, 0.05));
+}
+
+/* The photo now carries real weight instead of sitting as a 44px chip. */
+.story-card .story-photo-wrap { width: 100%; }
+.story-card .story-photo {
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+}
+.story-card .tape { width: 40px; height: 15px; top: -7px; }
+
+.story-card-body {
+  display: flex;
+  flex-direction: column;
+  padding: 1.15rem 1.35rem 1.35rem;
+  min-width: 0;
+}
+
+/* Wide variant — every fourth card spans two columns and switches to a
+   side-by-side layout, so the grid reads as a spread rather than a
+   uniform tile wall. */
+.story-card.is-wide {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+}
+.story-card.is-wide .story-photo { height: 100%; min-height: 230px; }
+
+.story-uni { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.story-uni-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.story-uni-name {
+  font-size: 0.85rem; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.story-uni-loc { font-size: 0.72rem; color: var(--ink-3); font-weight: 500; }
+
+.story-card-quote {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.48;
+  color: var(--ink);
+  margin: 0.85rem 0 0.6rem;
+}
+.story-card-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  margin: 0 0 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.1));
+}
+
+.story-by {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  font-weight: 500;
+  margin-top: auto;
+}
+.story-by strong { color: var(--ink-2, var(--ink)); }
+.story-year { font-variant-numeric: tabular-nums; }
+
+/* ── Scroll reveal ──
+   `reveal-ready` is added by JS only when IntersectionObserver exists and
+   motion is allowed, and a timeout force-adds `is-visible` regardless. The
+   hidden state can therefore never be reached without a guaranteed path
+   back out of it. */
+.story-grid.reveal-ready .story-card {
+  opacity: 0;
+  transform: rotate(var(--story-tilt, 0deg)) translateY(18px);
+  transition: opacity 420ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
+}
+.story-grid.reveal-ready .story-card.is-visible {
+  opacity: 1;
+  transform: rotate(var(--story-tilt, 0deg)) translateY(0);
+}
+
+@media (max-width: 900px) {
+  .stories-hero-wrap { grid-template-columns: 1fr; }
+  .stories-hero-cluster { display: none; }
+  .story-featured { grid-template-columns: 1fr; }
+  .story-featured .story-photo,
+  .story-featured .story-photo-wrap { min-height: 220px; }
+  .story-card.is-wide { grid-column: span 1; grid-template-columns: 1fr; }
+  .story-card.is-wide .story-photo { height: 170px; min-height: 0; }
+}
 
 @media (max-width: 640px) {
-  .story-row { flex-direction: column; }
-  .story-row-photo { width: 100%; height: 180px; }
+  .stories-hero { padding: calc(var(--nav-h) + 1.75rem) 0 2rem; }
+  .stories-toolbar { flex-direction: column; align-items: stretch; }
+  .stories-search { max-width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cluster-logo-wrap,
+  .cluster-nova,
+  .cluster-nova-inner { animation: none; }
+  .story-card, .story-featured { transition: none; }
+  .story-card:hover { transform: rotate(var(--story-tilt, 0deg)); }
 }
