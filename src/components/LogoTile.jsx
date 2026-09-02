@@ -42,6 +42,7 @@ export default function LogoTile({
   alt,
   className = '',
   fallback,
+  loading = 'lazy',
   logoStyle,
   logoUrl,
   radius = 12,
@@ -105,7 +106,7 @@ export default function LogoTile({
           src={imageUrl}
           alt={accessibleName}
           decoding="async"
-          loading="lazy"
+          loading={loading}
           onLoad={e => {
             if (!e.currentTarget.naturalWidth || !e.currentTarget.naturalHeight) {
               setFailed(true);

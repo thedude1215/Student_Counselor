@@ -61,4 +61,5 @@
 
 .logo-tile.has-loaded-image .logo-tile__fallback {
   opacity: 0;
+  visibility: hidden;
 }

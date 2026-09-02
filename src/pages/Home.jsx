@@ -242,6 +242,7 @@ export default function Home() {
                   key={`${university.name}-${index}`}
                   item={university}
                   className="home-logo-tile"
+                  loading="eager"
                   radius={14}
                   size={64}
                 />

@@ -64,7 +64,7 @@ export const homeUniversityLogos = [
   {
     name: 'National University of Singapore',
     fallback: 'NUS',
-    logoUrl: '/logos/nus-hq.png',
+    logoUrl: '/logos/national-university-of-singapore.svg',
     logoStyle: { background: '#FFFFFF', padding: '8px' },
   },
   {
@@ -76,8 +76,8 @@ export const homeUniversityLogos = [
   {
     name: 'New York University',
     fallback: 'NYU',
-    logoUrl: '/logos/nyuad-hq.png',
-    logoStyle: { background: '#57068C', padding: '6px' },
+    logoUrl: '/logos/new-york-university.svg',
+    logoStyle: { background: '#FFFFFF', padding: '8px' },
   },
   {
     name: 'Imperial College London',
@@ -106,7 +106,7 @@ export const homeUniversityLogos = [
   {
     name: 'University of Edinburgh',
     fallback: 'Ed',
-    logoUrl: '/logos/edinburgh-hq.png',
+    logoUrl: '/logos/university-of-edinburgh.svg',
     logoStyle: { background: '#FFFFFF', padding: '8px' },
   },
   {
